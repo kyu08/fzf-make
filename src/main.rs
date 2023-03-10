@@ -6,11 +6,12 @@ use std::io::Read;
 use std::process::Command;
 
 fn main() {
-    let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | rg -n {}: | sed -e 's/:.*//g') Makefile";
+    let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | grep -n {}: | sed -e 's/:.*//g') Makefile";
     let options = SkimOptionsBuilder::default()
         .height(Some("50%"))
         .multi(true)
         .preview(Some(preview_command))
+        .reverse(true)
         .build()
         .unwrap();
 
@@ -22,17 +23,25 @@ fn main() {
     let item_reader = SkimItemReader::default();
     let items = item_reader.of_bufread(Cursor::new(commands));
 
-    let selected_items = Skim::run_with(&options, Some(items))
-        .map(|out| out.selected_items)
-        .unwrap_or_else(Vec::new);
+    match Skim::run_with(&options, Some(items)) {
+        output @ Some(_) => {
+            if output.as_ref().unwrap().is_abort {
+                return;
+            }
 
-    for item in selected_items.iter() {
-        let output = Command::new("make")
-            .arg(item.output().to_string())
-            .output()
-            .expect("panic");
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-        println!("{}", String::from_utf8_lossy(&output.stderr));
+            let selected_items = output
+                .map(|out| out.selected_items)
+                .unwrap_or_else(Vec::new);
+            for item in selected_items.iter() {
+                let output = Command::new("make")
+                    .arg(item.output().to_string())
+                    .output()
+                    .expect("panic");
+                println!("{}", String::from_utf8_lossy(&output.stdout));
+                println!("{}", String::from_utf8_lossy(&output.stderr));
+            }
+        }
+        None => {}
     }
 }
 
