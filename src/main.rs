@@ -1,7 +1,11 @@
 use skim::prelude::*;
+use std::error::Error;
+use std::fs::File;
 use std::io::Cursor;
+use std::io::Read;
+use std::process::Command;
 
-pub fn main() {
+fn main() {
     let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | rg -n {}: | sed -e 's/:.*//g') Makefile";
     let options = SkimOptionsBuilder::default()
         .height(Some("50%"))
@@ -10,18 +14,45 @@ pub fn main() {
         .build()
         .unwrap();
 
-    // TODO: これをcommand一覧にする
-    let input = "PHONY\nrun\nclear".to_string();
+    let commands = match extract_command() {
+        Ok(s) => s,
+        Err(e) => panic!("{}", e),
+    };
 
     let item_reader = SkimItemReader::default();
-    let items = item_reader.of_bufread(Cursor::new(input));
+    let items = item_reader.of_bufread(Cursor::new(commands));
 
     let selected_items = Skim::run_with(&options, Some(items))
         .map(|out| out.selected_items)
         .unwrap_or_else(Vec::new);
 
     for item in selected_items.iter() {
-        // TODO: ここでmake hogeする
-        println!("{}", item.output());
+        let output = Command::new("make")
+            .arg(item.output().to_string())
+            .output()
+            .expect("panic");
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+        println!("{}", String::from_utf8_lossy(&output.stderr));
     }
+}
+
+/// Makefileからcommandを抽出
+fn extract_command() -> Result<String, Box<dyn Error>> {
+    let mut f = File::open("Makefile")?;
+    let mut contents = String::new();
+    f.read_to_string(&mut contents)?;
+    let mut result = String::new();
+    for line in contents.lines() {
+        if let Some(t) = line.split_once(':') {
+            if t.0.contains(".PHONY") {
+                continue;
+            }
+            if !result.is_empty() {
+                result += "\n";
+            }
+            result += t.0;
+        }
+    }
+
+    Ok(result)
 }

@@ -8,3 +8,6 @@ build:
 
 check:
 		@cargo check
+
+echo:
+	@echo good
