@@ -7,6 +7,7 @@ use std::process::Command;
 
 fn main() {
     let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | grep -n {}: | sed -e 's/:.*//g') Makefile";
+    // TODO: hide fzf window when fzf-make terminated
     let options = SkimOptionsBuilder::default()
         .height(Some("50%"))
         .multi(true)
@@ -14,13 +15,11 @@ fn main() {
         .reverse(true)
         .build()
         .unwrap();
-
+    let item_reader = SkimItemReader::default();
     let commands = match extract_command() {
         Ok(s) => s,
         Err(e) => panic!("{}", e),
     };
-
-    let item_reader = SkimItemReader::default();
     let items = item_reader.of_bufread(Cursor::new(commands));
 
     match Skim::run_with(&options, Some(items)) {
