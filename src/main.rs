@@ -1,10 +1,12 @@
 use skim::prelude::*;
-use std::error::Error;
+
 use std::fs::File;
 use std::io::Cursor;
 use std::io::Read;
-use std::process::Command;
+use std::process;
 
+// TODO: 処理を関数に切り出す
+// TODO: 命名いい感じにする
 fn main() {
     let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | grep -n {}: | sed -e 's/:.*//g') Makefile";
     // TODO: hide fzf window when fzf-make terminated
@@ -16,23 +18,27 @@ fn main() {
         .build()
         .unwrap();
     let item_reader = SkimItemReader::default();
-    let commands = match extract_command() {
+    let commands = match extract_command_from_makefile() {
         Ok(s) => s,
-        Err(e) => panic!("{}", e),
+        Err(e) => {
+            println!("[ERR] {}", e);
+            process::exit(1)
+        }
     };
     let items = item_reader.of_bufread(Cursor::new(commands));
 
+    // TODO: refactor
     match Skim::run_with(&options, Some(items)) {
         output @ Some(_) => {
             if output.as_ref().unwrap().is_abort {
-                return;
+                process::exit(0)
             }
 
             let selected_items = output
                 .map(|out| out.selected_items)
                 .unwrap_or_else(Vec::new);
             for item in selected_items.iter() {
-                let output = Command::new("make")
+                let output = process::Command::new("make")
                     .arg(item.output().to_string())
                     .output()
                     .expect("panic");
@@ -45,22 +51,30 @@ fn main() {
 }
 
 /// Makefileからcommandを抽出
-fn extract_command() -> Result<String, Box<dyn Error>> {
-    let mut f = File::open("Makefile")?;
+fn extract_command_from_makefile() -> Result<String, &'static str> {
+    let mut file = match File::open("Makefile") {
+        Ok(f) => f,
+        Err(_) => return Err("Makefile not found"),
+    };
+
     let mut contents = String::new();
-    f.read_to_string(&mut contents)?;
-    let mut result = String::new();
+    if file.read_to_string(&mut contents).is_err() {
+        return Err("fail to read Makefile contents");
+    }
+
+    Ok(extract_command(contents))
+}
+
+fn extract_command(contents: String) -> String {
+    let mut result = Vec::new();
     for line in contents.lines() {
         if let Some(t) = line.split_once(':') {
             if t.0.contains(".PHONY") {
                 continue;
             }
-            if !result.is_empty() {
-                result += "\n";
-            }
-            result += t.0;
+            result.push(t.0);
         }
     }
 
-    Ok(result)
+    result.join("\n")
 }
