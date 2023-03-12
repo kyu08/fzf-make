@@ -7,7 +7,6 @@ fn main() {
     let (options, items) = get_params();
 
     if let output @ Some(_) = Skim::run_with(&options, items) {
-        // TODO: as_refちゃんと理解する
         if output.as_ref().unwrap().is_abort {
             process::exit(0)
         }
