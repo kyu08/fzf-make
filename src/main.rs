@@ -1,15 +1,8 @@
 use skim::prelude::*;
 
-use std::{
-    fs::File,
-    io::Cursor,
-    io::Read,
-    process::{self},
-};
+use std::{fs::File, io::Cursor, io::Read, process};
 
 // TODO: add README
-// TODO: refactor
-// TODO: 命名いい感じにする
 fn main() {
     let (options, items) = get_params();
 
