@@ -24,14 +24,14 @@ fn main() {
                     println!("{}", String::from_utf8_lossy(&output.stdout));
                     println!("{}", String::from_utf8_lossy(&output.stderr));
                 }
-                Err(_) => println!("[ERR] fail to execute make command"),
+                Err(_) => print_error("fail to execute make command".to_string()),
             }
         }
     }
 }
 
 fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
-    // TODO: batがなければcatを使う
+    // TODO: use cat when bat is unavailable
     let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | grep -n {}: | sed -e 's/:.*//g') Makefile";
     // TODO: hide fzf window when fzf-make terminated
     let options = SkimOptionsBuilder::default()
@@ -44,8 +44,7 @@ fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
     let commands = match extract_command_from_makefile() {
         Ok(s) => s,
         Err(e) => {
-            // TODO: ログの共通化
-            println!("[ERR] {}", e);
+            print_error(e.to_string());
             process::exit(1)
         }
     };
@@ -74,6 +73,10 @@ fn extract_command_from_makefile() -> Result<String, &'static str> {
     } else {
         Err("no make command found")
     }
+}
+
+fn print_error(error_message: String) {
+    println!("[ERR] {}", error_message);
 }
 
 fn extract_command(contents: String) -> Vec<String> {
