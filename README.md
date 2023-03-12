@@ -21,5 +21,5 @@ brew install kyu08/tap/fzf-make
 ```
 
 # 💡 How it works
-- execute `fzf-make` in the directory include `Makefile`
-- select make command you want to execute
+1. execute `fzf-make` in the directory include `Makefile`
+1. select make command you want to execute
