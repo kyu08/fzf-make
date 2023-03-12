@@ -1,41 +1,44 @@
 use skim::prelude::*;
 
-use std::fs::File;
-use std::io::Cursor;
-use std::io::Read;
-use std::process;
+use std::{
+    fs::File,
+    io::Cursor,
+    io::Read,
+    process::{self},
+};
 
+// TODO: add README
 // TODO: refactor
 // TODO: 命名いい感じにする
 fn main() {
-    run()
-}
-
-fn run() {
     let (options, items) = get_params();
-    match Skim::run_with(&options, Some(items)) {
-        output @ Some(_) => {
-            if output.as_ref().unwrap().is_abort {
-                process::exit(0)
-            }
 
-            let selected_items = output
-                .map(|out| out.selected_items)
-                .unwrap_or_else(Vec::new);
-            for item in selected_items.iter() {
-                let output = process::Command::new("make")
-                    .arg(item.output().to_string())
-                    .output()
-                    .expect("panic");
-                println!("{}", String::from_utf8_lossy(&output.stdout));
-                println!("{}", String::from_utf8_lossy(&output.stderr));
+    if let output @ Some(_) = Skim::run_with(&options, items) {
+        // TODO: as_refちゃんと理解する
+        if output.as_ref().unwrap().is_abort {
+            process::exit(0)
+        }
+
+        let selected_items = output
+            .map(|out| out.selected_items)
+            .unwrap_or_else(Vec::new);
+        for item in selected_items.iter() {
+            let output = process::Command::new("make")
+                .arg(item.output().to_string())
+                .output();
+            match output {
+                Ok(output) => {
+                    println!("{}", String::from_utf8_lossy(&output.stdout));
+                    println!("{}", String::from_utf8_lossy(&output.stderr));
+                }
+                Err(_) => println!("[ERR] fail to execute make command"),
             }
         }
-        None => {}
     }
 }
 
-fn get_params<'a>() -> (SkimOptions<'a>, Receiver<Arc<dyn SkimItem>>) {
+fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
+    // TODO: batがなければcatを使う
     let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | grep -n {}: | sed -e 's/:.*//g') Makefile";
     // TODO: hide fzf window when fzf-make terminated
     let options = SkimOptionsBuilder::default()
@@ -48,6 +51,7 @@ fn get_params<'a>() -> (SkimOptions<'a>, Receiver<Arc<dyn SkimItem>>) {
     let commands = match extract_command_from_makefile() {
         Ok(s) => s,
         Err(e) => {
+            // TODO: ログの共通化
             println!("[ERR] {}", e);
             process::exit(1)
         }
@@ -55,7 +59,7 @@ fn get_params<'a>() -> (SkimOptions<'a>, Receiver<Arc<dyn SkimItem>>) {
     let item_reader = SkimItemReader::default();
     let items = item_reader.of_bufread(Cursor::new(commands));
 
-    (options, items)
+    (options, Some(items))
 }
 
 /// Makefileからcommandを抽出
@@ -70,19 +74,53 @@ fn extract_command_from_makefile() -> Result<String, &'static str> {
         return Err("fail to read Makefile contents");
     }
 
-    Ok(extract_command(contents))
+    let commands = extract_command(contents);
+
+    if !commands.is_empty() {
+        Ok(commands.join("\n"))
+    } else {
+        Err("no make command found")
+    }
 }
 
-fn extract_command(contents: String) -> String {
-    let mut result = Vec::new();
+fn extract_command(contents: String) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
     for line in contents.lines() {
         if let Some(t) = line.split_once(':') {
             if t.0.contains(".PHONY") {
                 continue;
             }
-            result.push(t.0);
+            result.push(t.0.to_string());
         }
     }
 
-    result.join("\n")
+    result
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn extract_command_test() {
+        let contents = "\
+.PHONY: run build check
+
+run:
+		@cargo run
+
+build:
+		@cargo build
+
+check:
+		@cargo check
+
+echo:
+	@echo good";
+
+        assert_eq!(
+            vec!["run", "build", "check", "echo"],
+            extract_command(contents.to_string())
+        );
+    }
 }
