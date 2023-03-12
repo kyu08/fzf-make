@@ -20,6 +20,7 @@ fn main() {
                 .output();
             match output {
                 Ok(output) => {
+                    println!("\n");
                     println!("{}", String::from_utf8_lossy(&output.stdout));
                     println!("{}", String::from_utf8_lossy(&output.stderr));
                 }
