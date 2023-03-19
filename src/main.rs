@@ -91,7 +91,7 @@ fn extract_commands(contents: String) -> Vec<String> {
 }
 
 fn extract_command(line: String) -> Option<String> {
-    let regex = Regex::new(r"^(.*):$").unwrap();
+    let regex = Regex::new(r"^[^\.PHONY]+:$").unwrap();
     match regex.find(line.as_str()) {
         // TODO: もう少しいい書き方がありそう...
         Some(m) => Some(
@@ -176,6 +176,10 @@ build:
             },
             Case {
                 contents: "echo".to_string(),
+                expect: None,
+            },
+            Case {
+                contents: ".PHONY:".to_string(),
                 expect: None,
             },
             Case {
