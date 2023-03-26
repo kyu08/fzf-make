@@ -1,4 +1,7 @@
-.PHONY: run build check
+.PHONY: test run build check 
+
+test :
+	echo "test"
 
 run:
 		@cargo run

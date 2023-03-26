@@ -90,13 +90,10 @@ fn extract_commands(contents: String) -> Vec<String> {
     result
 }
 
-// TODO: Makeの仕様完全対応はちょっと大変そうなのでREADMEに対応しているターゲットの形式を書いておく。
-// TODO: READMEに`Makefile`以外には対応していないことを書いておく
 fn extract_command(line: String) -> Option<String> {
     let regex = Regex::new(r"^[^.].+:$").unwrap();
-    match regex.find(line.as_str()) {
-        // TODO: もう少しいい書き方があるかも
-        Some(m) => Some(
+    regex.find(line.as_str()).and_then(|m| {
+        Some(
             m.as_str()
                 .to_string()
                 .split_once(':')
@@ -104,16 +101,56 @@ fn extract_command(line: String) -> Option<String> {
                 .0
                 .trim()
                 .to_string(),
-        ),
-        None => None,
-    }
+        )
+    })
 }
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use super::*;
+
+    #[test]
+    fn extract_commands_test() {
+        struct Case {
+            contents: &'static str,
+            expect: Vec<&'static str>, // NOTE: order of elements of `expect` order should be same as vec function returns
+        }
+        let cases = vec![
+            Case {
+                contents: "\
+    .PHONY: run build check
+
+    run:
+    		@cargo run
+
+    build:
+    		@cargo build
+
+    check:
+    		@cargo check
+
+    echo:
+    	@echo good",
+                expect: vec!["run", "build", "check", "echo"],
+            },
+            Case {
+                contents: "\
+    .PHONY: clone build
+
+    # https://example.com
+    clone:
+    		@git clone https://example.com
+
+    build:
+    		@cargo build",
+                expect: vec!["clone", "build"],
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(case.expect, extract_commands(case.contents.to_string()));
+        }
+    }
 
     #[test]
     fn extract_command_test() {
