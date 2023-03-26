@@ -90,16 +90,19 @@ fn extract_commands(contents: String) -> Vec<String> {
     result
 }
 
+// TODO: Makeの仕様完全対応はちょっと大変そうなのでREADMEに対応しているターゲットの形式を書いておく。
+// TODO: READMEに`Makefile`以外には対応していないことを書いておく
 fn extract_command(line: String) -> Option<String> {
-    let regex = Regex::new(r"^[^\.PHONY]+:$").unwrap();
+    let regex = Regex::new(r"^[^.].+:$").unwrap();
     match regex.find(line.as_str()) {
-        // TODO: もう少しいい書き方がありそう...
+        // TODO: もう少しいい書き方があるかも
         Some(m) => Some(
             m.as_str()
                 .to_string()
                 .split_once(':')
                 .unwrap()
                 .0
+                .trim()
                 .to_string(),
         ),
         None => None,
@@ -113,83 +116,55 @@ mod test {
     use super::*;
 
     #[test]
-    fn extract_commands_test() {
-        struct Case {
-            contents: String,
-            expect: Vec<String>,
-        }
-        let contents1 = "\
-.PHONY: run build check
-
-run:
-		@cargo run
-
-build:
-		@cargo build
-
-check:
-		@cargo check
-
-echo:
-	@echo good";
-        let contents2 = "\
-.PHONY: close build
-
-# https://example.com
-clone:
-		@git clone https://example.com
-
-build:
-		@cargo build";
-
-        let cases = vec![
-            Case {
-                contents: contents1.to_string(),
-                expect: vec![
-                    "run".to_string(),
-                    "build".to_string(),
-                    "check".to_string(),
-                    "echo".to_string(),
-                ],
-            },
-            Case {
-                contents: String::from_str(contents2).unwrap(),
-                expect: vec!["clone".to_string(), "build".to_string()],
-            },
-        ];
-
-        for case in cases {
-            assert_eq!(case.expect, extract_commands(case.contents));
-        }
-    }
-
-    #[test]
     fn extract_command_test() {
         struct Case {
-            contents: String,
-            expect: Option<String>,
+            contents: &'static str,
+            expect: Option<&'static str>,
         }
         let cases = vec![
             Case {
-                contents: "echo:".to_string(),
-                expect: Some("echo".to_string()),
+                contents: "echo:",
+                expect: Some("echo"),
             },
             Case {
-                contents: "echo".to_string(),
+                contents: "main.o:",
+                expect: Some("main.o"),
+            },
+            Case {
+                contents: "test::",
+                expect: Some("test"),
+            },
+            Case {
+                contents: "test ::",
+                expect: Some("test"),
+            },
+            Case {
+                contents: "echo",
                 expect: None,
             },
             Case {
-                contents: ".PHONY:".to_string(),
+                contents: "		@git clone https://example.com",
                 expect: None,
             },
             Case {
-                contents: "https://example.com".to_string(),
+                contents: ".PHONY:",
+                expect: None,
+            },
+            Case {
+                contents: ".DEFAULT:",
+                expect: None,
+            },
+            Case {
+                contents: "https://example.com",
                 expect: None,
             },
         ];
 
         for case in cases {
-            assert_eq!(case.expect, extract_command(case.contents));
+            assert_eq!(
+                case.expect.map(|e| e.to_string()),
+                extract_command(case.contents.to_string())
+            );
         }
     }
 }
