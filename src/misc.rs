@@ -1,7 +1,42 @@
 use regex::Regex;
-use std::{fs::File, io::Read};
+use skim::prelude::*;
+use std::{
+    fs::File,
+    io::{Cursor, Read},
+    process,
+    sync::Arc,
+};
 
 // FIXME rename module
+
+pub fn print_error(error_message: String) {
+    println!("[ERR] {}", error_message);
+}
+
+pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
+    // TODO: use cat when bat is unavailable
+    let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | grep -nE '^{}' | sed -e 's/:.*//g') Makefile";
+    // TODO: hide fzf window when fzf-make terminated
+    let options = SkimOptionsBuilder::default()
+        .height(Some("50%"))
+        .multi(true)
+        .preview(Some(preview_command))
+        .reverse(true)
+        .build()
+        .unwrap();
+    let commands = match extract_command_from_makefile() {
+        // TODO: use some method
+        Ok(s) => s,
+        Err(e) => {
+            print_error(e.to_string());
+            process::exit(1)
+        }
+    };
+    let item_reader = SkimItemReader::default();
+    let items = item_reader.of_bufread(Cursor::new(commands));
+
+    (options, Some(items))
+}
 
 pub fn extract_command_from_makefile() -> Result<String, &'static str> {
     let mut file = read_makefile()?;
