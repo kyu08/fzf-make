@@ -13,8 +13,10 @@ pub fn print_error(error_message: String) {
     println!("[ERR] {}", error_message);
 }
 
+// TODO: Maybe skim related could be combined into one module.
 pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
     // TODO: use cat when bat is unavailable
+    // fix #10 https://github.com/kyu08/fzf-make/issues/10
     let preview_command = "bat --style=numbers --color=always --highlight-line $(bat Makefile | grep -nE '^{}' | sed -e 's/:.*//g') Makefile";
     // TODO: hide fzf window when fzf-make terminated
     let options = SkimOptionsBuilder::default()
