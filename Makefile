@@ -1,13 +1,16 @@
-.PHONY: run build check
+.PHONY: test build check echo
 
-run:
-		@cargo run
+echo:
+	@echo good
+
+test :
+	echo "test"
+
+# run:
+# 		@cargo run
 
 build:
 		@cargo build
 
 check:
 		@cargo check
-
-echo:
-	@echo good
