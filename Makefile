@@ -1,4 +1,4 @@
-.PHONY: test build check echo
+.PHONY: test build run check echo build-release
 
 echo:
 	@echo good
@@ -6,11 +6,14 @@ echo:
 test :
 	echo "test"
 
-# run:
-# 		@cargo run
+run:
+		@cargo run
 
 build:
 		@cargo build
 
 check:
 		@cargo check
+
+build-release:
+		@cargo build --verbose --release
