@@ -20,6 +20,11 @@ brew tap kyu08/tap
 brew install kyu08/tap/fzf-make
 ```
 
+# ⚠️ Caution
+- The following format targets are supported(contributions are welcome!)
+  - `^[^.#\s].+:$`
+- File name is only supported for `Makefile`. (File names in formats such as `xxx.mk` are not supported.)
+
 # 💡 Usage
 1. execute `fzf-make` in the directory include `Makefile`
 1. select make command you want to execute
