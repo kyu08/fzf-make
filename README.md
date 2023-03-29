@@ -7,9 +7,9 @@
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
 
-</div>
+![fzf-make-demo](https://user-images.githubusercontent.com/49891479/228574753-2e0e46b8-b446-4b7d-b866-2362f33c9e17.gif)
 
-![how to use](https://user-images.githubusercontent.com/49891479/224536333-9bcdbc31-62a2-440d-87b6-17746d4ef138.gif)
+</div>
 
 # 🔧 Installation
 🚨 This command run only on a apple silicon machine.

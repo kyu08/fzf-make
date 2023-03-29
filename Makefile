@@ -1,6 +1,6 @@
-.PHONY: test build run check echo build-release
+.PHONY: test build run check echo-test build-release echo-greeting
 
-echo:
+echo-test:
 	@echo good
 
 test :
@@ -17,3 +17,6 @@ check:
 
 build-release:
 		@cargo build --verbose --release
+
+echo-greeting:
+	@echo hello fzf-make!
