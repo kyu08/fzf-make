@@ -15,7 +15,6 @@ pub fn print_error(error_message: String) {
 
 // TODO: Maybe skim related could be combined into one module.
 pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
-    // TODO: use cat when bat is unavailable
     let preview_command = r"line=$(bat Makefile | grep -nE '^{}\s*:' | sed -e 's/:.*//g'); bat --style=numbers --color=always --line-range $line: --highlight-line $line Makefile";
     let options = SkimOptionsBuilder::default()
         .preview(Some(preview_command))
