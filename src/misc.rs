@@ -98,31 +98,31 @@ mod test {
         let cases = vec![
             Case {
                 contents: "\
-    .PHONY: run build check
+.PHONY: run build check
 
-    run:
-    		@cargo run
+run:
+		@cargo run
 
-    build:
-    		@cargo build
+build:
+		@cargo build
 
-    check:
-    		@cargo check
+check:
+		@cargo check
 
-    echo:
-    	@echo good",
+echo:
+	@echo good",
                 expect: Ok(vec!["run", "build", "check", "echo"]),
             },
             Case {
                 contents: "\
-    .PHONY: clone build
+.PHONY: clone build
 
-    # https://example.com
-    clone:
-    		@git clone https://example.com
+# https://example.com
+clone:
+		@git clone https://example.com
 
-    build:
-    		@cargo build",
+build:
+		@cargo build",
                 expect: Ok(vec!["clone", "build"]),
             },
             Case {
