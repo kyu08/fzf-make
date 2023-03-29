@@ -15,7 +15,6 @@
 🚨 This command run only on a apple silicon machine.
 
 ```sh
-brew install bat
 brew tap kyu08/tap
 brew install kyu08/tap/fzf-make
 ```
