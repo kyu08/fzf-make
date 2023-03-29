@@ -9,7 +9,7 @@
 
 </div>
 
-![how to use](https://user-images.githubusercontent.com/49891479/224536333-9bcdbc31-62a2-440d-87b6-17746d4ef138.gif)
+![fzf-make-demo](https://user-images.githubusercontent.com/49891479/228574753-2e0e46b8-b446-4b7d-b866-2362f33c9e17.gif)
 
 # 🔧 Installation
 🚨 This command run only on a apple silicon machine.
