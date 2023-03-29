@@ -17,10 +17,7 @@ pub fn print_error(error_message: String) {
 pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
     // TODO: use cat when bat is unavailable
     let preview_command = r"line=$(bat Makefile | grep -nE '^{}\s*:' | sed -e 's/:.*//g'); bat --style=numbers --color=always --line-range $line: --highlight-line $line Makefile";
-    // TODO: hide fzf window when fzf-make terminated
     let options = SkimOptionsBuilder::default()
-        .height(Some("50%"))
-        .multi(true)
         .preview(Some(preview_command))
         .reverse(true)
         .build()
