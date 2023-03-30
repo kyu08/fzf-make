@@ -12,17 +12,23 @@
 </div>
 
 # 🔧 Installation
-🚨 This command run only on a apple silicon machine.
-
 ```sh
 brew tap kyu08/tap
 brew install kyu08/tap/fzf-make
 ```
 
+## ✨ How to update
+```sh
+brew update
+brew upgrade fzf-make
+```
+
+
 # ⚠️ Caution
 - The following format targets are supported(contributions are welcome!)
   - `^[^.#\s\t].+:.*$`
 - File name is only supported for `Makefile`. (File names in formats such as `xxx.mk` are not supported.)
+- This command run only on a apple silicon machine.
 
 # 💡 Usage
 1. execute `fzf-make` in the directory include `Makefile`
