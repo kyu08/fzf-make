@@ -3,7 +3,7 @@
 echo-test:
 	@echo good
 
-test :
+test : # run test
 	echo "test"
 
 run:

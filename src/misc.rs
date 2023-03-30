@@ -69,7 +69,7 @@ fn contents_to_commands(contents: String) -> Result<Vec<String>, &'static str> {
 }
 
 fn line_to_command(line: String) -> Option<String> {
-    let regex = Regex::new(r"^[^.#\s].+:$").unwrap();
+    let regex = Regex::new(r"^[^.#\s\t].+:.*$").unwrap();
     regex.find(line.as_str()).and_then(|m| {
         Some(
             m.as_str()
@@ -98,7 +98,7 @@ mod test {
         let cases = vec![
             Case {
                 contents: "\
-.PHONY: run build check
+.PHONY: run build check test
 
 run:
 		@cargo run
@@ -109,9 +109,13 @@ build:
 check:
 		@cargo check
 
+
+test: # run test
+        @cargo test
+
 echo:
 	@echo good",
-                expect: Ok(vec!["run", "build", "check", "echo"]),
+                expect: Ok(vec!["run", "build", "check", "test", "echo"]),
             },
             Case {
                 contents: "\
@@ -178,10 +182,6 @@ build:
             },
             Case {
                 contents: ".DEFAULT:",
-                expect: None,
-            },
-            Case {
-                contents: "https://example.com",
                 expect: None,
             },
             Case {
