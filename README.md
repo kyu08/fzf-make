@@ -21,7 +21,7 @@ brew install kyu08/tap/fzf-make
 
 # ⚠️ Caution
 - The following format targets are supported(contributions are welcome!)
-  - `^[^.#\s].+:$`
+  - `^[^.#\s\t].+:.*$`
 - File name is only supported for `Makefile`. (File names in formats such as `xxx.mk` are not supported.)
 
 # 💡 Usage
