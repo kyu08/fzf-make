@@ -33,3 +33,6 @@ brew upgrade fzf-make
 # 💡 Usage
 1. execute `fzf-make` in the directory include `Makefile`
 1. select make command you want to execute
+
+# 🗒 Related Article(s)
+- [Makefileに定義されたtargetをfzfで選択して実行するCLIツールをRustでつくった](https://blog.kyu08.com/posts/fzf-make)
