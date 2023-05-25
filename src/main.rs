@@ -1,4 +1,4 @@
-use skim::prelude::*;
+use skim::prelude::Skim;
 use std::process;
 
 mod misc;
@@ -15,18 +15,14 @@ fn main() {
             .unwrap_or_else(Vec::new);
 
         for item in selected_items.iter() {
-            match process::Command::new("make")
+            println!("make {}", item.output().to_string());
+            process::Command::new("make")
+                .stdin(process::Stdio::inherit())
                 .arg(item.output().to_string())
-                .output()
-            {
-                Ok(output) => {
-                    // TODO: extract as function?
-                    println!("\n");
-                    println!("{}", String::from_utf8_lossy(&output.stdout));
-                    println!("{}", String::from_utf8_lossy(&output.stderr));
-                }
-                Err(_) => misc::print_error("fail to execute make command".to_string()),
-            }
+                .spawn()
+                .expect("Failed to execute process")
+                .wait()
+                .expect("Failed to execute process");
         }
     }
 }
