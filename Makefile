@@ -1,10 +1,10 @@
-.PHONY: test build run check echo-test build-release echo-greeting
+.PHONY: test build run check echo-test build-release echo-greeting cmd
 
 echo-test:
 	@echo good
 
 test : # run test
-	echo "test"
+	cargo test
 
 run:
 		@cargo run
@@ -20,3 +20,9 @@ build-release:
 
 echo-greeting:
 	@echo hello fzf-make!
+
+cmd:
+	@read -p "Do something? y/n:" ans; \
+	if [ "$$ans" = y ]; then  \
+		echo "Doing something..."; \
+	fi
