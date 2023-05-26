@@ -10,19 +10,22 @@ fn main() {
             process::exit(0)
         }
 
-        let selected_items = output
+        let target = output
             .map(|out| out.selected_items)
-            .unwrap_or_else(Vec::new);
+            .unwrap_or_else(Vec::new)
+            .first()
+            .unwrap()
+            .output()
+            .to_string();
 
-        for item in selected_items.iter() {
-            println!("make {}", item.output().to_string());
-            process::Command::new("make")
-                .stdin(process::Stdio::inherit())
-                .arg(item.output().to_string())
-                .spawn()
-                .expect("Failed to execute process")
-                .wait()
-                .expect("Failed to execute process");
-        }
+        let fail_to_execute_message = "Failed to execute process";
+        println!("make {}", target);
+        process::Command::new("make")
+            .stdin(process::Stdio::inherit())
+            .arg(target)
+            .spawn()
+            .expect(fail_to_execute_message)
+            .wait()
+            .expect(fail_to_execute_message);
     }
 }
