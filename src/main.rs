@@ -15,6 +15,7 @@ fn main() {
             .unwrap_or_else(Vec::new);
 
         for item in selected_items.iter() {
+            println!("make {}", item.output().to_string());
             process::Command::new("make")
                 .stdin(process::Stdio::inherit())
                 .arg(item.output().to_string())
