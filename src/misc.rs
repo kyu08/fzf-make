@@ -35,7 +35,7 @@ pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>
     (options, Some(items))
 }
 
-pub fn extract_command_from_makefile() -> Result<String, &'static str> {
+fn extract_command_from_makefile() -> Result<String, &'static str> {
     let mut file = read_makefile()?;
     let contents = read_file_contents(&mut file)?;
     let commands = contents_to_commands(contents)?;
