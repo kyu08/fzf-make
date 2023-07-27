@@ -15,7 +15,14 @@ pub fn print_error(error_message: String) {
 
 // TODO: Maybe skim related could be combined into one module.
 pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
-    let preview_command = r"line=$(bat Makefile | grep -nE '^{}\s*:' | sed -e 's/:.*//g'); bat --style=numbers --color=always --line-range $line: --highlight-line $line Makefile";
+    // result has format like `test.mk:2:echo-mk`
+    // なぜか↓でもMakefileの中身が表示される。が、以下をterminalで実行するとちゃんと動く
+    let preview_command = r#"
+    files="test.mk" \
+    result=$(grep -rnE '^{}\s*:' $(echo $files)); \
+    IFS=':' read -r filename lineno _ <<< $result; \
+    bat --style=numbers --color=always --line-range $(echo $lineno): \
+    --highlight-line $(echo $lineno) $(echo $filename);"#;
     let options = SkimOptionsBuilder::default()
         .preview(Some(preview_command))
         .reverse(true)

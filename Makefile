@@ -7,16 +7,16 @@ test : # run test
 	cargo test
 
 run:
-		@cargo run
+	@cargo run
 
 build:
-		@cargo build
+	@cargo build
 
 check:
-		@cargo check
+	@cargo check
 
 build-release:
-		@cargo build --verbose --release
+	@cargo build --verbose --release
 
 echo-greeting:
 	@echo hello fzf-make!
