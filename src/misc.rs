@@ -16,13 +16,12 @@ pub fn print_error(error_message: String) {
 // TODO: Maybe skim related could be combined into one module.
 pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
     // result has format like `test.mk:2:echo-mk`
-    // なぜか↓でもMakefileの中身が表示される。が、以下をterminalで実行するとちゃんと動く
     let preview_command = r#"
-    files="test.mk" \
+    files="Makefile test.mk" \
     result=$(grep -rnE '^{}\s*:' $(echo $files)); \
     IFS=':' read -r filename lineno _ <<< $result; \
-    bat --style=numbers --color=always --line-range $(echo $lineno): \
-    --highlight-line $(echo $lineno) $(echo $filename);"#;
+    bat --style=numbers --color=always --line-range $lineno: \
+    --highlight-line $lineno $filename;"#;
     let options = SkimOptionsBuilder::default()
         .preview(Some(preview_command))
         .reverse(true)
@@ -43,8 +42,16 @@ pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>
 }
 
 fn extract_command_from_makefile() -> Result<String, &'static str> {
-    let mut file = read_makefile()?;
-    let contents = read_file_contents(&mut file)?;
+    // TODO: ここでtest.mkも読むようにする
+    // TODO: ここでtest.mkも読むようにする
+    // TODO: ここでtest.mkも読むようにする
+    // TODO: ここでtest.mkも読むようにする
+    // TODO: ここでtest.mkも読むようにする
+    // TODO: ここでtest.mkも読むようにする
+    // TODO: ここでtest.mkも読むようにする
+    // TODO: ここでtest.mkも読むようにする
+    let mut file = read_makefile()?; //TODO: こいつの返り値をVec<File>にする
+    let contents = read_file_contents(&mut file)?; // TODO: ここで結合する
     let commands = contents_to_commands(contents)?;
     Ok(commands.join("\n"))
 }
