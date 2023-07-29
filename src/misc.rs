@@ -16,6 +16,7 @@ pub fn print_error(error_message: String) {
 // TODO: Maybe skim related could be combined into one module.
 pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
     // result has format like `test.mk:2:echo-mk`
+    // TODO: `files` が Makefileと *.mk を指すようにする(find . hogeとかやる必要ありそう)
     let preview_command = r#"
     files="Makefile test.mk" \
     result=$(grep -rnE '^{}\s*:' $(echo $files)); \
@@ -42,22 +43,47 @@ pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>
 }
 
 fn extract_command_from_makefile() -> Result<String, &'static str> {
-    // TODO: ここでtest.mkも読むようにする
-    // TODO: ここでtest.mkも読むようにする
-    // TODO: ここでtest.mkも読むようにする
-    // TODO: ここでtest.mkも読むようにする
-    // TODO: ここでtest.mkも読むようにする
-    // TODO: ここでtest.mkも読むようにする
-    // TODO: ここでtest.mkも読むようにする
-    // TODO: ここでtest.mkも読むようにする
-    let mut file = read_makefile()?; //TODO: こいつの返り値をVec<File>にする
-    let contents = read_file_contents(&mut file)?; // TODO: ここで結合する
-    let commands = contents_to_commands(contents)?;
-    Ok(commands.join("\n"))
+    let mut files = read_makefile()?; //TODO: こいつの返り値をVec<File>にする
+                                      // let contents = read_file_contents(&mut files)?; // TODO: ここで結合する
+                                      // let commands = contents_to_commands(contents)?;
+                                      // Ok(commands.join("\n"))
+    Ok(String::new()) // TODO: あとで戻す
 }
 
-fn read_makefile() -> Result<File, &'static str> {
-    File::open("Makefile").map_err(|_| "Makefile not found")
+// read_makefile returns Makefile and the files named like *.mk
+fn read_makefile() -> Result<Vec<File>, &'static str> {
+    let mut makefiles: Vec<File> = Vec::new();
+
+    // add Makefile to `makefiles`
+    match File::open("Makefile").map_err(|_| "Makefile not found") {
+        Ok(f) => makefiles.push(f),
+        Err(err) => return Err(err),
+    }
+
+    // add *.mk to `makefiles` if exist
+    match std::fs::read_dir(".") {
+        Ok(entries) => {
+            for entry in entries {
+                match entry {
+                    Ok(e) => {
+                        let path = e.path();
+                        if let Some(ext) = path.extension() {
+                            if ext == "mk" {
+                                match File::open(path) {
+                                    Ok(f) => makefiles.push(f),
+                                    Err(_) => continue,
+                                }
+                            }
+                        }
+                    }
+                    Err(_) => continue,
+                }
+            }
+        }
+        Err(_) => return Err("fail to read directory"),
+    }
+
+    Ok(makefiles)
 }
 
 fn read_file_contents(file: &mut File) -> Result<String, &'static str> {
