@@ -4,7 +4,7 @@ echo-test:
 	@echo good
 
 test : # run test
-	cargo test
+	cargo nextest run
 
 run:
 	@cargo run

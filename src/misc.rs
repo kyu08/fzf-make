@@ -1,11 +1,8 @@
 use regex::Regex;
 use skim::prelude::*;
-use std::{
-    fs::File,
-    io::{Cursor, Read},
-    process,
-    sync::Arc,
-};
+use std::fs::{File, OpenOptions};
+use std::io::Read;
+use std::{io::Cursor, process, sync::Arc};
 
 // FIXME rename module
 
@@ -43,54 +40,78 @@ pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>
 }
 
 fn extract_command_from_makefile() -> Result<String, &'static str> {
-    let mut files = read_makefile()?; //TODO: こいつの返り値をVec<File>にする
-                                      // let contents = read_file_contents(&mut files)?; // TODO: ここで結合する
-                                      // let commands = contents_to_commands(contents)?;
-                                      // Ok(commands.join("\n"))
-    Ok(String::new()) // TODO: あとで戻す
+    let files = get_makefile_file_names()?;
+    let contents = concat_file_contents(files)?;
+    let commands = contents_to_commands(contents)?;
+    Ok(commands.join("\n"))
 }
 
-// read_makefile returns Makefile and the files named like *.mk
-fn read_makefile() -> Result<Vec<File>, &'static str> {
-    let mut makefiles: Vec<File> = Vec::new();
+// get_makefile_file_names returns filenames of Makefile and the files named like *.mk
+fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
+    let mut file_names: Vec<String> = Vec::new();
 
-    // add Makefile to `makefiles`
-    match File::open("Makefile").map_err(|_| "Makefile not found") {
-        Ok(f) => makefiles.push(f),
+    let makefile = "Makefile";
+    match File::open(makefile).map_err(|_| "Makefile not found") {
         Err(err) => return Err(err),
+        Ok(_) => file_names.push(makefile.to_string()),
     }
 
     // add *.mk to `makefiles` if exist
-    match std::fs::read_dir(".") {
-        Ok(entries) => {
-            for entry in entries {
-                match entry {
-                    Ok(e) => {
-                        let path = e.path();
-                        if let Some(ext) = path.extension() {
-                            if ext == "mk" {
-                                match File::open(path) {
-                                    Ok(f) => makefiles.push(f),
-                                    Err(_) => continue,
-                                }
-                            }
-                        }
-                    }
-                    Err(_) => continue,
-                }
-            }
-        }
+    let entries = match std::fs::read_dir(".") {
         Err(_) => return Err("fail to read directory"),
+        Ok(entries) => entries,
+    };
+
+    for entry in entries {
+        let entry = match entry {
+            Err(_) => continue,
+            Ok(e) => e,
+        };
+
+        let path = entry.path();
+        let ext = match path.extension() {
+            None => continue,
+            Some(ext) => ext,
+        };
+        if ext != "mk" {
+            continue;
+        }
+
+        let file_name = match entry.file_name().into_string() {
+            // c.f. https://zenn.dev/suzuki_hoge/books/2023-03-rust-strings-8868f207b3ed18/viewer/4-os-string-and-os-str
+            Err(entry) => panic!("file name is not utf-8: {:?}", entry),
+            Ok(f) => f,
+        };
+        file_names.push(file_name);
     }
 
-    Ok(makefiles)
+    Ok(file_names)
 }
 
-fn read_file_contents(file: &mut File) -> Result<String, &'static str> {
+fn concat_file_contents(file_paths: Vec<String>) -> Result<String, &'static str> {
     let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .map(|_| contents)
-        .map_err(|_| "fail to read Makefile contents")
+    for path in file_paths {
+        let mut content = String::new();
+        let mut file = match OpenOptions::new().read(true).open(path) {
+            Err(_) => return Err("fail to open file"),
+            Ok(f) => f,
+        };
+
+        match file.read_to_string(&mut content) {
+            Err(e) => {
+                print!("fail to read file: {:?}", e);
+                return Err("fail to read file");
+            }
+            Ok(_) => {
+                if !contents.is_empty() {
+                    contents += "\n";
+                }
+
+                contents += &content;
+            }
+        }
+    }
+    Ok(contents)
 }
 
 fn contents_to_commands(contents: String) -> Result<Vec<String>, &'static str> {
@@ -125,9 +146,80 @@ fn line_to_command(line: String) -> Option<String> {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
+    use std::{io::Write, str::FromStr};
+    use uuid::Uuid;
 
     use super::*;
+
+    #[test]
+    fn concat_file_contents_test() {
+        struct Case {
+            file_contents: Vec<&'static str>,
+            expect: Result<&'static str, &'static str>,
+        }
+        let cases = vec![Case {
+            file_contents: vec![
+                "\
+.PHONY: test-1
+test-1:
+    @cargo run",
+                "\
+.PHONY: test-2
+test-2:
+    @cargo run",
+            ],
+            expect: Ok("\
+.PHONY: test-1
+test-1:
+    @cargo run
+.PHONY: test-2
+test-2:
+    @cargo run"),
+        }];
+
+        for case in cases {
+            let in_file_names: Vec<String> = case
+                .file_contents
+                .iter()
+                .map(|content| {
+                    let random_file_name = Uuid::new_v4().to_string();
+                    test_file_from_content(random_file_name, content)
+                })
+                .collect();
+
+            assert_eq!(
+                case.expect.map(|e| e.to_string()),
+                concat_file_contents(in_file_names)
+            );
+        }
+    }
+
+    fn test_file_from_content(file_name: String, content: &'static str) -> String {
+        let tmp_dir = std::env::temp_dir();
+        let file_name = file_name + ".mk";
+        let file_path = tmp_dir.join(&file_name);
+
+        let mut file = match OpenOptions::new()
+            .create(true)
+            .write(true)
+            .read(true)
+            .append(true)
+            .open(&file_path)
+        {
+            Err(err) => panic!("fail to create file: {:?}", err),
+            Ok(file) => file,
+        };
+
+        match file.write_all(content.as_bytes()) {
+            Err(e) => {
+                print!("fail to write file: {:?}", e);
+                process::exit(1);
+            }
+            Ok(_) => {}
+        }
+
+        file_path.to_path_buf().to_str().unwrap().to_string()
+    }
 
     #[test]
     fn contents_to_commands_test() {
@@ -176,12 +268,12 @@ build:
         ];
 
         for case in cases {
-            let a = case.expect.map(|x| {
+            let expect = case.expect.map(|x| {
                 x.iter()
                     .map(|y| String::from_str(y).unwrap())
                     .collect::<Vec<String>>()
             });
-            assert_eq!(a, contents_to_commands(case.contents.to_string()));
+            assert_eq!(expect, contents_to_commands(case.contents.to_string()));
         }
     }
 
