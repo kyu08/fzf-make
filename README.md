@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏭 fzf-make
+<img src="./static/fzf-make-logo.png" />
 
 `fzf-make` is the command line tool that execute make command using fzf.
 
