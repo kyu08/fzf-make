@@ -1,5 +1,7 @@
 .PHONY: test build run check echo-test build-release echo-greeting cmd
 
+include test.mk
+
 echo-test:
 	@echo good
 

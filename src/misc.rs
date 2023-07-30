@@ -1,53 +1,51 @@
 use regex::Regex;
+use skim::prelude::Skim;
 use skim::prelude::*;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
 use std::{io::Cursor, process, sync::Arc};
 
-// FIXME rename module
-
-pub fn print_error(error_message: String) {
-    println!("[ERR] {}", error_message);
-}
-
-// TODO: Maybe skim related could be combined into one module.
-pub fn get_params<'a>() -> (SkimOptions<'a>, Option<Receiver<Arc<dyn SkimItem>>>) {
-    // result has format like `test.mk:2:echo-mk`
-    // TODO: `files` が Makefileと *.mk を指すようにする(find . hogeとかやる必要ありそう)
-    let preview_command = r#"
-    files="Makefile test.mk" \
-    result=$(grep -rnE '^{}\s*:' $(echo $files)); \
-    IFS=':' read -r filename lineno _ <<< $result; \
-    bat --style=numbers --color=always --line-range $lineno: \
-    --highlight-line $lineno $filename;"#;
-    let options = SkimOptionsBuilder::default()
-        .preview(Some(preview_command))
-        .reverse(true)
-        .build()
-        .unwrap();
-    let commands = match extract_command_from_makefile() {
-        // TODO: use some method
-        Ok(s) => s,
+pub fn run() {
+    let file_paths = match get_makefile_file_names() {
         Err(e) => {
             print_error(e.to_string());
             process::exit(1)
         }
+        Ok(f) => f,
     };
-    let item_reader = SkimItemReader::default();
-    let items = item_reader.of_bufread(Cursor::new(commands));
 
-    (options, Some(items))
+    let preview_command = get_preview_command(file_paths.clone());
+    let options = get_options(&preview_command);
+    let items = get_items(file_paths.clone());
+    run_fuzzy_finder(options, items);
 }
 
-fn extract_command_from_makefile() -> Result<String, &'static str> {
-    let files = get_makefile_file_names()?;
-    let contents = concat_file_contents(files)?;
-    let commands = contents_to_commands(contents)?;
-    Ok(commands.join("\n"))
+fn run_fuzzy_finder(options: SkimOptions, items: Option<Receiver<Arc<dyn SkimItem>>>) {
+    if let output @ Some(_) = Skim::run_with(&options, items) {
+        if output.as_ref().unwrap().is_abort {
+            process::exit(0)
+        }
+
+        let selected_items = output
+            .map(|out| out.selected_items)
+            .unwrap_or_else(Vec::new);
+
+        for item in selected_items.iter() {
+            println!("make {}", item.output().to_string());
+            process::Command::new("make")
+                .stdin(process::Stdio::inherit())
+                .arg(item.output().to_string())
+                .spawn()
+                .expect("Failed to execute process")
+                .wait()
+                .expect("Failed to execute process");
+        }
+    }
 }
 
 // get_makefile_file_names returns filenames of Makefile and the files named like *.mk
 fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
+    // TODO: includeしているファイルの探索
     let mut file_names: Vec<String> = Vec::new();
 
     let makefile = "Makefile";
@@ -86,6 +84,60 @@ fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
     }
 
     Ok(file_names)
+}
+
+fn get_preview_command(file_paths: Vec<String>) -> String {
+    // result has format like `test.mk:2:echo-mk`
+    // 1. param: Makefileのcontent, result: Vec<includeしているファイル名(.mk))>な関数をRust側で作る
+    //  このときGNUmakefile, makefile and Makefile の順で探索する。はじめに見つかった1つのみを使う。(実際に試してみたところそのような挙動だった)
+    // 1. include しているファイルのVecをつくる
+    // 1. そのなかから *.mkを探す
+    // それを以下の $files に格納する
+
+    let preview_command = format!(
+        r#"
+    files="{}" \
+    result=$(grep -rnE '^{}\s*:' $(echo $files)); \
+    IFS=':' read -r filename lineno _ <<< $result; \
+    bat --style=numbers --color=always --line-range $lineno: \
+    --highlight-line $lineno $filename;"#,
+        file_paths.join(" "),
+        "{}",
+    );
+
+    preview_command
+}
+
+fn get_options(preview_command: &str) -> SkimOptions {
+    SkimOptionsBuilder::default()
+        .preview(Some(preview_command))
+        .reverse(true)
+        .build()
+        .unwrap()
+}
+
+fn print_error(error_message: String) {
+    println!("[ERR] {}", error_message);
+}
+
+fn get_items(file_paths: Vec<String>) -> Option<Receiver<Arc<dyn SkimItem>>> {
+    let commands = match extract_command_from_makefiles(file_paths) {
+        Err(e) => {
+            print_error(e.to_string());
+            process::exit(1)
+        }
+        Ok(s) => s,
+    };
+    let item_reader = SkimItemReader::default();
+    let items = item_reader.of_bufread(Cursor::new(commands));
+
+    Some(items)
+}
+
+fn extract_command_from_makefiles(file_paths: Vec<String>) -> Result<String, &'static str> {
+    let contents = concat_file_contents(file_paths)?;
+    let commands = contents_to_commands(contents)?;
+    Ok(commands.join("\n"))
 }
 
 fn concat_file_contents(file_paths: Vec<String>) -> Result<String, &'static str> {
