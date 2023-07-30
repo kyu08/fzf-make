@@ -1,8 +1,9 @@
 use regex::Regex;
 use skim::prelude::Skim;
 use skim::prelude::*;
-use std::fs::{File, OpenOptions};
+use std::fs::{File, OpenOptions, ReadDir};
 use std::io::Read;
+use std::path::Path;
 use std::{io::Cursor, process, sync::Arc};
 
 pub fn run() {
@@ -45,22 +46,49 @@ fn run_fuzzy_finder(options: SkimOptions, items: Option<Receiver<Arc<dyn SkimIte
 
 // get_makefile_file_names returns filenames of Makefile and the files named like *.mk
 fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
-    // TODO: includeしているファイルの探索
     let mut file_names: Vec<String> = Vec::new();
 
-    // TODO: GNUmakefile, makefile and Makefile の順で探索するように変更する
-    let makefile = "Makefile";
-    match File::open(makefile).map_err(|_| "Makefile not found") {
+    let makefile_name = match specify_makefile_name(".".to_string()) {
+        None => return Err("makefile not found"),
+        Some(f) => f,
+    };
+    match File::open(makefile_name.clone()).map_err(|_| "makefile not found") {
         Err(err) => return Err(err),
-        Ok(_) => file_names.push(makefile.to_string()),
+        Ok(_) => file_names.push(makefile_name.to_string()),
     }
 
-    // add *.mk to `makefiles` if exist
+    //   TODO: makefileでincludeしているファイルの名前を特定する
     let entries = match std::fs::read_dir(".") {
         Err(_) => return Err("fail to read directory"),
         Ok(entries) => entries,
     };
+    for file_path in get_including_files(entries) {
+        file_names.push(file_path);
+    }
 
+    Ok(file_names)
+}
+
+fn specify_makefile_name(target_path: String) -> Option<String> {
+    //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
+    //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
+    // enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
+    let makefile_name_options = vec!["GNUmakefile", "makefile", "Makefile"];
+
+    for file_name in makefile_name_options {
+        let path = Path::new(&target_path).join(file_name);
+        if path.is_file() {
+            return Some(file_name.to_string());
+        }
+        continue;
+    }
+
+    None
+}
+
+fn get_including_files(entries: ReadDir) -> Vec<String> {
+    // TODO: いい感じにする
+    let mut file_names: Vec<String> = Vec::new();
     for entry in entries {
         let entry = match entry {
             Err(_) => continue,
@@ -84,7 +112,7 @@ fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
         file_names.push(file_name);
     }
 
-    Ok(file_names)
+    file_names
 }
 
 fn get_preview_command(file_paths: Vec<String>) -> String {
@@ -199,7 +227,7 @@ fn line_to_command(line: String) -> Option<String> {
 
 #[cfg(test)]
 mod test {
-    use std::{io::Write, str::FromStr};
+    use std::{fs, io::Write, str::FromStr};
     use uuid::Uuid;
 
     use super::*;
@@ -207,61 +235,57 @@ mod test {
     #[test]
     fn specify_makefile_name_test() {
         struct Case {
-            file_contents: Vec<&'static str>,
-            expect: Result<&'static str, &'static str>,
+            title: &'static str,
+            files: Vec<&'static str>,
+            expect: Option<String>,
         }
         let cases = vec![
             Case {
-                file_contents: vec![
-                    "\
-    .PHONY: test-1
-    test-1:
-        @cargo run",
-                    "\
-    .PHONY: test-2
-    test-2:
-        @cargo run",
-                ],
-                expect: Ok("\
-    .PHONY: test-1
-    test-1:
-        @cargo run
-    .PHONY: test-2
-    test-2:
-        @cargo run"),
+                title: "no makefile",
+                files: vec!["README.md"],
+                expect: None,
             },
             Case {
-                file_contents: vec![
-                    "\
-    .PHONY: test-1
-    test-1:
-        @cargo run",
-                    "\
-    .PHONY: test-2
-    test-2:
-        @cargo run",
-                ],
-                expect: Ok("\
-    .PHONY: test-1
-    test-1:
-        @cargo run
-    .PHONY: test-2
-    test-2:
-        @cargo run"),
+                title: "GNUmakefile",
+                files: vec!["makefile", "GNUmakefile", "README.md", "Makefile"],
+                expect: Some("GNUmakefile".to_string()),
             },
+            Case {
+                title: "makefile",
+                files: vec!["makefile", "Makefile", "README.md"],
+                expect: Some("makefile".to_string()),
+            },
+            // NOTE: not use this test case because there is a difference in handling case sensitivity between macOS and linux.
+            // to use this test case, you need to determine whether the file system is
+            // case-sensitive or not when test execute.
+            // Case {
+            // title: "Makefile",
+            // files: vec!["Makefile", "README.md"],
+            // expect: Some("makefile".to_string()),
+            // },
         ];
 
         for case in cases {
-            let in_file_names: Vec<String> = case
-                .file_contents
-                .iter()
-                .map(|content| {
-                    let random_file_name = Uuid::new_v4().to_string();
-                    test_file_from_content(random_file_name, content)
-                })
-                .collect();
+            let random_dir_name = Uuid::new_v4().to_string();
+            let tmp_dir = std::env::temp_dir().join(random_dir_name);
+            match fs::create_dir(tmp_dir.as_path()) {
+                Err(e) => panic!("fail to create dir: {:?}", e),
+                Ok(_) => {}
+            }
 
-            assert_eq!(case.expect.map(|e| e.to_string()), specify_makefile_name());
+            for file in case.files {
+                match File::create(tmp_dir.join(file)) {
+                    Err(e) => panic!("fail to create file: {:?}", e),
+                    Ok(_) => {}
+                }
+            }
+
+            assert_eq!(
+                case.expect,
+                specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
+                "\nFailed in the 🚨{:?}🚨",
+                case.title,
+            );
         }
     }
     #[test]
