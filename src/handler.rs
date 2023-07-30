@@ -205,30 +205,107 @@ mod test {
     use super::*;
 
     #[test]
-    fn concat_file_contents_test() {
+    fn specify_makefile_name_test() {
         struct Case {
             file_contents: Vec<&'static str>,
             expect: Result<&'static str, &'static str>,
         }
-        let cases = vec![Case {
-            file_contents: vec![
-                "\
+        let cases = vec![
+            Case {
+                file_contents: vec![
+                    "\
+    .PHONY: test-1
+    test-1:
+        @cargo run",
+                    "\
+    .PHONY: test-2
+    test-2:
+        @cargo run",
+                ],
+                expect: Ok("\
+    .PHONY: test-1
+    test-1:
+        @cargo run
+    .PHONY: test-2
+    test-2:
+        @cargo run"),
+            },
+            Case {
+                file_contents: vec![
+                    "\
+    .PHONY: test-1
+    test-1:
+        @cargo run",
+                    "\
+    .PHONY: test-2
+    test-2:
+        @cargo run",
+                ],
+                expect: Ok("\
+    .PHONY: test-1
+    test-1:
+        @cargo run
+    .PHONY: test-2
+    test-2:
+        @cargo run"),
+            },
+        ];
+
+        for case in cases {
+            let in_file_names: Vec<String> = case
+                .file_contents
+                .iter()
+                .map(|content| {
+                    let random_file_name = Uuid::new_v4().to_string();
+                    test_file_from_content(random_file_name, content)
+                })
+                .collect();
+
+            assert_eq!(case.expect.map(|e| e.to_string()), specify_makefile_name());
+        }
+    }
+    #[test]
+    fn concat_file_contents_test() {
+        struct Case {
+            title: &'static str,
+            file_contents: Vec<&'static str>,
+            expect: Result<&'static str, &'static str>,
+        }
+        let cases = vec![
+            Case {
+                title: "two files",
+                file_contents: vec![
+                    "\
 .PHONY: test-1
 test-1:
     @cargo run",
-                "\
+                    "\
 .PHONY: test-2
 test-2:
     @cargo run",
-            ],
-            expect: Ok("\
+                ],
+                expect: Ok("\
 .PHONY: test-1
 test-1:
     @cargo run
 .PHONY: test-2
 test-2:
     @cargo run"),
-        }];
+            },
+            Case {
+                title: "single file",
+                file_contents: vec![
+                    "\
+.PHONY: test-1
+test-1:
+    @cargo run",
+                ],
+                expect: Ok("\
+.PHONY: test-1
+test-1:
+    @cargo run"),
+            },
+        ];
 
         for case in cases {
             let in_file_names: Vec<String> = case
@@ -242,7 +319,9 @@ test-2:
 
             assert_eq!(
                 case.expect.map(|e| e.to_string()),
-                concat_file_contents(in_file_names)
+                concat_file_contents(in_file_names),
+                "\nFailed in the 🚨{:?}🚨",
+                case.title,
             );
         }
     }
@@ -277,11 +356,13 @@ test-2:
     #[test]
     fn contents_to_commands_test() {
         struct Case {
+            title: &'static str,
             contents: &'static str,
             expect: Result<Vec<&'static str>, &'static str>, // NOTE: order of elements of `expect` order should be same as vec function returns
         }
         let cases = vec![
             Case {
+                title: "comment in same line",
                 contents: "\
 .PHONY: run build check test
 
@@ -303,6 +384,7 @@ echo:
                 expect: Ok(vec!["run", "build", "check", "test", "echo"]),
             },
             Case {
+                title: "comment line",
                 contents: "\
 .PHONY: clone build
 
@@ -315,6 +397,7 @@ build:
                 expect: Ok(vec!["clone", "build"]),
             },
             Case {
+                title: "invalid format",
                 contents: "echo hello",
                 expect: Err("make command not found"),
             },
@@ -326,54 +409,70 @@ build:
                     .map(|y| String::from_str(y).unwrap())
                     .collect::<Vec<String>>()
             });
-            assert_eq!(expect, contents_to_commands(case.contents.to_string()));
+            assert_eq!(
+                expect,
+                contents_to_commands(case.contents.to_string()),
+                "\nFailed in the 🚨{:?}🚨",
+                case.title,
+            );
         }
     }
 
     #[test]
     fn extract_command_test() {
         struct Case {
+            title: &'static str,
             contents: &'static str,
             expect: Option<&'static str>,
         }
         let cases = vec![
             Case {
+                title: "echo:",
                 contents: "echo:",
                 expect: Some("echo"),
             },
             Case {
+                title: "main.o:",
                 contents: "main.o:",
                 expect: Some("main.o"),
             },
             Case {
+                title: "test::",
                 contents: "test::",
                 expect: Some("test"),
             },
             Case {
+                title: "test ::",
                 contents: "test ::",
                 expect: Some("test"),
             },
             Case {
+                title: "echo",
                 contents: "echo",
                 expect: None,
             },
             Case {
+                title: "		@git clone https://example.com",
                 contents: "		@git clone https://example.com",
                 expect: None,
             },
             Case {
+                title: ".PHONY:",
                 contents: ".PHONY:",
                 expect: None,
             },
             Case {
+                title: ".DEFAULT:",
                 contents: ".DEFAULT:",
                 expect: None,
             },
             Case {
+                title: "# run:",
                 contents: "# run:",
                 expect: None,
             },
             Case {
+                title: " # run:",
                 contents: " # run:",
                 expect: None,
             },
@@ -382,7 +481,9 @@ build:
         for case in cases {
             assert_eq!(
                 case.expect.map(|e| e.to_string()),
-                line_to_command(case.contents.to_string())
+                line_to_command(case.contents.to_string()),
+                "\nFailed in the 🚨{:?}🚨",
+                case.title,
             );
         }
     }
