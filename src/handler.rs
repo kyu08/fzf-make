@@ -48,6 +48,7 @@ fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
     // TODO: includeしているファイルの探索
     let mut file_names: Vec<String> = Vec::new();
 
+    // TODO: GNUmakefile, makefile and Makefile の順で探索するように変更する
     let makefile = "Makefile";
     match File::open(makefile).map_err(|_| "Makefile not found") {
         Err(err) => return Err(err),

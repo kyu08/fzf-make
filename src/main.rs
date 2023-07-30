@@ -1,6 +1,6 @@
-mod misc;
+mod handler;
 
 fn main() {
     // TODO: catch panic
-    misc::run();
+    handler::run();
 }
