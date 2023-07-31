@@ -58,6 +58,8 @@ fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
     }
 
     //   TODO: makefileでincludeしているファイルの名前を特定する
+    //   makefile_contentを変数に格納
+    //   file_contentを引数にしてVec<including_file_name>返す関数をつくる
     let entries = match std::fs::read_dir(".") {
         Err(_) => return Err("fail to read directory"),
         Ok(entries) => entries,
@@ -84,6 +86,46 @@ fn specify_makefile_name(target_path: String) -> Option<String> {
     }
 
     None
+}
+
+// TODO: add UT
+// fn extract_including_file_names(file_content: String) -> Vec<String> {
+//     let mut result: Vec<String> = Vec::new();
+//     for line in file_content.lines() {
+//         let include_files = line_to_including_files(line.to_string());
+//         result = [result, include_files].concat();
+//     }
+//
+//     result
+// }
+
+// trunslate above to english
+// ignore if line is only include
+// give up to handle pattern like `include foo *.mk $(bar)`
+// do not search if file is not found based on current directory
+fn line_to_including_files(line: String) -> Vec<String> {
+    // not to allow tab character, ` ` is used instead of `\s`
+    let regex = Regex::new(r"^ *(include|-include|sinclude).*$").unwrap();
+    let include_line = regex.find(line.as_str());
+    match include_line {
+        None => return Vec::new(),
+        Some(line) => {
+            let excluding_comment = match line.as_str().to_string().split_once("#") {
+                Some((before, _)) => before.to_string(),
+                None => line.as_str().to_string(),
+            };
+
+            let mut file_names: Vec<String> = excluding_comment
+                .split_whitespace()
+                .map(|e| e.to_string())
+                .collect();
+
+            // remove directive(include or -include or sinclude)
+            file_names.remove(0);
+
+            file_names
+        }
+    }
 }
 
 fn get_including_files(entries: ReadDir) -> Vec<String> {
@@ -288,6 +330,79 @@ mod test {
             );
         }
     }
+
+    #[test]
+    fn line_to_including_files_test() {
+        struct Case {
+            title: &'static str,
+            line: &'static str,
+            expect: Vec<&'static str>,
+        }
+        let cases = vec![
+            Case {
+                title: "include one.mk two.mk",
+                line: "include one.mk two.mk",
+                expect: vec!["one.mk", "two.mk"],
+            },
+            Case {
+                title: "-include",
+                line: "-include one.mk two.mk",
+                expect: vec!["one.mk", "two.mk"],
+            },
+            Case {
+                title: "sinclude",
+                line: "sinclude hoge.mk fuga.mk",
+                expect: vec!["hoge.mk", "fuga.mk"],
+            },
+            Case {
+                title: " include one.mk two.mk",
+                line: " include one.mk two.mk",
+                expect: vec!["one.mk", "two.mk"],
+            },
+            Case {
+                title: "include one.mk two.mk(tab is not allowed)",
+                line: "	include one.mk two.mk",
+                expect: vec![],
+            },
+            Case {
+                title: "not include directive",
+                line: ".PHONY: test",
+                expect: vec![],
+            },
+            Case {
+                title: "include comment",
+                line: "include one.mk two.mk # three.mk",
+                expect: vec!["one.mk", "two.mk"],
+            },
+            Case {
+                title: "# include one.mk two.mk # three.mk",
+                line: "# include one.mk two.mk # three.mk",
+                expect: vec![],
+            },
+            Case {
+                title: "included",
+                line: "included",
+                expect: vec![],
+            },
+        ];
+
+        for case in cases {
+            let random_dir_name = Uuid::new_v4().to_string();
+            let tmp_dir = std::env::temp_dir().join(random_dir_name);
+            match fs::create_dir(tmp_dir.as_path()) {
+                Err(e) => panic!("fail to create dir: {:?}", e),
+                Ok(_) => {}
+            }
+
+            assert_eq!(
+                case.expect,
+                line_to_including_files(case.line.to_string()),
+                "\nFailed in the 🚨{:?}🚨",
+                case.title,
+            );
+        }
+    }
+
     #[test]
     fn concat_file_contents_test() {
         struct Case {
