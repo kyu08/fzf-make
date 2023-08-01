@@ -88,16 +88,15 @@ fn specify_makefile_name(target_path: String) -> Option<String> {
     None
 }
 
-// TODO: add UT
-// fn extract_including_file_names(file_content: String) -> Vec<String> {
-//     let mut result: Vec<String> = Vec::new();
-//     for line in file_content.lines() {
-//         let include_files = line_to_including_files(line.to_string());
-//         result = [result, include_files].concat();
-//     }
-//
-//     result
-// }
+fn extract_including_file_names(file_content: String) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
+    for line in file_content.lines() {
+        let include_files = line_to_including_files(line.to_string());
+        result = [result, include_files].concat();
+    }
+
+    result
+}
 
 // trunslate above to english
 // ignore if line is only include
@@ -325,6 +324,59 @@ mod test {
             assert_eq!(
                 case.expect,
                 specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
+                "\nFailed in the 🚨{:?}🚨",
+                case.title,
+            );
+        }
+    }
+
+    #[test]
+    fn extract_including_file_names_test() {
+        struct Case {
+            title: &'static str,
+            file_content: &'static str,
+            expect: Vec<&'static str>,
+        }
+        let cases = vec![
+            Case {
+                title: "has two lines of line includes include directive",
+                file_content: "\
+include one.mk two.mk
+.PHONY: echo-test
+echo-test:
+	@echo good
+
+include three.mk four.mk
+
+.PHONY: test
+test:
+	cargo nextest run",
+                expect: vec!["one.mk", "two.mk", "three.mk", "four.mk"],
+            },
+            Case {
+                title: "has no lines includes include directive",
+                file_content: "\
+.PHONY: echo-test test
+echo-test:
+	@echo good
+
+test:
+	cargo nextest run",
+                expect: vec![],
+            },
+        ];
+
+        for case in cases {
+            let random_dir_name = Uuid::new_v4().to_string();
+            let tmp_dir = std::env::temp_dir().join(random_dir_name);
+            match fs::create_dir(tmp_dir.as_path()) {
+                Err(e) => panic!("fail to create dir: {:?}", e),
+                Ok(_) => {}
+            }
+
+            assert_eq!(
+                case.expect,
+                extract_including_file_names(case.file_content.to_string()),
                 "\nFailed in the 🚨{:?}🚨",
                 case.title,
             );
