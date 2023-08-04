@@ -1,8 +1,10 @@
 use regex::Regex;
 
-pub fn contents_to_commands(contents: String) -> Result<Vec<String>, &'static str> {
+pub type Targets = Vec<String>;
+
+pub fn content_to_commands(content: String) -> Result<Targets, &'static str> {
     let mut result: Vec<String> = Vec::new();
-    for line in contents.lines() {
+    for line in content.lines() {
         if let Some(c) = line_to_command(line.to_string()) {
             result.push(c);
         }
@@ -107,7 +109,7 @@ mod test {
     }
 
     #[test]
-    fn contents_to_commands_test() {
+    fn content_to_commands_test() {
         struct Case {
             title: &'static str,
             contents: &'static str,
@@ -164,7 +166,7 @@ build:
             });
             assert_eq!(
                 expect,
-                contents_to_commands(case.contents.to_string()),
+                content_to_commands(case.contents.to_string()),
                 "\nFailed in the 🚨{:?}🚨",
                 case.title,
             );

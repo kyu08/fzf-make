@@ -1,9 +1,9 @@
 use regex::Regex;
 
-pub fn extract_including_file_names(file_content: String) -> Vec<String> {
+pub fn extract_including_file_paths(file_content: String) -> Vec<String> {
     let mut result: Vec<String> = Vec::new();
     for line in file_content.lines() {
-        let include_files = line_to_including_files(line.to_string());
+        let include_files = line_to_including_file_paths(line.to_string());
         result = [result, include_files].concat();
     }
 
@@ -14,7 +14,7 @@ pub fn extract_including_file_names(file_content: String) -> Vec<String> {
 // ignore if line is only include
 // give up to handle pattern like `include foo *.mk $(bar)`
 // do not search if file is not found based on current directory
-fn line_to_including_files(line: String) -> Vec<String> {
+fn line_to_including_file_paths(line: String) -> Vec<String> {
     // not to allow tab character, ` ` is used instead of `\s`
     let regex = Regex::new(r"^ *(include|-include|sinclude).*$").unwrap();
     let include_line = regex.find(line.as_str());
@@ -47,7 +47,7 @@ mod test {
     use uuid::Uuid;
 
     #[test]
-    fn extract_including_file_names_test() {
+    fn extract_including_file_paths_test() {
         struct Case {
             title: &'static str,
             file_content: &'static str,
@@ -92,7 +92,7 @@ test:
 
             assert_eq!(
                 case.expect,
-                extract_including_file_names(case.file_content.to_string()),
+                extract_including_file_paths(case.file_content.to_string()),
                 "\nFailed in the 🚨{:?}🚨",
                 case.title,
             );
@@ -100,7 +100,7 @@ test:
     }
 
     #[test]
-    fn line_to_including_files_test() {
+    fn line_to_including_file_paths_test() {
         struct Case {
             title: &'static str,
             line: &'static str,
@@ -164,7 +164,7 @@ test:
 
             assert_eq!(
                 case.expect,
-                line_to_including_files(case.line.to_string()),
+                line_to_including_file_paths(case.line.to_string()),
                 "\nFailed in the 🚨{:?}🚨",
                 case.title,
             );

@@ -1,36 +1,15 @@
 // module for file manipulation
-use std::{
-    fs::{File, OpenOptions},
-    io::Read,
-    path::Path,
-};
+use std::{fs::OpenOptions, io::Read, path::Path};
 
-use crate::parser;
+use crate::parser::{self, makefile};
 
 // get_makefile_file_names returns filenames of Makefile and the files included by Makefile
-pub fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
-    let makefile_name = match specify_makefile_name(".".to_string()) {
-        None => return Err("makefile not found"),
-        Some(f) => f,
-    };
+pub fn create_makefile() -> Result<makefile::Makefile, &'static str> {
+    let Some(makefile_name) = specify_makefile_name(".".to_string()) else { return Err("makefile not found") };
 
-    let mut makefile_file = match File::open(makefile_name.clone()) {
-        Err(_) => return Err("fail to open file"),
-        Ok(f) => f,
-    };
-
-    let mut makefile_content = String::new();
-    match makefile_file.read_to_string(&mut makefile_content) {
-        Err(e) => {
-            print!("fail to read file: {:?}", e);
-            return Err("fail to read file");
-        }
-        Ok(_) => {}
-    }
-
-    let mut including_file_names = parser::include::extract_including_file_names(makefile_content);
-    including_file_names.insert(0, makefile_name.to_string());
-    Ok(including_file_names)
+    Ok(parser::makefile::Makefile::new(
+        Path::new(&makefile_name).to_path_buf(),
+    ))
 }
 
 pub fn concat_file_contents(file_paths: Vec<String>) -> Result<String, &'static str> {
