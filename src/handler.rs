@@ -1,11 +1,13 @@
 use regex::Regex;
 use skim::prelude::Skim;
 use skim::prelude::*;
-use std::fs::{File, OpenOptions, ReadDir};
+use std::fs::{File, OpenOptions};
 use std::io::Read;
 use std::path::Path;
 use std::{io::Cursor, process, sync::Arc};
 
+// TODO: mod parser切る
+// その中に include.rs, target.rs を配置する
 pub fn run() {
     let file_paths = match get_makefile_file_names() {
         Err(e) => {
@@ -46,29 +48,28 @@ fn run_fuzzy_finder(options: SkimOptions, items: Option<Receiver<Arc<dyn SkimIte
 
 // get_makefile_file_names returns filenames of Makefile and the files named like *.mk
 fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
-    let mut file_names: Vec<String> = Vec::new();
-
     let makefile_name = match specify_makefile_name(".".to_string()) {
         None => return Err("makefile not found"),
         Some(f) => f,
     };
-    match File::open(makefile_name.clone()).map_err(|_| "makefile not found") {
-        Err(err) => return Err(err),
-        Ok(_) => file_names.push(makefile_name.to_string()),
-    }
 
-    //   TODO: makefileでincludeしているファイルの名前を特定する
-    //   makefile_contentを変数に格納
-    //   file_contentを引数にしてVec<including_file_name>返す関数をつくる
-    let entries = match std::fs::read_dir(".") {
-        Err(_) => return Err("fail to read directory"),
-        Ok(entries) => entries,
+    let mut makefile_file = match File::open(makefile_name.clone()) {
+        Err(_) => return Err("fail to open file"),
+        Ok(f) => f,
     };
-    for file_path in get_including_files(entries) {
-        file_names.push(file_path);
+
+    let mut makefile_content = String::new();
+    match makefile_file.read_to_string(&mut makefile_content) {
+        Err(e) => {
+            print!("fail to read file: {:?}", e);
+            return Err("fail to read file");
+        }
+        Ok(_) => {}
     }
 
-    Ok(file_names)
+    let mut including_file_names = extract_including_file_names(makefile_content);
+    including_file_names.insert(0, makefile_name.to_string());
+    Ok(including_file_names)
 }
 
 fn specify_makefile_name(target_path: String) -> Option<String> {
@@ -125,35 +126,6 @@ fn line_to_including_files(line: String) -> Vec<String> {
             file_names
         }
     }
-}
-
-fn get_including_files(entries: ReadDir) -> Vec<String> {
-    // TODO: いい感じにする
-    let mut file_names: Vec<String> = Vec::new();
-    for entry in entries {
-        let entry = match entry {
-            Err(_) => continue,
-            Ok(e) => e,
-        };
-
-        let path = entry.path();
-        let ext = match path.extension() {
-            None => continue,
-            Some(ext) => ext,
-        };
-        if ext != "mk" {
-            continue;
-        }
-
-        let file_name = match entry.file_name().into_string() {
-            // c.f. https://zenn.dev/suzuki_hoge/books/2023-03-rust-strings-8868f207b3ed18/viewer/4-os-string-and-os-str
-            Err(entry) => panic!("file name is not utf-8: {:?}", entry),
-            Ok(f) => f,
-        };
-        file_names.push(file_name);
-    }
-
-    file_names
 }
 
 fn get_preview_command(file_paths: Vec<String>) -> String {
@@ -214,6 +186,7 @@ fn concat_file_contents(file_paths: Vec<String>) -> Result<String, &'static str>
     let mut contents = String::new();
     for path in file_paths {
         let mut content = String::new();
+        // TODO: commonize convert file path to file content
         let mut file = match OpenOptions::new().read(true).open(path) {
             Err(_) => return Err("fail to open file"),
             Ok(f) => f,
