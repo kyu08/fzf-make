@@ -1,15 +1,10 @@
-use regex::Regex;
-use skim::prelude::Skim;
-use skim::prelude::*;
-use std::fs::{File, OpenOptions};
-use std::io::Read;
-use std::path::Path;
+use crate::file::file;
+use crate::parser;
+use skim::prelude::{Receiver, Skim, SkimItem, SkimItemReader, SkimOptions, SkimOptionsBuilder};
 use std::{io::Cursor, process, sync::Arc};
 
-// TODO: mod parser切る
-// その中に include.rs, target.rs を配置する
 pub fn run() {
-    let file_paths = match get_makefile_file_names() {
+    let file_paths = match file::get_makefile_file_names() {
         Err(e) => {
             print_error(e.to_string());
             process::exit(1)
@@ -19,113 +14,9 @@ pub fn run() {
 
     let preview_command = get_preview_command(file_paths.clone());
     let options = get_options(&preview_command);
-    let items = get_items(file_paths.clone());
+    let items = get_skimitem(file_paths.clone());
+
     run_fuzzy_finder(options, items);
-}
-
-fn run_fuzzy_finder(options: SkimOptions, items: Option<Receiver<Arc<dyn SkimItem>>>) {
-    if let output @ Some(_) = Skim::run_with(&options, items) {
-        if output.as_ref().unwrap().is_abort {
-            process::exit(0)
-        }
-
-        let selected_items = output
-            .map(|out| out.selected_items)
-            .unwrap_or_else(Vec::new);
-
-        for item in selected_items.iter() {
-            println!("make {}", item.output().to_string());
-            process::Command::new("make")
-                .stdin(process::Stdio::inherit())
-                .arg(item.output().to_string())
-                .spawn()
-                .expect("Failed to execute process")
-                .wait()
-                .expect("Failed to execute process");
-        }
-    }
-}
-
-// get_makefile_file_names returns filenames of Makefile and the files named like *.mk
-fn get_makefile_file_names() -> Result<Vec<String>, &'static str> {
-    let makefile_name = match specify_makefile_name(".".to_string()) {
-        None => return Err("makefile not found"),
-        Some(f) => f,
-    };
-
-    let mut makefile_file = match File::open(makefile_name.clone()) {
-        Err(_) => return Err("fail to open file"),
-        Ok(f) => f,
-    };
-
-    let mut makefile_content = String::new();
-    match makefile_file.read_to_string(&mut makefile_content) {
-        Err(e) => {
-            print!("fail to read file: {:?}", e);
-            return Err("fail to read file");
-        }
-        Ok(_) => {}
-    }
-
-    let mut including_file_names = extract_including_file_names(makefile_content);
-    including_file_names.insert(0, makefile_name.to_string());
-    Ok(including_file_names)
-}
-
-fn specify_makefile_name(target_path: String) -> Option<String> {
-    //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
-    //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
-    // enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
-    let makefile_name_options = vec!["GNUmakefile", "makefile", "Makefile"];
-
-    for file_name in makefile_name_options {
-        let path = Path::new(&target_path).join(file_name);
-        if path.is_file() {
-            return Some(file_name.to_string());
-        }
-        continue;
-    }
-
-    None
-}
-
-fn extract_including_file_names(file_content: String) -> Vec<String> {
-    let mut result: Vec<String> = Vec::new();
-    for line in file_content.lines() {
-        let include_files = line_to_including_files(line.to_string());
-        result = [result, include_files].concat();
-    }
-
-    result
-}
-
-// trunslate above to english
-// ignore if line is only include
-// give up to handle pattern like `include foo *.mk $(bar)`
-// do not search if file is not found based on current directory
-fn line_to_including_files(line: String) -> Vec<String> {
-    // not to allow tab character, ` ` is used instead of `\s`
-    let regex = Regex::new(r"^ *(include|-include|sinclude).*$").unwrap();
-    let include_line = regex.find(line.as_str());
-    match include_line {
-        None => return Vec::new(),
-        Some(line) => {
-            let excluding_comment = match line.as_str().to_string().split_once("#") {
-                Some((before, _)) => before.to_string(),
-                None => line.as_str().to_string(),
-            };
-
-            let mut file_names: Vec<String> = excluding_comment
-                .split_whitespace()
-                .map(|e| e.to_string())
-                .collect();
-
-            // remove directive(include or -include or sinclude)
-            file_names.remove(0);
-
-            file_names
-        }
-    }
 }
 
 fn get_preview_command(file_paths: Vec<String>) -> String {
@@ -149,6 +40,28 @@ fn get_preview_command(file_paths: Vec<String>) -> String {
 
     preview_command
 }
+fn run_fuzzy_finder(options: SkimOptions, items: Option<Receiver<Arc<dyn SkimItem>>>) {
+    if let output @ Some(_) = Skim::run_with(&options, items) {
+        if output.as_ref().unwrap().is_abort {
+            process::exit(0)
+        }
+
+        let selected_items = output
+            .map(|out| out.selected_items)
+            .unwrap_or_else(Vec::new);
+
+        for item in selected_items.iter() {
+            println!("make {}", item.output().to_string());
+            process::Command::new("make")
+                .stdin(process::Stdio::inherit())
+                .arg(item.output().to_string())
+                .spawn()
+                .expect("Failed to execute process")
+                .wait()
+                .expect("Failed to execute process");
+        }
+    }
+}
 
 fn get_options(preview_command: &str) -> SkimOptions {
     SkimOptionsBuilder::default()
@@ -158,11 +71,7 @@ fn get_options(preview_command: &str) -> SkimOptions {
         .unwrap()
 }
 
-fn print_error(error_message: String) {
-    println!("[ERR] {}", error_message);
-}
-
-fn get_items(file_paths: Vec<String>) -> Option<Receiver<Arc<dyn SkimItem>>> {
+fn get_skimitem(file_paths: Vec<String>) -> Option<Receiver<Arc<dyn SkimItem>>> {
     let commands = match extract_command_from_makefiles(file_paths) {
         Err(e) => {
             print_error(e.to_string());
@@ -177,478 +86,11 @@ fn get_items(file_paths: Vec<String>) -> Option<Receiver<Arc<dyn SkimItem>>> {
 }
 
 fn extract_command_from_makefiles(file_paths: Vec<String>) -> Result<String, &'static str> {
-    let contents = concat_file_contents(file_paths)?;
-    let commands = contents_to_commands(contents)?;
+    let contents = file::concat_file_contents(file_paths)?;
+    let commands = parser::target::contents_to_commands(contents)?;
     Ok(commands.join("\n"))
 }
 
-fn concat_file_contents(file_paths: Vec<String>) -> Result<String, &'static str> {
-    let mut contents = String::new();
-    for path in file_paths {
-        let mut content = String::new();
-        // TODO: commonize convert file path to file content
-        let mut file = match OpenOptions::new().read(true).open(path) {
-            Err(_) => return Err("fail to open file"),
-            Ok(f) => f,
-        };
-
-        match file.read_to_string(&mut content) {
-            Err(e) => {
-                print!("fail to read file: {:?}", e);
-                return Err("fail to read file");
-            }
-            Ok(_) => {
-                if !contents.is_empty() {
-                    contents += "\n";
-                }
-
-                contents += &content;
-            }
-        }
-    }
-    Ok(contents)
-}
-
-fn contents_to_commands(contents: String) -> Result<Vec<String>, &'static str> {
-    let mut result: Vec<String> = Vec::new();
-    for line in contents.lines() {
-        if let Some(c) = line_to_command(line.to_string()) {
-            result.push(c);
-        }
-    }
-
-    if !result.is_empty() {
-        Ok(result)
-    } else {
-        Err("make command not found")
-    }
-}
-
-fn line_to_command(line: String) -> Option<String> {
-    let regex = Regex::new(r"^[^.#\s\t].+:.*$").unwrap();
-    regex.find(line.as_str()).and_then(|m| {
-        Some(
-            m.as_str()
-                .to_string()
-                .split_once(':')
-                .unwrap()
-                .0
-                .trim()
-                .to_string(),
-        )
-    })
-}
-
-#[cfg(test)]
-mod test {
-    use std::{fs, io::Write, str::FromStr};
-    use uuid::Uuid;
-
-    use super::*;
-
-    #[test]
-    fn specify_makefile_name_test() {
-        struct Case {
-            title: &'static str,
-            files: Vec<&'static str>,
-            expect: Option<String>,
-        }
-        let cases = vec![
-            Case {
-                title: "no makefile",
-                files: vec!["README.md"],
-                expect: None,
-            },
-            Case {
-                title: "GNUmakefile",
-                files: vec!["makefile", "GNUmakefile", "README.md", "Makefile"],
-                expect: Some("GNUmakefile".to_string()),
-            },
-            Case {
-                title: "makefile",
-                files: vec!["makefile", "Makefile", "README.md"],
-                expect: Some("makefile".to_string()),
-            },
-            // NOTE: not use this test case because there is a difference in handling case sensitivity between macOS and linux.
-            // to use this test case, you need to determine whether the file system is
-            // case-sensitive or not when test execute.
-            // Case {
-            // title: "Makefile",
-            // files: vec!["Makefile", "README.md"],
-            // expect: Some("makefile".to_string()),
-            // },
-        ];
-
-        for case in cases {
-            let random_dir_name = Uuid::new_v4().to_string();
-            let tmp_dir = std::env::temp_dir().join(random_dir_name);
-            match fs::create_dir(tmp_dir.as_path()) {
-                Err(e) => panic!("fail to create dir: {:?}", e),
-                Ok(_) => {}
-            }
-
-            for file in case.files {
-                match File::create(tmp_dir.join(file)) {
-                    Err(e) => panic!("fail to create file: {:?}", e),
-                    Ok(_) => {}
-                }
-            }
-
-            assert_eq!(
-                case.expect,
-                specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
-                "\nFailed in the 🚨{:?}🚨",
-                case.title,
-            );
-        }
-    }
-
-    #[test]
-    fn extract_including_file_names_test() {
-        struct Case {
-            title: &'static str,
-            file_content: &'static str,
-            expect: Vec<&'static str>,
-        }
-        let cases = vec![
-            Case {
-                title: "has two lines of line includes include directive",
-                file_content: "\
-include one.mk two.mk
-.PHONY: echo-test
-echo-test:
-	@echo good
-
-include three.mk four.mk
-
-.PHONY: test
-test:
-	cargo nextest run",
-                expect: vec!["one.mk", "two.mk", "three.mk", "four.mk"],
-            },
-            Case {
-                title: "has no lines includes include directive",
-                file_content: "\
-.PHONY: echo-test test
-echo-test:
-	@echo good
-
-test:
-	cargo nextest run",
-                expect: vec![],
-            },
-        ];
-
-        for case in cases {
-            let random_dir_name = Uuid::new_v4().to_string();
-            let tmp_dir = std::env::temp_dir().join(random_dir_name);
-            match fs::create_dir(tmp_dir.as_path()) {
-                Err(e) => panic!("fail to create dir: {:?}", e),
-                Ok(_) => {}
-            }
-
-            assert_eq!(
-                case.expect,
-                extract_including_file_names(case.file_content.to_string()),
-                "\nFailed in the 🚨{:?}🚨",
-                case.title,
-            );
-        }
-    }
-
-    #[test]
-    fn line_to_including_files_test() {
-        struct Case {
-            title: &'static str,
-            line: &'static str,
-            expect: Vec<&'static str>,
-        }
-        let cases = vec![
-            Case {
-                title: "include one.mk two.mk",
-                line: "include one.mk two.mk",
-                expect: vec!["one.mk", "two.mk"],
-            },
-            Case {
-                title: "-include",
-                line: "-include one.mk two.mk",
-                expect: vec!["one.mk", "two.mk"],
-            },
-            Case {
-                title: "sinclude",
-                line: "sinclude hoge.mk fuga.mk",
-                expect: vec!["hoge.mk", "fuga.mk"],
-            },
-            Case {
-                title: " include one.mk two.mk",
-                line: " include one.mk two.mk",
-                expect: vec!["one.mk", "two.mk"],
-            },
-            Case {
-                title: "include one.mk two.mk(tab is not allowed)",
-                line: "	include one.mk two.mk",
-                expect: vec![],
-            },
-            Case {
-                title: "not include directive",
-                line: ".PHONY: test",
-                expect: vec![],
-            },
-            Case {
-                title: "include comment",
-                line: "include one.mk two.mk # three.mk",
-                expect: vec!["one.mk", "two.mk"],
-            },
-            Case {
-                title: "# include one.mk two.mk # three.mk",
-                line: "# include one.mk two.mk # three.mk",
-                expect: vec![],
-            },
-            Case {
-                title: "included",
-                line: "included",
-                expect: vec![],
-            },
-        ];
-
-        for case in cases {
-            let random_dir_name = Uuid::new_v4().to_string();
-            let tmp_dir = std::env::temp_dir().join(random_dir_name);
-            match fs::create_dir(tmp_dir.as_path()) {
-                Err(e) => panic!("fail to create dir: {:?}", e),
-                Ok(_) => {}
-            }
-
-            assert_eq!(
-                case.expect,
-                line_to_including_files(case.line.to_string()),
-                "\nFailed in the 🚨{:?}🚨",
-                case.title,
-            );
-        }
-    }
-
-    #[test]
-    fn concat_file_contents_test() {
-        struct Case {
-            title: &'static str,
-            file_contents: Vec<&'static str>,
-            expect: Result<&'static str, &'static str>,
-        }
-        let cases = vec![
-            Case {
-                title: "two files",
-                file_contents: vec![
-                    "\
-.PHONY: test-1
-test-1:
-    @cargo run",
-                    "\
-.PHONY: test-2
-test-2:
-    @cargo run",
-                ],
-                expect: Ok("\
-.PHONY: test-1
-test-1:
-    @cargo run
-.PHONY: test-2
-test-2:
-    @cargo run"),
-            },
-            Case {
-                title: "single file",
-                file_contents: vec![
-                    "\
-.PHONY: test-1
-test-1:
-    @cargo run",
-                ],
-                expect: Ok("\
-.PHONY: test-1
-test-1:
-    @cargo run"),
-            },
-        ];
-
-        for case in cases {
-            let in_file_names: Vec<String> = case
-                .file_contents
-                .iter()
-                .map(|content| {
-                    let random_file_name = Uuid::new_v4().to_string();
-                    test_file_from_content(random_file_name, content)
-                })
-                .collect();
-
-            assert_eq!(
-                case.expect.map(|e| e.to_string()),
-                concat_file_contents(in_file_names),
-                "\nFailed in the 🚨{:?}🚨",
-                case.title,
-            );
-        }
-    }
-
-    fn test_file_from_content(file_name: String, content: &'static str) -> String {
-        let tmp_dir = std::env::temp_dir();
-        let file_name = file_name + ".mk";
-        let file_path = tmp_dir.join(&file_name);
-
-        let mut file = match OpenOptions::new()
-            .create(true)
-            .write(true)
-            .read(true)
-            .append(true)
-            .open(&file_path)
-        {
-            Err(err) => panic!("fail to create file: {:?}", err),
-            Ok(file) => file,
-        };
-
-        match file.write_all(content.as_bytes()) {
-            Err(e) => {
-                print!("fail to write file: {:?}", e);
-                process::exit(1);
-            }
-            Ok(_) => {}
-        }
-
-        file_path.to_path_buf().to_str().unwrap().to_string()
-    }
-
-    #[test]
-    fn contents_to_commands_test() {
-        struct Case {
-            title: &'static str,
-            contents: &'static str,
-            expect: Result<Vec<&'static str>, &'static str>, // NOTE: order of elements of `expect` order should be same as vec function returns
-        }
-        let cases = vec![
-            Case {
-                title: "comment in same line",
-                contents: "\
-.PHONY: run build check test
-
-run:
-		@cargo run
-
-build:
-		@cargo build
-
-check:
-		@cargo check
-
-
-test: # run test
-        @cargo test
-
-echo:
-	@echo good",
-                expect: Ok(vec!["run", "build", "check", "test", "echo"]),
-            },
-            Case {
-                title: "comment line",
-                contents: "\
-.PHONY: clone build
-
-# https://example.com
-clone:
-		@git clone https://example.com
-
-build:
-		@cargo build",
-                expect: Ok(vec!["clone", "build"]),
-            },
-            Case {
-                title: "invalid format",
-                contents: "echo hello",
-                expect: Err("make command not found"),
-            },
-        ];
-
-        for case in cases {
-            let expect = case.expect.map(|x| {
-                x.iter()
-                    .map(|y| String::from_str(y).unwrap())
-                    .collect::<Vec<String>>()
-            });
-            assert_eq!(
-                expect,
-                contents_to_commands(case.contents.to_string()),
-                "\nFailed in the 🚨{:?}🚨",
-                case.title,
-            );
-        }
-    }
-
-    #[test]
-    fn extract_command_test() {
-        struct Case {
-            title: &'static str,
-            contents: &'static str,
-            expect: Option<&'static str>,
-        }
-        let cases = vec![
-            Case {
-                title: "echo:",
-                contents: "echo:",
-                expect: Some("echo"),
-            },
-            Case {
-                title: "main.o:",
-                contents: "main.o:",
-                expect: Some("main.o"),
-            },
-            Case {
-                title: "test::",
-                contents: "test::",
-                expect: Some("test"),
-            },
-            Case {
-                title: "test ::",
-                contents: "test ::",
-                expect: Some("test"),
-            },
-            Case {
-                title: "echo",
-                contents: "echo",
-                expect: None,
-            },
-            Case {
-                title: "		@git clone https://example.com",
-                contents: "		@git clone https://example.com",
-                expect: None,
-            },
-            Case {
-                title: ".PHONY:",
-                contents: ".PHONY:",
-                expect: None,
-            },
-            Case {
-                title: ".DEFAULT:",
-                contents: ".DEFAULT:",
-                expect: None,
-            },
-            Case {
-                title: "# run:",
-                contents: "# run:",
-                expect: None,
-            },
-            Case {
-                title: " # run:",
-                contents: " # run:",
-                expect: None,
-            },
-        ];
-
-        for case in cases {
-            assert_eq!(
-                case.expect.map(|e| e.to_string()),
-                line_to_command(case.contents.to_string()),
-                "\nFailed in the 🚨{:?}🚨",
-                case.title,
-            );
-        }
-    }
+fn print_error(error_message: String) {
+    println!("[ERR] {}", error_message);
 }
