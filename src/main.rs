@@ -1,4 +1,5 @@
 mod file;
+mod fuzzy_finder;
 mod handler;
 mod parser;
 
