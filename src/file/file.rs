@@ -9,7 +9,7 @@ pub fn create_makefile() -> Result<makefile::Makefile, &'static str> {
 
     Ok(parser::makefile::Makefile::new(
         Path::new(&makefile_name).to_path_buf(),
-    )?)
+    ))
 }
 
 fn specify_makefile_name(target_path: String) -> Option<String> {

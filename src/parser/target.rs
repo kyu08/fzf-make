@@ -2,7 +2,7 @@ use regex::Regex;
 
 pub type Targets = Vec<String>;
 
-pub fn content_to_commands(content: String) -> Result<Targets, &'static str> {
+pub fn content_to_commands(content: String) -> Targets {
     let mut result: Vec<String> = Vec::new();
     for line in content.lines() {
         if let Some(c) = line_to_command(line.to_string()) {
@@ -10,11 +10,7 @@ pub fn content_to_commands(content: String) -> Result<Targets, &'static str> {
         }
     }
 
-    if !result.is_empty() {
-        Ok(result)
-    } else {
-        Err("target not found")
-    }
+    result
 }
 
 fn line_to_command(line: String) -> Option<String> {
@@ -34,8 +30,6 @@ fn line_to_command(line: String) -> Option<String> {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use super::*;
 
     #[test]
@@ -113,7 +107,7 @@ mod test {
         struct Case {
             title: &'static str,
             contents: &'static str,
-            expect: Result<Vec<&'static str>, &'static str>, // NOTE: order of elements of `expect` order should be same as vec function returns
+            expect: Vec<String>, // NOTE: order of elements of `expect` order should be same as vec function returns
         }
         let cases = vec![
             Case {
@@ -136,7 +130,13 @@ test: # run test
 
 echo:
 	@echo good",
-                expect: Ok(vec!["run", "build", "check", "test", "echo"]),
+                expect: vec![
+                    "run".to_string(),
+                    "build".to_string(),
+                    "check".to_string(),
+                    "test".to_string(),
+                    "echo".to_string(),
+                ],
             },
             Case {
                 title: "comment line",
@@ -149,23 +149,18 @@ clone:
 
 build:
 		@cargo build",
-                expect: Ok(vec!["clone", "build"]),
+                expect: vec!["clone".to_string(), "build".to_string()],
             },
             Case {
                 title: "invalid format",
                 contents: "echo hello",
-                expect: Err("target not found"),
+                expect: vec![],
             },
         ];
 
         for case in cases {
-            let expect = case.expect.map(|x| {
-                x.iter()
-                    .map(|y| String::from_str(y).unwrap())
-                    .collect::<Vec<String>>()
-            });
             assert_eq!(
-                expect,
+                case.expect,
                 content_to_commands(case.contents.to_string()),
                 "\nFailed in the 🚨{:?}🚨",
                 case.title,

@@ -15,35 +15,19 @@ pub struct Makefile {
 
 impl Makefile {
     // TODO: add UT
-    pub fn new(path: PathBuf) -> Result<Makefile, &'static str> {
+    pub fn new(path: PathBuf) -> Makefile {
         let file_content = Makefile::path_to_content(path.clone());
         let including_file_paths = include::extract_including_file_paths(file_content.clone());
-        let include_files: Vec<Result<Makefile, &'static str>> = including_file_paths
+        let include_files: Vec<Makefile> = including_file_paths
             .iter()
             .map(|path| Makefile::new(Path::new(&path).to_path_buf()))
             .collect();
 
-        // この辺のエラーの扱いどうしよう
-        let mut include_files_err: Vec<&'static str> = vec![];
-        let mut include_files_ok: Vec<Makefile> = vec![];
-        for i in include_files {
-            match i {
-                Ok(m) => include_files_ok.push(m),
-                Err(err) => include_files_err.push(err),
-            }
-        }
-
-        let targets = target::content_to_commands(file_content);
-        if let Err(e) = targets {
-            print!("failed to parse target\n");
-            return Err(e);
-        }
-
-        Ok(Makefile {
+        Makefile {
             path,
-            include_files: include_files_ok,
-            targets: targets.unwrap(),
-        })
+            include_files,
+            targets: target::content_to_commands(file_content),
+        }
     }
 
     pub fn to_include_path_string(&self) -> Vec<String> {
