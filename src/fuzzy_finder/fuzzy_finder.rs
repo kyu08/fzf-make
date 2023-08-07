@@ -5,10 +5,10 @@ use crate::parser::makefile::Makefile;
 
 pub fn run(makefile: Makefile) {
     let preview_command = get_preview_command(makefile.to_include_path_string());
-    let options = get_skimoptions(&preview_command);
-    let items = get_skimitem(makefile.to_target_string());
+    let options = get_skim_options(&preview_command);
+    let item = get_skim_item(makefile.to_target_string());
 
-    if let output @ Some(_) = Skim::run_with(&options, items) {
+    if let output @ Some(_) = Skim::run_with(&options, item) {
         if output.as_ref().unwrap().is_abort {
             process::exit(0)
         }
@@ -46,7 +46,7 @@ fn get_preview_command(file_paths: Vec<String>) -> String {
     preview_command
 }
 
-fn get_skimoptions(preview_command: &str) -> SkimOptions {
+fn get_skim_options(preview_command: &str) -> SkimOptions {
     SkimOptionsBuilder::default()
         .preview(Some(preview_command))
         .reverse(true)
@@ -54,10 +54,9 @@ fn get_skimoptions(preview_command: &str) -> SkimOptions {
         .unwrap()
 }
 
-fn get_skimitem(targets: Vec<String>) -> Option<Receiver<Arc<dyn SkimItem>>> {
+fn get_skim_item(targets: Vec<String>) -> Option<Receiver<Arc<dyn SkimItem>>> {
     let targets = targets.join("\n");
-    let item_reader = SkimItemReader::default();
-    let items = item_reader.of_bufread(Cursor::new(targets));
+    let items = SkimItemReader::default().of_bufread(Cursor::new(targets));
 
     Some(items)
 }
