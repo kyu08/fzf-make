@@ -19,6 +19,11 @@ jobs:
         id: extract-version2
         run: |
           echo "::set-output name=tag-name::${GITHUB_REF#refs/tags/}"
+
+      - name: echo
+        run: |
+          echo ${{ steps.extract-version.outputs.tag-name }}
+          echo ${{ steps.extract-version2.outputs.tag-name }}
       # - uses: mislav/bump-homebrew-formula-action@v2
       #   if: ${{ !contains(github.ref, '-') }} # skip prereleases
       #   with:
