@@ -2,12 +2,13 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 
 /// The path should be relative path from current directory where make command is executed.
-/// So, the path can be treated as it is.
+/// So the path can be treated as it is.
 /// NOTE: path include `..` is not supported for now like `include ../c.mk`.
 pub fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     for line in file_content.lines() {
-        let include_files = line_to_including_file_paths(line.to_string());
+        let Some(include_files) = line_to_including_file_paths(line.to_string()) else { continue };
+
         result = [result, include_files].concat();
     }
 
@@ -17,29 +18,27 @@ pub fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
 /// The line that is only include directive is ignored.
 /// Pattern like `include foo *.mk $(bar)` is not handled for now.
 /// Additional search is not executed if file is not found based on current directory.
-fn line_to_including_file_paths(line: String) -> Vec<PathBuf> {
+fn line_to_including_file_paths(line: String) -> Option<Vec<PathBuf>> {
     // not to allow tab character, ` ` is used instead of `\s`
     let regex = Regex::new(r"^ *(include|-include|sinclude).*$").unwrap();
-    let include_line = regex.find(line.as_str());
-    match include_line {
-        None => return Vec::new(),
+    match regex.find(line.as_str()) {
         Some(line) => {
-            let excluding_comment = match line.as_str().to_string().split_once("#") {
+            let line_excluding_comment = match line.as_str().to_string().split_once("#") {
                 Some((before, _)) => before.to_string(),
                 None => line.as_str().to_string(),
             };
 
-            let mut file_names: Vec<PathBuf> = excluding_comment
+            let mut file_names: Vec<PathBuf> = line_excluding_comment
                 .split_whitespace()
                 .map(|e| Path::new(e).to_path_buf())
-                // .map(|e| e.to_string())
                 .collect();
 
-            // remove directive(include or -include or sinclude)
+            // remove directive itself. (include or -include or sinclude)
             file_names.remove(0);
 
-            file_names
+            Some(file_names)
         }
+        None => None,
     }
 }
 
@@ -112,68 +111,68 @@ mod test {
         struct Case {
             title: &'static str,
             line: &'static str,
-            expect: Vec<PathBuf>,
+            expect: Option<Vec<PathBuf>>,
         }
         let cases = vec![
             Case {
                 title: "include one.mk two.mk",
                 line: "include one.mk two.mk",
-                expect: vec![
+                expect: Some(vec![
                     Path::new("one.mk").to_path_buf(),
                     Path::new("two.mk").to_path_buf(),
-                ],
+                ]),
             },
             Case {
                 title: "-include",
                 line: "-include one.mk two.mk",
-                expect: vec![
+                expect: Some(vec![
                     Path::new("one.mk").to_path_buf(),
                     Path::new("two.mk").to_path_buf(),
-                ],
+                ]),
             },
             Case {
                 title: "sinclude",
                 line: "sinclude hoge.mk fuga.mk",
-                expect: vec![
+                expect: Some(vec![
                     Path::new("hoge.mk").to_path_buf(),
                     Path::new("fuga.mk").to_path_buf(),
-                ],
+                ]),
             },
             Case {
                 title: " include one.mk two.mk",
                 line: " include one.mk two.mk",
-                expect: vec![
+                expect: Some(vec![
                     Path::new("one.mk").to_path_buf(),
                     Path::new("two.mk").to_path_buf(),
-                ],
+                ]),
             },
             Case {
                 title: "include one.mk two.mk(tab is not allowed)",
                 line: "	include one.mk two.mk",
-                expect: vec![],
+                expect: None,
             },
             Case {
                 title: "not include directive",
                 line: ".PHONY: test",
-                expect: vec![],
+                expect: None,
             },
             Case {
                 title: "include comment",
                 line: "include one.mk two.mk # three.mk",
-                expect: vec![
+                expect: Some(vec![
                     Path::new("one.mk").to_path_buf(),
                     Path::new("two.mk").to_path_buf(),
-                ],
+                ]),
             },
             Case {
                 title: "# include one.mk two.mk # three.mk",
                 line: "# include one.mk two.mk # three.mk",
-                expect: vec![],
+                expect: None,
             },
             Case {
                 title: "included",
                 line: "included",
-                expect: vec![],
+                expect: Some(vec![]),
             },
         ];
 
