@@ -13,7 +13,7 @@ pub fn content_to_commands(content: String) -> Result<Targets, &'static str> {
     if !result.is_empty() {
         Ok(result)
     } else {
-        Err("make command not found")
+        Err("target not found")
     }
 }
 
@@ -154,7 +154,7 @@ build:
             Case {
                 title: "invalid format",
                 contents: "echo hello",
-                expect: Err("make command not found"),
+                expect: Err("target not found"),
             },
         ];
 

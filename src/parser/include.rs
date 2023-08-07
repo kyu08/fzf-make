@@ -1,5 +1,8 @@
 use regex::Regex;
 
+/// The path should be relative path from current directory where make command is executed.
+/// So, the path can be treated as it is.
+/// NOTE: path include `..` is not supported for now like `include ../c.mk`.
 pub fn extract_including_file_paths(file_content: String) -> Vec<String> {
     let mut result: Vec<String> = Vec::new();
     for line in file_content.lines() {
@@ -10,10 +13,9 @@ pub fn extract_including_file_paths(file_content: String) -> Vec<String> {
     result
 }
 
-// trunslate above to english
-// ignore if line is only include
-// give up to handle pattern like `include foo *.mk $(bar)`
-// do not search if file is not found based on current directory
+/// The line that is only include directive is ignored.
+/// Pattern like `include foo *.mk $(bar)` is not handled for now.
+/// Additional search is not executed if file is not found based on current directory.
 fn line_to_including_file_paths(line: String) -> Vec<String> {
     // not to allow tab character, ` ` is used instead of `\s`
     let regex = Regex::new(r"^ *(include|-include|sinclude).*$").unwrap();
@@ -82,7 +84,7 @@ test:
             },
         ];
 
-        for case in cases {
+        for mut case in cases {
             let random_dir_name = Uuid::new_v4().to_string();
             let tmp_dir = std::env::temp_dir().join(random_dir_name);
             match fs::create_dir(tmp_dir.as_path()) {
@@ -90,12 +92,11 @@ test:
                 Ok(_) => {}
             }
 
-            assert_eq!(
-                case.expect,
-                extract_including_file_paths(case.file_content.to_string()),
-                "\nFailed in the 🚨{:?}🚨",
-                case.title,
-            );
+            case.expect.sort();
+            let mut got = extract_including_file_paths(case.file_content.to_string());
+            got.sort();
+
+            assert_eq!(case.expect, got, "\nFailed in the 🚨{:?}🚨", case.title,);
         }
     }
 

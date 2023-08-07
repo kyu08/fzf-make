@@ -24,7 +24,6 @@ impl Makefile {
             .collect();
 
         // この辺のエラーの扱いどうしよう
-        // TODO: extract as fn?
         let mut include_files_err: Vec<&'static str> = vec![];
         let mut include_files_ok: Vec<Makefile> = vec![];
         for i in include_files {
@@ -36,7 +35,7 @@ impl Makefile {
 
         let targets = target::content_to_commands(file_content);
         if let Err(e) = targets {
-            print!("failed to parse target");
+            print!("failed to parse target\n");
             return Err(e);
         }
 
