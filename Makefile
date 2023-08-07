@@ -1,26 +1,34 @@
-.PHONY: test build run check echo-test build-release echo-greeting cmd
+include ./makefiles/test.mk
 
+.PHONY: echo-test
 echo-test:
 	@echo good
 
+.PHONY: test
 test : # run test
-	cargo test
+	RUST_BACKTRACE=1 cargo nextest run
 
+.PHONY: run
 run:
-		@cargo run
+	@cargo run
 
+.PHONY: build
 build:
-		@cargo build
+	@cargo build
 
+.PHONY: check
 check:
-		@cargo check
+	@cargo check
 
+.PHONY: build-release
 build-release:
-		@cargo build --verbose --release
+	@cargo build --verbose --release
 
+.PHONY: echo-greeting
 echo-greeting:
 	@echo hello fzf-make!
 
+.PHONY: cmd
 cmd:
 	@read -p "Do something? y/n:" ans; \
 	if [ "$$ans" = y ]; then  \
