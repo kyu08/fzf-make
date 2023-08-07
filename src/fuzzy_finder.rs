@@ -1,1 +1,1 @@
-pub mod fuzzy_finder;
+pub(super) mod fuzzy_finder;
