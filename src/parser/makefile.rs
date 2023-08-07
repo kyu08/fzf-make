@@ -1,8 +1,6 @@
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
+
+use crate::file::file;
 
 use super::{include, target};
 
@@ -16,7 +14,7 @@ pub struct Makefile {
 impl Makefile {
     // TODO: add UT
     pub fn new(path: PathBuf) -> Makefile {
-        let file_content = Makefile::path_to_content(path.clone());
+        let file_content = file::path_to_content(path.clone());
         let including_file_paths = include::extract_including_file_paths(file_content.clone());
         let include_files: Vec<Makefile> = including_file_paths
             .iter()
@@ -50,20 +48,60 @@ impl Makefile {
 
         result
     }
-
-    // TODO: add UT
-    fn path_to_content(path: PathBuf) -> String {
-        let mut content = String::new();
-        let mut f = File::open(&path).unwrap();
-        f.read_to_string(&mut content).unwrap();
-
-        content
-    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn makefile_new_test() {
+        struct Case {
+            title: &'static str,
+            makefile: Makefile,
+            expect: Vec<&'static str>,
+        }
+
+        let cases = vec![Case {
+            title: "makefile with nested include directive",
+            makefile: Makefile {
+                path: Path::new("path1").to_path_buf(),
+                include_files: vec![
+                    Makefile {
+                        path: Path::new("path2").to_path_buf(),
+                        include_files: vec![Makefile {
+                            path: Path::new("path2-1").to_path_buf(),
+                            include_files: vec![],
+                            targets: vec![],
+                        }],
+                        targets: vec![],
+                    },
+                    Makefile {
+                        path: Path::new("path3").to_path_buf(),
+                        include_files: vec![],
+                        targets: vec![],
+                    },
+                ],
+                targets: vec![],
+            },
+            expect: vec!["path1", "path2", "path2-1", "path3"],
+        }];
+
+        // tempdirにいい感じの環境をつくる
+        // テストかく
+        for case in cases {
+            let mut expect_string: Vec<String> =
+                case.expect.iter().map(|e| e.to_string()).collect();
+            expect_string.sort();
+            let sorted_result = case.makefile.to_include_path_string();
+
+            assert_eq!(
+                expect_string, sorted_result,
+                "\nFailed in the 🚨{:?}🚨",
+                case.title,
+            )
+        }
+    }
 
     #[test]
     fn makefile_to_include_path_string_test() {

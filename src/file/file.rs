@@ -1,7 +1,21 @@
 // module for file manipulation
-use std::path::Path;
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use crate::parser::{self, makefile};
+
+// TODO: add UT
+pub fn path_to_content(path: PathBuf) -> String {
+    let mut content = String::new();
+    let mut f = File::open(&path).unwrap();
+    // TODO: remove unwrap
+    f.read_to_string(&mut content).unwrap();
+
+    content
+}
 
 // get_makefile_file_names returns filenames of Makefile and the files included by Makefile
 pub fn create_makefile() -> Result<makefile::Makefile, &'static str> {
