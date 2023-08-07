@@ -2,18 +2,18 @@ use regex::Regex;
 
 pub type Targets = Vec<String>;
 
-pub fn content_to_commands(content: String) -> Targets {
+pub fn content_to_targets(content: String) -> Targets {
     let mut result: Vec<String> = Vec::new();
     for line in content.lines() {
-        if let Some(c) = line_to_command(line.to_string()) {
-            result.push(c);
+        if let Some(t) = line_to_target(line.to_string()) {
+            result.push(t);
         }
     }
 
     result
 }
 
-fn line_to_command(line: String) -> Option<String> {
+fn line_to_target(line: String) -> Option<String> {
     let regex = Regex::new(r"^[^.#\s\t].+:.*$").unwrap();
     regex.find(line.as_str()).and_then(|m| {
         Some(
@@ -33,7 +33,73 @@ mod test {
     use super::*;
 
     #[test]
-    fn extract_command_test() {
+    fn content_to_targets_test() {
+        struct Case {
+            title: &'static str,
+            contents: &'static str,
+            expect: Vec<String>, // NOTE: order of elements of `expect` order should be same as vec function returns
+        }
+        let cases = vec![
+            Case {
+                title: "comment in same line",
+                contents: "\
+.PHONY: run build check test
+
+run:
+		@cargo run
+
+build:
+		@cargo build
+
+check:
+		@cargo check
+
+
+test: # run test
+        @cargo test
+
+echo:
+	@echo good",
+                expect: vec![
+                    "run".to_string(),
+                    "build".to_string(),
+                    "check".to_string(),
+                    "test".to_string(),
+                    "echo".to_string(),
+                ],
+            },
+            Case {
+                title: "comment line",
+                contents: "\
+.PHONY: clone build
+
+# https://example.com
+clone:
+		@git clone https://example.com
+
+build:
+		@cargo build",
+                expect: vec!["clone".to_string(), "build".to_string()],
+            },
+            Case {
+                title: "invalid format",
+                contents: "echo hello",
+                expect: vec![],
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                content_to_targets(case.contents.to_string()),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            );
+        }
+    }
+
+    #[test]
+    fn line_to_target_test() {
         struct Case {
             title: &'static str,
             contents: &'static str,
@@ -95,73 +161,7 @@ mod test {
         for case in cases {
             assert_eq!(
                 case.expect.map(|e| e.to_string()),
-                line_to_command(case.contents.to_string()),
-                "\nFailed: 🚨{:?}🚨\n",
-                case.title,
-            );
-        }
-    }
-
-    #[test]
-    fn content_to_commands_test() {
-        struct Case {
-            title: &'static str,
-            contents: &'static str,
-            expect: Vec<String>, // NOTE: order of elements of `expect` order should be same as vec function returns
-        }
-        let cases = vec![
-            Case {
-                title: "comment in same line",
-                contents: "\
-.PHONY: run build check test
-
-run:
-		@cargo run
-
-build:
-		@cargo build
-
-check:
-		@cargo check
-
-
-test: # run test
-        @cargo test
-
-echo:
-	@echo good",
-                expect: vec![
-                    "run".to_string(),
-                    "build".to_string(),
-                    "check".to_string(),
-                    "test".to_string(),
-                    "echo".to_string(),
-                ],
-            },
-            Case {
-                title: "comment line",
-                contents: "\
-.PHONY: clone build
-
-# https://example.com
-clone:
-		@git clone https://example.com
-
-build:
-		@cargo build",
-                expect: vec!["clone".to_string(), "build".to_string()],
-            },
-            Case {
-                title: "invalid format",
-                contents: "echo hello",
-                expect: vec![],
-            },
-        ];
-
-        for case in cases {
-            assert_eq!(
-                case.expect,
-                content_to_commands(case.contents.to_string()),
+                line_to_target(case.contents.to_string()),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );

@@ -55,7 +55,7 @@ impl Makefile {
         Makefile {
             path,
             include_files,
-            targets: target::content_to_commands(file_content),
+            targets: target::content_to_targets(file_content),
         }
     }
 

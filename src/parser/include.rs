@@ -21,25 +21,22 @@ pub fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
 fn line_to_including_file_paths(line: String) -> Option<Vec<PathBuf>> {
     // not to allow tab character, ` ` is used instead of `\s`
     let regex = Regex::new(r"^ *(include|-include|sinclude).*$").unwrap();
-    match regex.find(line.as_str()) {
-        Some(line) => {
-            let line_excluding_comment = match line.as_str().to_string().split_once("#") {
-                Some((before, _)) => before.to_string(),
-                None => line.as_str().to_string(),
-            };
+    regex.find(line.as_str()).and_then(|line| {
+        let line_excluding_comment = match line.as_str().to_string().split_once("#") {
+            Some((before, _)) => before.to_string(),
+            None => line.as_str().to_string(),
+        };
 
-            let mut file_names: Vec<PathBuf> = line_excluding_comment
-                .split_whitespace()
-                .map(|e| Path::new(e).to_path_buf())
-                .collect();
+        let mut directive_and_file_names: Vec<PathBuf> = line_excluding_comment
+            .split_whitespace()
+            .map(|e| Path::new(e).to_path_buf())
+            .collect();
 
-            // remove directive itself. (include or -include or sinclude)
-            file_names.remove(0);
+        // remove directive itself. (include or -include or sinclude)
+        directive_and_file_names.remove(0);
 
-            Some(file_names)
-        }
-        None => None,
-    }
+        Some(directive_and_file_names)
+    })
 }
 
 #[cfg(test)]
