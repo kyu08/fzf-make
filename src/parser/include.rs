@@ -1,6 +1,5 @@
-use std::path::{Path, PathBuf};
-
 use regex::Regex;
+use std::path::{Path, PathBuf};
 
 /// The path should be relative path from current directory where make command is executed.
 /// So, the path can be treated as it is.
