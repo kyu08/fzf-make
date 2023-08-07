@@ -5,7 +5,6 @@ use crate::file::file;
 use super::{include, target};
 
 /// Makefile represents a Makefile.
-#[derive(Debug, PartialEq)]
 pub struct Makefile {
     path: PathBuf,
     include_files: Vec<Makefile>,
