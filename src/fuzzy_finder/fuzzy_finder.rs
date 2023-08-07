@@ -1,9 +1,9 @@
 use skim::prelude::{Receiver, Skim, SkimItem, SkimItemReader, SkimOptions, SkimOptionsBuilder};
 use std::{io::Cursor, process, sync::Arc};
 
-use crate::parser::makefile;
+use crate::parser::makefile::Makefile;
 
-pub fn run(makefile: makefile::Makefile) {
+pub fn run(makefile: Makefile) {
     let preview_command = get_preview_command(makefile.to_include_path_string());
     let options = get_skimoptions(&preview_command);
     let items = get_skimitem(makefile.to_target_string());
