@@ -5,6 +5,7 @@ use crate::file::file;
 use super::{include, target};
 
 /// Makefile represents a Makefile.
+#[derive(Debug, PartialEq)]
 pub struct Makefile {
     path: PathBuf,
     include_files: Vec<Makefile>,
@@ -12,20 +13,11 @@ pub struct Makefile {
 }
 
 impl Makefile {
-    // TODO: add UT
-    pub fn new(path: PathBuf) -> Makefile {
-        let file_content = file::path_to_content(path.clone());
-        let including_file_paths = include::extract_including_file_paths(file_content.clone());
-        let include_files: Vec<Makefile> = including_file_paths
-            .iter()
-            .map(|path| Makefile::new(Path::new(&path).to_path_buf()))
-            .collect();
+    // get_makefile_file_names returns filenames of Makefile and the files included by Makefile
+    pub fn create_makefile() -> Result<Makefile, &'static str> {
+        let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else { return Err("makefile not found\n") };
 
-        Makefile {
-            path,
-            include_files,
-            targets: target::content_to_commands(file_content),
-        }
+        Ok(Makefile::new(Path::new(&makefile_name).to_path_buf()))
     }
 
     pub fn to_include_path_string(&self) -> Vec<String> {
@@ -48,58 +40,106 @@ impl Makefile {
 
         result
     }
+
+    // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
+    // It is not difficult to ensure that it works with manual tests, so I will not support it for now.
+    fn new(path: PathBuf) -> Makefile {
+        // If the file path does not exist, the make command cannot be executed in the first place,
+        // so it is not handled here.
+        let file_content = file::path_to_content(path.clone());
+        let include_files = include::extract_including_file_paths(file_content.clone())
+            .iter()
+            .map(|included_file_relative_path| {
+                Makefile::new(Path::new(&included_file_relative_path).to_path_buf())
+            })
+            .collect();
+
+        Makefile {
+            path,
+            include_files,
+            targets: target::content_to_commands(file_content),
+        }
+    }
+
+    fn specify_makefile_name(target_path: String) -> Option<String> {
+        //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
+        //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
+        // enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
+        let makefile_name_options = vec!["GNUmakefile", "makefile", "Makefile"];
+
+        for file_name in makefile_name_options {
+            let path = Path::new(&target_path).join(file_name);
+            if path.is_file() {
+                return Some(file_name.to_string());
+            }
+            continue;
+        }
+
+        None
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
 
+    use std::fs::{self, File};
+    use uuid::Uuid;
+
     #[test]
-    fn makefile_new_test() {
+    fn specify_makefile_name_test() {
         struct Case {
             title: &'static str,
-            makefile: Makefile,
-            expect: Vec<&'static str>,
+            files: Vec<&'static str>,
+            expect: Option<String>,
         }
-
-        let cases = vec![Case {
-            title: "makefile with nested include directive",
-            makefile: Makefile {
-                path: Path::new("path1").to_path_buf(),
-                include_files: vec![
-                    Makefile {
-                        path: Path::new("path2").to_path_buf(),
-                        include_files: vec![Makefile {
-                            path: Path::new("path2-1").to_path_buf(),
-                            include_files: vec![],
-                            targets: vec![],
-                        }],
-                        targets: vec![],
-                    },
-                    Makefile {
-                        path: Path::new("path3").to_path_buf(),
-                        include_files: vec![],
-                        targets: vec![],
-                    },
-                ],
-                targets: vec![],
+        let cases = vec![
+            Case {
+                title: "no makefile",
+                files: vec!["README.md"],
+                expect: None,
             },
-            expect: vec!["path1", "path2", "path2-1", "path3"],
-        }];
+            Case {
+                title: "GNUmakefile",
+                files: vec!["makefile", "GNUmakefile", "README.md", "Makefile"],
+                expect: Some("GNUmakefile".to_string()),
+            },
+            Case {
+                title: "makefile",
+                files: vec!["makefile", "Makefile", "README.md"],
+                expect: Some("makefile".to_string()),
+            },
+            // NOTE: not use this test case because there is a difference in handling case sensitivity between macOS and linux.
+            // to use this test case, you need to determine whether the file system is
+            // case-sensitive or not when test execute.
+            // Case {
+            // title: "Makefile",
+            // files: vec!["Makefile", "README.md"],
+            // expect: Some("makefile".to_string()),
+            // },
+        ];
 
-        // tempdirにいい感じの環境をつくる
-        // テストかく
         for case in cases {
-            let mut expect_string: Vec<String> =
-                case.expect.iter().map(|e| e.to_string()).collect();
-            expect_string.sort();
-            let sorted_result = case.makefile.to_include_path_string();
+            let random_dir_name = Uuid::new_v4().to_string();
+            let tmp_dir = std::env::temp_dir().join(random_dir_name);
+            match fs::create_dir(tmp_dir.as_path()) {
+                Err(e) => panic!("fail to create dir: {:?}", e),
+                Ok(_) => {}
+            }
+
+            for file in case.files {
+                match File::create(tmp_dir.join(file)) {
+                    Err(e) => panic!("fail to create file: {:?}", e),
+                    Ok(_) => {}
+                }
+            }
 
             assert_eq!(
-                expect_string, sorted_result,
-                "\nFailed in the 🚨{:?}🚨",
+                case.expect,
+                Makefile::specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
+                "\nFailed: 🚨{:?}🚨\n",
                 case.title,
-            )
+            );
         }
     }
 
@@ -155,7 +195,7 @@ mod test {
 
             assert_eq!(
                 expect_string, sorted_result,
-                "\nFailed in the 🚨{:?}🚨",
+                "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             )
         }
@@ -222,7 +262,7 @@ mod test {
             assert_eq!(
                 expect_string,
                 case.makefile.to_target_string(),
-                "\nFailed in the 🚨{:?}🚨",
+                "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             )
         }

@@ -96,7 +96,7 @@ test:
             let mut got = extract_including_file_paths(case.file_content.to_string());
             got.sort();
 
-            assert_eq!(case.expect, got, "\nFailed in the 🚨{:?}🚨", case.title,);
+            assert_eq!(case.expect, got, "\nFailed: 🚨{:?}🚨\n", case.title,);
         }
     }
 
@@ -166,7 +166,7 @@ test:
             assert_eq!(
                 case.expect,
                 line_to_including_file_paths(case.line.to_string()),
-                "\nFailed in the 🚨{:?}🚨",
+                "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
         }

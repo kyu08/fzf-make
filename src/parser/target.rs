@@ -96,7 +96,7 @@ mod test {
             assert_eq!(
                 case.expect.map(|e| e.to_string()),
                 line_to_command(case.contents.to_string()),
-                "\nFailed in the 🚨{:?}🚨",
+                "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
         }
@@ -162,7 +162,7 @@ build:
             assert_eq!(
                 case.expect,
                 content_to_commands(case.contents.to_string()),
-                "\nFailed in the 🚨{:?}🚨",
+                "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
         }

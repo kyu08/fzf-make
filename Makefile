@@ -6,7 +6,7 @@ echo-test:
 
 .PHONY: test
 test : # run test
-	cargo nextest run
+	RUST_BACKTRACE=1 cargo nextest run
 
 .PHONY: run
 run:

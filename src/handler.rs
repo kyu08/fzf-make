@@ -1,8 +1,8 @@
-use crate::{file::file, fuzzy_finder::fuzzy_finder};
+use crate::{fuzzy_finder::fuzzy_finder, parser::makefile::Makefile};
 use std::process;
 
 pub fn run() {
-    let makefile = match file::create_makefile() {
+    let makefile = match Makefile::create_makefile() {
         Err(e) => {
             println!("[ERR] {}", e.to_string());
             process::exit(1)
