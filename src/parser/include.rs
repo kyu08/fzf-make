@@ -1,10 +1,21 @@
+use std::path::{Path, PathBuf};
+
 use regex::Regex;
 
 /// The path should be relative path from current directory where make command is executed.
 /// So, the path can be treated as it is.
 /// NOTE: path include `..` is not supported for now like `include ../c.mk`.
-pub fn extract_including_file_paths(file_content: String) -> Vec<String> {
-    let mut result: Vec<String> = Vec::new();
+// pub fn content_to_include_file_paths(file_content: String) -> Vec<String> {
+//     let mut result: Vec<String> = Vec::new();
+//     for line in file_content.lines() {
+//         let include_files = line_to_including_file_paths(line.to_string());
+//         result = [result, include_files].concat();
+//     }
+//
+//     result
+// }
+pub fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
+    let mut result: Vec<PathBuf> = Vec::new();
     for line in file_content.lines() {
         let include_files = line_to_including_file_paths(line.to_string());
         result = [result, include_files].concat();
@@ -16,7 +27,7 @@ pub fn extract_including_file_paths(file_content: String) -> Vec<String> {
 /// The line that is only include directive is ignored.
 /// Pattern like `include foo *.mk $(bar)` is not handled for now.
 /// Additional search is not executed if file is not found based on current directory.
-fn line_to_including_file_paths(line: String) -> Vec<String> {
+fn line_to_including_file_paths(line: String) -> Vec<PathBuf> {
     // not to allow tab character, ` ` is used instead of `\s`
     let regex = Regex::new(r"^ *(include|-include|sinclude).*$").unwrap();
     let include_line = regex.find(line.as_str());
@@ -28,9 +39,10 @@ fn line_to_including_file_paths(line: String) -> Vec<String> {
                 None => line.as_str().to_string(),
             };
 
-            let mut file_names: Vec<String> = excluding_comment
+            let mut file_names: Vec<PathBuf> = excluding_comment
                 .split_whitespace()
-                .map(|e| e.to_string())
+                .map(|e| Path::new(e).to_path_buf())
+                // .map(|e| e.to_string())
                 .collect();
 
             // remove directive(include or -include or sinclude)
@@ -53,33 +65,38 @@ mod test {
         struct Case {
             title: &'static str,
             file_content: &'static str,
-            expect: Vec<&'static str>,
+            expect: Vec<PathBuf>,
         }
         let cases = vec![
             Case {
                 title: "has two lines of line includes include directive",
                 file_content: "\
-include one.mk two.mk
-.PHONY: echo-test
-echo-test:
-	@echo good
+    include one.mk two.mk
+    .PHONY: echo-test
+    echo-test:
+    	@echo good
 
-include three.mk four.mk
+    include three.mk four.mk
 
-.PHONY: test
-test:
-	cargo nextest run",
-                expect: vec!["one.mk", "two.mk", "three.mk", "four.mk"],
+    .PHONY: test
+    test:
+    	cargo nextest run",
+                expect: vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                    Path::new("three.mk").to_path_buf(),
+                    Path::new("four.mk").to_path_buf(),
+                ],
             },
             Case {
                 title: "has no lines includes include directive",
                 file_content: "\
-.PHONY: echo-test test
-echo-test:
-	@echo good
+    .PHONY: echo-test test
+    echo-test:
+    	@echo good
 
-test:
-	cargo nextest run",
+    test:
+    	cargo nextest run",
                 expect: vec![],
             },
         ];
@@ -93,7 +110,7 @@ test:
             }
 
             case.expect.sort();
-            let mut got = extract_including_file_paths(case.file_content.to_string());
+            let mut got = content_to_include_file_paths(case.file_content.to_string());
             got.sort();
 
             assert_eq!(case.expect, got, "\nFailed: 🚨{:?}🚨\n", case.title,);
@@ -105,28 +122,40 @@ test:
         struct Case {
             title: &'static str,
             line: &'static str,
-            expect: Vec<&'static str>,
+            expect: Vec<PathBuf>,
         }
         let cases = vec![
             Case {
                 title: "include one.mk two.mk",
                 line: "include one.mk two.mk",
-                expect: vec!["one.mk", "two.mk"],
+                expect: vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                ],
             },
             Case {
                 title: "-include",
                 line: "-include one.mk two.mk",
-                expect: vec!["one.mk", "two.mk"],
+                expect: vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                ],
             },
             Case {
                 title: "sinclude",
                 line: "sinclude hoge.mk fuga.mk",
-                expect: vec!["hoge.mk", "fuga.mk"],
+                expect: vec![
+                    Path::new("hoge.mk").to_path_buf(),
+                    Path::new("fuga.mk").to_path_buf(),
+                ],
             },
             Case {
                 title: " include one.mk two.mk",
                 line: " include one.mk two.mk",
-                expect: vec!["one.mk", "two.mk"],
+                expect: vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                ],
             },
             Case {
                 title: "include one.mk two.mk(tab is not allowed)",
@@ -141,7 +170,10 @@ test:
             Case {
                 title: "include comment",
                 line: "include one.mk two.mk # three.mk",
-                expect: vec!["one.mk", "two.mk"],
+                expect: vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                ],
             },
             Case {
                 title: "# include one.mk two.mk # three.mk",

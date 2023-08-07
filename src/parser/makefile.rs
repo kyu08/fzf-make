@@ -47,11 +47,9 @@ impl Makefile {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
         let file_content = file::path_to_content(path.clone());
-        let include_files = include::extract_including_file_paths(file_content.clone())
+        let include_files = include::content_to_include_file_paths(file_content.clone())
             .iter()
-            .map(|included_file_relative_path| {
-                Makefile::new(Path::new(&included_file_relative_path).to_path_buf())
-            })
+            .map(|included_file_path| Makefile::new(included_file_path.clone()))
             .collect();
 
         Makefile {
