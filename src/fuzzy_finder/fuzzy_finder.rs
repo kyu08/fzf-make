@@ -4,9 +4,9 @@ use std::{io::Cursor, process, sync::Arc};
 use crate::parser::makefile::Makefile;
 
 pub fn run(makefile: Makefile) {
-    let preview_command = get_preview_command(makefile.to_include_path_string());
+    let preview_command = get_preview_command(makefile.to_include_files_string());
     let options = get_skim_options(&preview_command);
-    let item = get_skim_item(makefile.to_target_string());
+    let item = get_skim_item(makefile.to_targets_string());
 
     if let output @ Some(_) = Skim::run_with(&options, item) {
         if output.as_ref().unwrap().is_abort {

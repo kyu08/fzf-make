@@ -12,36 +12,33 @@ pub struct Makefile {
 }
 
 impl Makefile {
-    // get_makefile_file_names returns filenames of Makefile and the files included by Makefile
     pub fn create_makefile() -> Result<Makefile, &'static str> {
         let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else { return Err("makefile not found\n") };
-
         Ok(Makefile::new(Path::new(&makefile_name).to_path_buf()))
     }
 
-    pub fn to_include_path_string(&self) -> Vec<String> {
-        let mut result: Vec<String> = vec![];
-        result.push(self.path.to_string_lossy().to_string());
+    pub fn to_include_files_string(&self) -> Vec<String> {
+        let mut result: Vec<String> = vec![self.path.to_string_lossy().to_string()];
 
         for include_file in &self.include_files {
-            Vec::append(&mut result, &mut include_file.to_include_path_string());
+            Vec::append(&mut result, &mut include_file.to_include_files_string());
         }
 
         result
     }
 
-    pub fn to_target_string(&self) -> Vec<String> {
+    pub fn to_targets_string(&self) -> Vec<String> {
         let mut result: Vec<String> = vec![];
         (&mut result).append(&mut self.targets.clone());
         for include_file in &self.include_files {
-            Vec::append(&mut result, &mut include_file.to_target_string());
+            Vec::append(&mut result, &mut include_file.to_targets_string());
         }
 
         result
     }
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
-    // It is not difficult to ensure that it works with manual tests, so I will not support it for now.
+    // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
     fn new(path: PathBuf) -> Makefile {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
@@ -61,15 +58,14 @@ impl Makefile {
     fn specify_makefile_name(target_path: String) -> Option<String> {
         //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
         //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
-        // enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
+        // It needs to enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
         let makefile_name_options = vec!["GNUmakefile", "makefile", "Makefile"];
 
         for file_name in makefile_name_options {
-            let path = Path::new(&target_path).join(file_name);
-            if path.is_file() {
+            let exists = Path::new(&target_path).join(file_name).is_file();
+            if exists {
                 return Some(file_name.to_string());
             }
-            continue;
         }
 
         None
@@ -141,7 +137,7 @@ mod test {
     }
 
     #[test]
-    fn makefile_to_include_path_string_test() {
+    fn makefile_to_include_files_string_test() {
         struct Case {
             title: &'static str,
             makefile: Makefile,
@@ -188,7 +184,7 @@ mod test {
             let mut expect_string: Vec<String> =
                 case.expect.iter().map(|e| e.to_string()).collect();
             expect_string.sort();
-            let sorted_result = case.makefile.to_include_path_string();
+            let sorted_result = case.makefile.to_include_files_string();
 
             assert_eq!(
                 expect_string, sorted_result,
@@ -199,7 +195,7 @@ mod test {
     }
 
     #[test]
-    fn makefile_to_target_string_test() {
+    fn makefile_to_targets_string_test() {
         struct Case {
             title: &'static str,
             makefile: Makefile,
@@ -258,7 +254,7 @@ mod test {
 
             assert_eq!(
                 expect_string,
-                case.makefile.to_target_string(),
+                case.makefile.to_targets_string(),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             )
