@@ -20,6 +20,8 @@
 
 # 📦 Installation
 ## Homebrew
+You don't need to install `bat` because `fzf-make` will install it automatically via Homebrew.
+
 ```sh
 # install
 brew tap kyu08/tap
@@ -30,6 +32,11 @@ brew install kyu08/tap/fzf-make
 # update 
 brew update
 brew upgrade fzf-make
+```
+
+## Cargo
+```sh
+cargo install --git https://github.com/kyu08/fzf-make
 ```
 
 # 💡 Usage
