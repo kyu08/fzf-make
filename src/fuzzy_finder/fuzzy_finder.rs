@@ -33,7 +33,9 @@ pub fn run(makefile: Makefile) {
 fn get_preview_command(mut file_paths: Vec<String>) -> String {
     // workaround for https://stackoverflow.com/questions/15432156/display-filename-before-matching-line
     // For more information, see https://github.com/kyu08/fzf-make/issues/53#issuecomment-1684872018
-    file_paths.push(String::from("/dev/null"));
+    if file_paths.len() == 1 {
+        file_paths.push(String::from("/dev/null"));
+    }
     // MEMO: result has format like `test.mk:2:echo-mk`
     let preview_command = format!(
         r#"
