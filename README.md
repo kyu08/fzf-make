@@ -19,7 +19,8 @@
 - [bat](https://github.com/sharkdp/bat) (In the future, we intend to make it work with `cat` as well, but currently it only works with `bat`.)
 
 # 📦 Installation
-## Homebrew
+## macOS
+### Homebrew
 You don't need to install `bat` because `fzf-make` will install it automatically via Homebrew.
 
 ```sh
@@ -42,7 +43,8 @@ brew upgrade fzf-make
 paru -S fzf-make
 ```
 
-## Cargo
+## OS-independent method
+### Cargo
 ```sh
 cargo install --git https://github.com/kyu08/fzf-make
 ```
