@@ -23,6 +23,27 @@ brew update
 brew upgrade fzf-make
 ```
 
+## 💻Develop
+
+### nix
+
+> You can create a development environment using nix!
+
+```sh
+nix develop
+```
+
+> You can also build a local derivation.
+
+```sh
+nix build .
+```
+
+> Or run it from your terminal
+
+```sh
+nix run github:kyu08/fzf-make
+```
 
 # ⚠️ Caution
 - The following format targets are supported(contributions are welcome!)
