@@ -34,6 +34,14 @@ brew update
 brew upgrade fzf-make
 ```
 
+## Arch Linux
+
+`fzf-make` can be installed from the [AUR](https://aur.archlinux.org/packages/fzf-make) using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers). For example:
+
+```sh
+paru -S fzf-make
+```
+
 ## Cargo
 ```sh
 cargo install --git https://github.com/kyu08/fzf-make
