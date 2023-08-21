@@ -35,26 +35,7 @@ brew update
 brew upgrade fzf-make
 ```
 
-### nix
-
-> You can create a development environment using nix!
-
-```sh
-nix develop
-```
-
-> You can also build a local derivation.
-
-```sh
-nix build .
-```
-
-> Or run it from your terminal
-
-```sh
-nix run github:kyu08/fzf-make
-
-### Arch Linux
+## Arch Linux
 
 `fzf-make` can be installed from the [AUR](https://aur.archlinux.org/packages/fzf-make) using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers). For example:
 
@@ -62,8 +43,22 @@ nix run github:kyu08/fzf-make
 paru -S fzf-make
 ```
 
-### OS-independent method
+## NixOS / Nix (package manager)
+`fzf-make` can be run from the repository (latest version)
+```sh
+nix run github:kyu08/fzf-make
+```
 
+Or from the nixpkgs (channel >= 23.05)
+```sh
+nix run nixpkgs#fzf-make
+```
+
+> **Note**
+> You may need to enable experimental feature. In that case, execute the following command to enable them
+> `echo "experimental-features = nix-command flakes" | tee  ~/.config/nix/nix.conf`
+
+## OS-independent method
 ### Cargo
 ```sh
 cargo install --git https://github.com/kyu08/fzf-make
@@ -72,6 +67,14 @@ cargo install --git https://github.com/kyu08/fzf-make
 # 💡 Usage
 1. Execute `fzf-make` in the directory include makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile`)
 1. Select make command you want to execute
+
+# 💻 Development
+- You can use `nix` to create a developement shell with the project dependencies.
+
+Within the repo root, execute the following command:
+```nix
+nix develop
+```
 
 # 👥 Contribution
 - Contributions are welcome!
