@@ -69,7 +69,14 @@ cargo install --git https://github.com/kyu08/fzf-make
 1. Select make command you want to execute
 
 # 💻 Development
-- You can use `nix` to create a developement shell with the project dependencies.
+1. Clone this repository
+1. Change the codes
+1. Run `make run`
+
+To execute test, run `make test`(needs `nextest`). Or just run `cargo test`.
+
+## nix
+Or you can use `nix` to create a developement shell with the project dependencies.
 
 Within the repo root, execute the following command:
 ```nix
