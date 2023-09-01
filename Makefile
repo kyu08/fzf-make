@@ -1,11 +1,5 @@
-include ./makefiles/test.mk
-
-.PHONY: echo-test
-echo-test:
-	@echo good
-
 .PHONY: test
-test : # run test
+test : # Run unit tests
 	RUST_BACKTRACE=1 cargo nextest run
 
 .PHONY: run
@@ -23,6 +17,13 @@ check:
 .PHONY: build-release
 build-release:
 	@cargo build --verbose --release
+
+# Targets for test
+include ./makefiles/test.mk
+
+.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target
+toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target:
+	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
 
 .PHONY: echo-greeting
 echo-greeting:
