@@ -36,6 +36,7 @@ fn get_preview_command(mut file_paths: Vec<String>) -> String {
     if file_paths.len() == 1 {
         file_paths.push(String::from("/dev/null"));
     }
+    // TODO: Make preview command selectable via config file(bat/cat)
     // MEMO: result has format like `test.mk:2:echo-mk`
     let preview_command = format!(
         r#"
@@ -54,7 +55,8 @@ fn get_preview_command(mut file_paths: Vec<String>) -> String {
 fn get_skim_options(preview_command: &str) -> SkimOptions {
     SkimOptionsBuilder::default()
         .preview(Some(preview_command))
-        .reverse(true)
+        .preview_window(Some("up:50%")) // TODO: Make configurable via config file
+        // .reverse(true) // TODO: Make configurable via config file
         .build()
         .unwrap()
 }
