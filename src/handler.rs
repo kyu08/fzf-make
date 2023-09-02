@@ -1,4 +1,4 @@
-use crate::{fuzzy_finder::fuzzy_finder, parser::makefile::Makefile};
+use crate::{fuzzy_finder, parser::makefile::Makefile};
 use std::process;
 
 pub fn run() {
