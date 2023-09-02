@@ -1,3 +1,4 @@
+use colored::*;
 use skim::prelude::{Receiver, Skim, SkimItem, SkimItemReader, SkimOptions, SkimOptionsBuilder};
 use std::{io::Cursor, process, sync::Arc};
 
@@ -18,7 +19,11 @@ pub fn run(makefile: Makefile) {
             .unwrap_or_else(Vec::new);
 
         for item in selected_items.iter() {
-            println!("executing `make {}`...", item.output().to_string());
+            println!(
+                "{}",
+                ("make ".to_string() + &item.output().to_string()).blue() // TODO: Make output color configurable via config file
+            );
+
             process::Command::new("make")
                 .stdin(process::Stdio::inherit())
                 .arg(item.output().to_string())
