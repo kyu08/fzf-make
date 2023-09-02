@@ -9,3 +9,4 @@ edition = "2021"
 regex = "1.7.1"
 skim = "0.10.4"
 uuid = { version = "1.4.1", features = ["serde", "v4"] }
+colored = "2"
