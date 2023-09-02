@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::file::file;
+use crate::file;
 
 use super::{include, target};
 
