@@ -1,14 +1,14 @@
+use super::target::*;
+use regex::Regex;
 use std::path::{Path, PathBuf};
-
-use crate::file;
-
-use super::{include, target};
+use std::{fs::File, io::Read};
 
 /// Makefile represents a Makefile.
+#[derive(Clone)]
 pub struct Makefile {
     path: PathBuf,
     include_files: Vec<Makefile>,
-    targets: target::Targets,
+    targets: Targets,
 }
 
 impl Makefile {
@@ -29,7 +29,7 @@ impl Makefile {
 
     pub fn to_targets_string(&self) -> Vec<String> {
         let mut result: Vec<String> = vec![];
-        (&mut result).append(&mut self.targets.clone());
+        (&mut result).append(&mut self.targets.0.clone());
         for include_file in &self.include_files {
             Vec::append(&mut result, &mut include_file.to_targets_string());
         }
@@ -42,8 +42,8 @@ impl Makefile {
     fn new(path: PathBuf) -> Makefile {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
-        let file_content = file::path_to_content(path.clone());
-        let include_files = include::content_to_include_file_paths(file_content.clone())
+        let file_content = path_to_content(path.clone());
+        let include_files = content_to_include_file_paths(file_content.clone())
             .iter()
             .map(|included_file_path| Makefile::new(included_file_path.clone()))
             .collect();
@@ -51,7 +51,7 @@ impl Makefile {
         Makefile {
             path,
             include_files,
-            targets: target::content_to_targets(file_content),
+            targets: Targets::new(file_content),
         }
     }
 
@@ -70,6 +70,55 @@ impl Makefile {
 
         None
     }
+}
+
+pub fn path_to_content(path: PathBuf) -> String {
+    let mut content = String::new();
+
+    // Not handle cases where files are not found because make command cannot be
+    // executed in the first place if Makefile or included files are not found.
+    let mut f = File::open(&path).unwrap();
+    f.read_to_string(&mut content).unwrap();
+
+    content
+}
+
+/// The path should be relative path from current directory where make command is executed.
+/// So the path can be treated as it is.
+/// NOTE: path include `..` is not supported for now like `include ../c.mk`.
+pub fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
+    let mut result: Vec<PathBuf> = Vec::new();
+    for line in file_content.lines() {
+        let Some(include_files) = line_to_including_file_paths(line.to_string()) else { continue };
+
+        result = [result, include_files].concat();
+    }
+
+    result
+}
+
+/// The line that is only include directive is ignored.
+/// Pattern like `include foo *.mk $(bar)` is not handled for now.
+/// Additional search is not executed if file is not found based on current directory.
+fn line_to_including_file_paths(line: String) -> Option<Vec<PathBuf>> {
+    // not to allow tab character, ` ` is used instead of `\s`
+    let regex = Regex::new(r"^ *(include|-include|sinclude).*$").unwrap();
+    regex.find(line.as_str()).and_then(|line| {
+        let line_excluding_comment = match line.as_str().to_string().split_once("#") {
+            Some((before, _)) => before.to_string(),
+            None => line.as_str().to_string(),
+        };
+
+        let mut directive_and_file_names: Vec<PathBuf> = line_excluding_comment
+            .split_whitespace()
+            .map(|e| Path::new(e).to_path_buf())
+            .collect();
+
+        // remove directive itself. (include or -include or sinclude)
+        directive_and_file_names.remove(0);
+
+        Some(directive_and_file_names)
+    })
 }
 
 #[cfg(test)]
@@ -150,7 +199,7 @@ mod test {
                 makefile: Makefile {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
-                    targets: vec!["test".to_string(), "run".to_string()],
+                    targets: Targets(vec!["test".to_string(), "run".to_string()]),
                 },
                 expect: vec!["path"],
             },
@@ -164,17 +213,17 @@ mod test {
                             include_files: vec![Makefile {
                                 path: Path::new("path2-1").to_path_buf(),
                                 include_files: vec![],
-                                targets: vec![],
+                                targets: Targets(vec![]),
                             }],
-                            targets: vec![],
+                            targets: Targets(vec![]),
                         },
                         Makefile {
                             path: Path::new("path3").to_path_buf(),
                             include_files: vec![],
-                            targets: vec![],
+                            targets: Targets(vec![]),
                         },
                     ],
-                    targets: vec![],
+                    targets: Targets(vec![]),
                 },
                 expect: vec!["path1", "path2", "path2-1", "path3"],
             },
@@ -208,7 +257,7 @@ mod test {
                 makefile: Makefile {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
-                    targets: vec![],
+                    targets: Targets(vec![]),
                 },
                 expect: vec![],
             },
@@ -217,7 +266,7 @@ mod test {
                 makefile: Makefile {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
-                    targets: vec!["test".to_string(), "run".to_string()],
+                    targets: Targets(vec!["test".to_string(), "run".to_string()]),
                 },
                 expect: vec!["test", "run"],
             },
@@ -231,17 +280,17 @@ mod test {
                             include_files: vec![Makefile {
                                 path: Path::new("path2-1").to_path_buf(),
                                 include_files: vec![],
-                                targets: vec!["test2-1".to_string(), "run2-1".to_string()],
+                                targets: Targets(vec!["test2-1".to_string(), "run2-1".to_string()]),
                             }],
-                            targets: vec!["test2".to_string(), "run2".to_string()],
+                            targets: Targets(vec!["test2".to_string(), "run2".to_string()]),
                         },
                         Makefile {
                             path: Path::new("path3").to_path_buf(),
                             include_files: vec![],
-                            targets: vec!["test3".to_string(), "run3".to_string()],
+                            targets: Targets(vec!["test3".to_string(), "run3".to_string()]),
                         },
                     ],
-                    targets: vec!["test1".to_string(), "run1".to_string()],
+                    targets: Targets(vec!["test1".to_string(), "run1".to_string()]),
                 },
                 expect: vec![
                     "test1", "run1", "test2", "run2", "test2-1", "run2-1", "test3", "run3",
@@ -258,6 +307,150 @@ mod test {
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             )
+        }
+    }
+
+    #[test]
+    fn extract_including_file_paths_test() {
+        struct Case {
+            title: &'static str,
+            file_content: &'static str,
+            expect: Vec<PathBuf>,
+        }
+        let cases = vec![
+            Case {
+                title: "has two lines of line includes include directive",
+                file_content: "\
+    include one.mk two.mk
+    .PHONY: echo-test
+    echo-test:
+    	@echo good
+
+    include three.mk four.mk
+
+    .PHONY: test
+    test:
+    	cargo nextest run",
+                expect: vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                    Path::new("three.mk").to_path_buf(),
+                    Path::new("four.mk").to_path_buf(),
+                ],
+            },
+            Case {
+                title: "has no lines includes include directive",
+                file_content: "\
+    .PHONY: echo-test test
+    echo-test:
+    	@echo good
+
+    test:
+    	cargo nextest run",
+                expect: vec![],
+            },
+        ];
+
+        for mut case in cases {
+            let random_dir_name = Uuid::new_v4().to_string();
+            let tmp_dir = std::env::temp_dir().join(random_dir_name);
+            match fs::create_dir(tmp_dir.as_path()) {
+                Err(e) => panic!("fail to create dir: {:?}", e),
+                Ok(_) => {}
+            }
+
+            case.expect.sort();
+            let mut got = content_to_include_file_paths(case.file_content.to_string());
+            got.sort();
+
+            assert_eq!(case.expect, got, "\nFailed: 🚨{:?}🚨\n", case.title,);
+        }
+    }
+
+    #[test]
+    fn line_to_including_file_paths_test() {
+        struct Case {
+            title: &'static str,
+            line: &'static str,
+            expect: Option<Vec<PathBuf>>,
+        }
+        let cases = vec![
+            Case {
+                title: "include one.mk two.mk",
+                line: "include one.mk two.mk",
+                expect: Some(vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                ]),
+            },
+            Case {
+                title: "-include",
+                line: "-include one.mk two.mk",
+                expect: Some(vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                ]),
+            },
+            Case {
+                title: "sinclude",
+                line: "sinclude hoge.mk fuga.mk",
+                expect: Some(vec![
+                    Path::new("hoge.mk").to_path_buf(),
+                    Path::new("fuga.mk").to_path_buf(),
+                ]),
+            },
+            Case {
+                title: " include one.mk two.mk",
+                line: " include one.mk two.mk",
+                expect: Some(vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                ]),
+            },
+            Case {
+                title: "include one.mk two.mk(tab is not allowed)",
+                line: "	include one.mk two.mk",
+                expect: None,
+            },
+            Case {
+                title: "not include directive",
+                line: ".PHONY: test",
+                expect: None,
+            },
+            Case {
+                title: "include comment",
+                line: "include one.mk two.mk # three.mk",
+                expect: Some(vec![
+                    Path::new("one.mk").to_path_buf(),
+                    Path::new("two.mk").to_path_buf(),
+                ]),
+            },
+            Case {
+                title: "# include one.mk two.mk # three.mk",
+                line: "# include one.mk two.mk # three.mk",
+                expect: None,
+            },
+            Case {
+                title: "included",
+                line: "included",
+                expect: Some(vec![]),
+            },
+        ];
+
+        for case in cases {
+            let random_dir_name = Uuid::new_v4().to_string();
+            let tmp_dir = std::env::temp_dir().join(random_dir_name);
+            match fs::create_dir(tmp_dir.as_path()) {
+                Err(e) => panic!("fail to create dir: {:?}", e),
+                Ok(_) => {}
+            }
+
+            assert_eq!(
+                case.expect,
+                line_to_including_file_paths(case.line.to_string()),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            );
         }
     }
 }

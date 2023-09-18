@@ -1,9 +1,11 @@
-mod file;
+mod controller;
 mod fuzzy_finder;
-mod handler;
-mod parser;
+mod models;
+mod usecase;
+
+use crate::controller::controller_main;
 
 fn main() {
-    // TODO: catch panic
-    handler::run();
+    // TODO: Catch panic
+    controller_main::run();
 }
