@@ -14,6 +14,8 @@
 # 🛠️ Features
 - Select and execute a make target using fzf
 - Support `include` directive
+- **(Scheduled to be developed)** Support config file
+- **(Scheduled to be developed)** Command history
 
 # 👓 Prerequisites
 - [bat](https://github.com/sharkdp/bat) (In the future, we intend to make it work with `cat` as well, but currently it only works with `bat`.)
