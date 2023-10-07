@@ -2,6 +2,17 @@
 test : # Run unit tests
 	RUST_BACKTRACE=1 cargo nextest run
 
+# Install tools if not installed.
+.PHONY: tools
+tools:
+	@if ! which cargo-nextest > /dev/null; then \
+		cargo install cargo-nextest; \
+	fi
+	@if ! which cargo-set-version > /dev/null; then \
+		cargo install cargo-edit; \
+	fi
+	@echo "Installation completed! 🎉"
+
 .PHONY: run
 run:
 	@cargo run
@@ -17,6 +28,14 @@ check:
 .PHONY: build-release
 build-release:
 	@cargo build --verbose --release
+
+.PHONY: upgrade-and-build-release-binary
+upgrade-and-build-release-binary: tools
+	@read -p "Upgrade to new version? (If n or empty, the version will not be upgraded) y/n: " ans; \
+	if [ "$$ans" = y ]; then \
+		cargo set-version --bump minor; \
+	fi; \
+	make build-release
 
 # Targets for test
 include ./makefiles/test.mk
