@@ -63,12 +63,16 @@ nix run nixpkgs#fzf-make
 ## OS-independent method
 ### Cargo
 ```sh
-cargo install --git https://github.com/kyu08/fzf-make
+cargo install fzf-make
 ```
 
 # 💡 Usage
+## Run `fzf-make`
 1. Execute `fzf-make` in the directory include makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile`)
 1. Select make command you want to execute
+
+## Misc
+Comming soon...
 
 # 💻 Development
 1. Clone this repository
