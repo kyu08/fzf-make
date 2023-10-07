@@ -1,6 +1,6 @@
 [package]
 name = "fzf-make"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 authors = ["kyu08"]
 description = "A command line tool that executes make target using fuzzy finder with preview window."
