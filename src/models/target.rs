@@ -1,16 +1,19 @@
 use regex::Regex;
 
-pub type Targets = Vec<String>;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Targets(pub Vec<String>);
 
-pub fn content_to_targets(content: String) -> Targets {
-    let mut result: Vec<String> = Vec::new();
-    for line in content.lines() {
-        if let Some(t) = line_to_target(line.to_string()) {
-            result.push(t);
+impl Targets {
+    pub fn new(content: String) -> Targets {
+        let mut result: Vec<String> = Vec::new();
+        for line in content.lines() {
+            if let Some(t) = line_to_target(line.to_string()) {
+                result.push(t);
+            }
         }
-    }
 
-    result
+        Targets(result)
+    }
 }
 
 fn line_to_target(line: String) -> Option<String> {
@@ -37,7 +40,7 @@ mod test {
         struct Case {
             title: &'static str,
             contents: &'static str,
-            expect: Vec<String>, // NOTE: order of elements of `expect` order should be same as vec function returns
+            expect: Targets, // NOTE: order of elements of `expect` order should be same as vec function returns
         }
         let cases = vec![
             Case {
@@ -60,13 +63,13 @@ test: # run test
 
 echo:
 	@echo good",
-                expect: vec![
+                expect: Targets(vec![
                     "run".to_string(),
                     "build".to_string(),
                     "check".to_string(),
                     "test".to_string(),
                     "echo".to_string(),
-                ],
+                ]),
             },
             Case {
                 title: "comment line",
@@ -79,19 +82,19 @@ clone:
 
 build:
 		@cargo build",
-                expect: vec!["clone".to_string(), "build".to_string()],
+                expect: Targets(vec!["clone".to_string(), "build".to_string()]),
             },
             Case {
                 title: "invalid format",
                 contents: "echo hello",
-                expect: vec![],
+                expect: Targets(vec![]),
             },
         ];
 
         for case in cases {
             assert_eq!(
                 case.expect,
-                content_to_targets(case.contents.to_string()),
+                Targets::new(case.contents.to_string()),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );

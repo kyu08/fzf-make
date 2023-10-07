@@ -2,7 +2,7 @@ use colored::*;
 use skim::prelude::{Receiver, Skim, SkimItem, SkimItemReader, SkimOptions, SkimOptionsBuilder};
 use std::{io::Cursor, process, sync::Arc};
 
-use crate::parser::makefile::Makefile;
+use crate::models::makefile::Makefile;
 
 pub fn run(makefile: Makefile) {
     let preview_command = get_preview_command(makefile.to_include_files_string());
