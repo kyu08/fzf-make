@@ -17,7 +17,7 @@ impl Targets {
 }
 
 fn line_to_target(line: String) -> Option<String> {
-    let regex = Regex::new(r"^[^.#\s\t].+:.*$").unwrap();
+    let regex = Regex::new(r"^[^.#\s\t].+:[^=]*$").unwrap();
     regex.find(line.as_str()).and_then(|m| {
         Some(
             m.as_str()
@@ -157,6 +157,11 @@ build:
             Case {
                 title: " # run:",
                 contents: " # run:",
+                expect: None,
+            },
+            Case {
+                title: "hoge := 1",
+                contents: "hoge := 1",
                 expect: None,
             },
         ];
