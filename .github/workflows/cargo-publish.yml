@@ -1,0 +1,14 @@
+name: Run cargo publish
+
+on:
+  push:
+    tags: 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aactions/checkoutctions/checkout@v4
+      - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
