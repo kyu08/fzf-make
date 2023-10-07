@@ -18,7 +18,6 @@ jobs:
           formula-path: Formula/fzf-make.rb
           homebrew-tap: kyu08/homebrew-tap
           base-branch: main
-          download-url: https://github.com/kyu08/fzf-make/releases/download/${{ steps.extract-version.outputs.tag-name }}/fzf-make
           commit-message: |
             {{formulaName}} {{version}}
 
