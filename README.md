@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="./static/fzf-make-logo.png" />
+<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-logo.png" />
 
 `fzf-make` is the command line tool that execute make target using fzf.
 
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
 
-![fzf-make-demo](static/fzf-demo.gif)
+<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.gif" />
 
 </div>
 
@@ -72,7 +72,11 @@ cargo install fzf-make
 1. Select make command you want to execute
 
 ## Misc
-Comming soon...
+| Command | Output |
+|--------|--------|
+| `fzf-make --help` |  <img width="752" alt="fzf-make-help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-help.png">|
+| `fzf-make --version` | <img width="752" alt="fzf-make-version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-version.png"> |
+| `fzf-make ${some_invalid_command}` | <img width="752" alt="fzf-make-invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-invalid-arg.png"> |
 
 # 💻 Development
 1. Clone this repository
