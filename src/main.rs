@@ -1,5 +1,4 @@
 mod controller;
-mod fuzzy_finder;
 mod models;
 mod usecase;
 

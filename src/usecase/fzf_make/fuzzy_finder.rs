@@ -1,10 +1,9 @@
-use colored::*;
 use skim::prelude::{Receiver, Skim, SkimItem, SkimItemReader, SkimOptions, SkimOptionsBuilder};
 use std::{io::Cursor, process, sync::Arc};
 
 use crate::models::makefile::Makefile;
 
-pub fn run(makefile: Makefile) {
+pub fn run(makefile: Makefile) -> String {
     let preview_command = get_preview_command(makefile.to_include_files_string());
     let options = get_skim_options(&preview_command);
     let item = get_skim_item(makefile.to_targets_string());
@@ -18,20 +17,10 @@ pub fn run(makefile: Makefile) {
             .map(|out| out.selected_items)
             .unwrap_or_else(Vec::new);
 
-        for item in selected_items.iter() {
-            println!(
-                "{}",
-                ("make ".to_string() + &item.output().to_string()).blue() // TODO: Make output color configurable via config file
-            );
-
-            process::Command::new("make")
-                .stdin(process::Stdio::inherit())
-                .arg(item.output().to_string())
-                .spawn()
-                .expect("Failed to execute process")
-                .wait()
-                .expect("Failed to execute process");
-        }
+        selected_items.first().unwrap().output().to_string()
+    } else {
+        println!("[ERR] {}", "Fail to get selected target.".to_string());
+        process::exit(1)
     }
 }
 
