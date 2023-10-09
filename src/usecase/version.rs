@@ -3,6 +3,12 @@ use std::env;
 
 pub struct Version;
 
+impl Version {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl Usecase for Version {
     fn command_str(&self) -> Vec<&'static str> {
         vec!["--version", "-v", "version"]
@@ -10,12 +16,6 @@ impl Usecase for Version {
 
     fn run(&self) {
         println!("v{}", get_version());
-    }
-}
-
-impl Version {
-    pub fn new() -> Self {
-        Self {}
     }
 }
 

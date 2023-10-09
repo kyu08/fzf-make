@@ -2,6 +2,12 @@ use crate::usecase::usecase::Usecase;
 
 pub struct Help;
 
+impl Help {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl Usecase for Help {
     fn command_str(&self) -> Vec<&'static str> {
         vec!["--help", "-h", "help"]
@@ -9,12 +15,6 @@ impl Usecase for Help {
 
     fn run(&self) {
         println!("{}", get_help());
-    }
-}
-
-impl Help {
-    pub fn new() -> Self {
-        Self {}
     }
 }
 
