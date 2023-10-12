@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::{collections::HashMap, env};
 
-use crate::usecases::{fzf_make_main, help, invalid_arg, usecase, version};
+use crate::usecases::{fzf_make_main, fzf_make_ratatui_main, help, invalid_arg, usecase, version};
 
 pub fn run() {
     let command_line_args = env::args().collect();
@@ -33,6 +33,7 @@ fn usecases() -> HashMap<&'static str, Arc<dyn usecase::Usecase>> {
         Arc::new(help::Help::new()),
         Arc::new(invalid_arg::InvalidArg::new()),
         Arc::new(version::Version::new()),
+        Arc::new(fzf_make_ratatui_main::FzfMakeRatatui::new()),
     ];
 
     let mut usecases_hash_map = HashMap::new();
