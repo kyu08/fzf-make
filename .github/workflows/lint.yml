@@ -1,0 +1,22 @@
+name: Lint
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    paths:
+      - 'src/**.rs'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Lint
+      run: |
+        cargo fmt
+        cargo clippy
