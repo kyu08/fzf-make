@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-logo.png" />
 
-`fzf-make` is the command line tool that execute make target using fzf.
+`fzf-make` is a command line tool that executes make target using fuzzy finder with preview window.
 
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
