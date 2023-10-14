@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::{collections::HashMap, env};
 
-use crate::usecase::{fzf_make_main, help, invalid_arg, usecase, version};
+use crate::usecases::{fzf_make_main, help, invalid_arg, usecase, version};
 
 pub fn run() {
     let command_line_args = env::args().collect();
@@ -22,8 +22,8 @@ fn args_to_usecase(args: Vec<String>) -> Arc<dyn usecase::Usecase> {
     };
 
     match usecases().get(command.as_str()) {
-        Some(uc) => return uc.clone(),
-        None => return Arc::new(invalid_arg::InvalidArg::new()),
+        Some(uc) => uc.clone(),
+        None => Arc::new(invalid_arg::InvalidArg::new()),
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::models::makefile::Makefile;
-use crate::usecase::{fzf_make::fuzzy_finder, usecase::Usecase};
+use crate::usecases::{fzf_make::fuzzy_finder, usecase::Usecase};
 use colored::*;
 use std::process;
 
@@ -19,7 +19,7 @@ impl Usecase for FzfMake {
     fn run(&self) {
         let makefile = match Makefile::create_makefile() {
             Err(e) => {
-                println!("[ERR] {}", e.to_string());
+                println!("[ERR] {}", e);
                 process::exit(1)
             }
             Ok(f) => f,

@@ -1,6 +1,6 @@
 .PHONY: test
 test : # Run unit tests
-	RUST_BACKTRACE=1 cargo nextest run
+	RUST_BACKTRACE=full cargo nextest run
 
 # Install tools if not installed.
 .PHONY: tools
@@ -23,7 +23,7 @@ build:
 
 .PHONY: check
 check:
-	@cargo check
+	@cargo clippy -- -D warnings
 
 .PHONY: build-release
 build-release:

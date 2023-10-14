@@ -1,4 +1,4 @@
-use crate::usecase::usecase::Usecase;
+use crate::usecases::usecase::Usecase;
 
 pub struct Help;
 
