@@ -1,4 +1,4 @@
-use crate::usecase::usecase::Usecase;
+use crate::usecases::usecase::Usecase;
 use std::env;
 
 pub struct Version;

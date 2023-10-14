@@ -19,7 +19,7 @@ pub fn run(makefile: Makefile) -> String {
 
         selected_items.first().unwrap().output().to_string()
     } else {
-        println!("[ERR] {}", "Fail to get selected target.".to_string());
+        println!("[ERR] Fail to get selected target.");
         process::exit(1)
     }
 }

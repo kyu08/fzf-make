@@ -1,6 +1,6 @@
 mod controller;
 mod models;
-mod usecase;
+mod usecases;
 
 use crate::controller::controller_main;
 
