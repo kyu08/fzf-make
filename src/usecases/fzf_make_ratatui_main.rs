@@ -14,9 +14,6 @@ impl Usecase for FzfMakeRatatui {
         vec!["--r", "-r", "r"]
     }
 
-    // TODO: ratatuiのUIが起動するようにする
-    // まずはtutorialのコードが動くようにする https://github.com/ratatui-org/ratatui-book/tree/main/src/tutorial/json-editor/ratatui-json-editor-app
-    // そこからUIを少しずつ作っていく
     fn run(&self) {
         let _ = ratatui::main();
     }
