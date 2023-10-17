@@ -20,6 +20,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
         ])
         .split(f.size());
 
+    //  TODO: ここでfzf-makeを実行する
     let list = rounded_border_block("fzf-make");
     f.render_widget(list, chunks[0]);
 
