@@ -101,7 +101,6 @@ nix develop
 - Contributions sind willkommen!
 - Wenn du eine Funktionsanfrage hast, erstelle bitte zuerst ein Issue.
 - Wenn du fzf-make zu einem Paketmanager hinzugefügt hast, lass es mich bitte wissen. (oder sende bitte einen PR, um die Installation über den Paketmanager in die `README.md` aufzunehmen)
-- If you have any questions, feel free to create an issue and ask.
 - Wenn Fragen bestehen, gerne einfach ein Issue erstellen und fragen.
 
 # 🗒 Related Article(s)
