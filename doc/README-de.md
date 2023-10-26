@@ -103,5 +103,5 @@ nix develop
 - Wenn du fzf-make zu einem Paketmanager hinzugefügt hast, lass es mich bitte wissen. (oder sende bitte einen PR, um die Installation über den Paketmanager in die `README.md` aufzunehmen)
 - Wenn Fragen bestehen, gerne einfach ein Issue erstellen und fragen.
 
-# 🗒 Related Article(s)
+# 🗒 Verwandte Artikel
 - (Japanese)[Makefileに定義されたtargetをfzfで選択して実行するCLIツールをRustでつくった](https://blog.kyu08.com/posts/fzf-make)
