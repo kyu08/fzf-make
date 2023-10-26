@@ -8,8 +8,8 @@
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
 
 <p align="center">
-[<a href="../README.md">English</a>]
-[Deutsch]
+    [<a href="../README.md">English</a>]
+    [Deutsch]
 </p>
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.gif" />
