@@ -61,7 +61,7 @@ nix run nixpkgs#fzf-make
 ```
 
 > **Note**
-> Möglicherweise müssen die experimentelle Funktion aktiviert werden. Folgender Befehl muss ausgeführt werden, um sie zu aktivieren:
+> Möglicherweise müssen die experimentellen Funktionen aktiviert werden. Folgender Befehl muss ausgeführt werden, um sie zu aktivieren:
 > `echo "experimental-features = nix-command flakes" | tee  ~/.config/nix/nix.conf`
 
 ## OS-unabhängige Methode
