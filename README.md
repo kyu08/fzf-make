@@ -7,6 +7,11 @@
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
 
+<p align="center">
+    [English]
+    [<a href="doc/README-de.md">Deutsch</a>]
+</p>
+
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.gif" />
 
 </div>
