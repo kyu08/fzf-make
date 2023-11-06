@@ -1,12 +1,13 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-logo.png" />
+<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-logo.png" 
 
+<img https://camo.githubusercontent.com/86a3c931a8d4144dcdd13c6648bb1a68bf793d7155fe548037fbc4e427291efc/68747470733a2f2f696d672e736869656c64732e696f2f6372617465732f762f667a662d6d616b653f7374796c653d666c6174666c61742d737175617265 />
 `fzf-make` is a command line tool that executes make target using fuzzy finder with preview window.
 
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
-
+![crates.io](https://img.shields.io/crates/v/fzf-make?style=flatflat-square)(https://github.com/rust-lang/crates.io-index)
 <p align="center">
     [English]
     [<a href="doc/README-de.md">Deutsch</a>]
