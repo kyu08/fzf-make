@@ -1,4 +1,4 @@
-use crate::usecases::fzf_make_ratatui::ratatui;
+use crate::usecases::fzf_make_ratatui::app;
 use crate::usecases::usecase::Usecase;
 
 pub struct FzfMakeRatatui;
@@ -15,6 +15,6 @@ impl Usecase for FzfMakeRatatui {
     }
 
     fn run(&self) {
-        let _ = ratatui::main();
+        let _ = app::main();
     }
 }

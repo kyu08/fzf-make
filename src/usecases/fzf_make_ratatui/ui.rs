@@ -3,13 +3,13 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, ListItem, Paragraph},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
-use super::app::{App, CurrentScreen};
+use super::app::Model;
 
-pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
+pub fn ui<B: Backend>(f: &mut Frame<B>, model: &Model) {
     // Create the layout sections.
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -20,28 +20,25 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
         ])
         .split(f.size());
 
-    let list = rounded_border_block("fzf-make");
+    // TODO: current_painは色を変えるだけに変更する
+    let (fzf_make_title, history_title) = {
+        match model.current_pain {
+            super::app::CurrentPain::Main => ("fzf-make-current", "history"),
+            super::app::CurrentPain::History => ("fzf-make", "history-current"),
+        }
+    };
+
+    let list = rounded_border_block(fzf_make_title);
     f.render_widget(list, chunks[0]);
 
-    let title_block = rounded_border_block("history");
+    let title_block = rounded_border_block(history_title);
 
     f.render_widget(title_block, chunks[1]);
-    let mut list_items = Vec::<ListItem>::new();
-
-    for key in app.pairs.keys() {
-        list_items.push(ListItem::new(Line::from(Span::styled(
-            format!("{: <25} : {}", key, app.pairs.get(key).unwrap()),
-            Style::default().fg(Color::Yellow),
-        ))));
-    }
-
     let current_keys_hint = {
-        match app.current_screen {
-            CurrentScreen::Main => Span::styled(
-                "(q): to quit, <tab> move to next tab",
-                Style::default().fg(Color::Red),
-            ),
-        }
+        Span::styled(
+            "(q): to quit, <tab> move to next tab",
+            Style::default().fg(Color::Red),
+        )
     };
 
     let key_notes_footer =
