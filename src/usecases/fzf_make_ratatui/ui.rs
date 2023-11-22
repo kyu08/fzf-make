@@ -20,7 +20,6 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
         ])
         .split(f.size());
 
-    //  TODO: ここでfzf-makeを実行する
     let list = rounded_border_block("fzf-make");
     f.render_widget(list, chunks[0]);
 
@@ -39,8 +38,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
     let current_keys_hint = {
         match app.current_screen {
             CurrentScreen::Main => Span::styled(
-                // TODO: edit
-                "(q) to quit",
+                "(q): to quit, <tab> move to next tab",
                 Style::default().fg(Color::Red),
             ),
         }

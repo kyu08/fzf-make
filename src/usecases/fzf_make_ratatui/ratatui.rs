@@ -15,8 +15,6 @@ use super::{
     ui::ui,
 };
 
-// TODO: 画面の枠をつくっていく
-// TODO: その中でfzf-makeの実行を試みる
 pub fn main() -> Result<(), Box<dyn Error>> {
     // setup terminal
     enable_raw_mode()?;
