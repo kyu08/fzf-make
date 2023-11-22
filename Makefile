@@ -17,6 +17,10 @@ tools:
 run:
 	@cargo run
 
+.PHONY: run-ratatui
+run-ratatui:
+	@cargo run -- -r
+
 .PHONY: build
 build:
 	@cargo build
