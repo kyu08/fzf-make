@@ -8,10 +8,12 @@ use crossterm::{
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
+    widgets::ListState,
     Terminal,
 };
 use std::{error::Error, io, process};
 
+#[derive(Clone)]
 pub enum CurrentPain {
     Main,
     History,
@@ -32,13 +34,18 @@ enum Message {
     Quit,
     KeyInput(String),
     Backspace, // TODO: Delegate to rhysd/tui-textarea
+    Next,
+    Previous,
 }
 
+#[derive(Clone)]
 pub struct Model {
+    pub current_pain: CurrentPain,
     pub key_input: String,
-    pub current_pain: CurrentPain, // the current screen the user is looking at, and will later determine what is rendered.
-    pub should_quit: bool,
     pub makefile: Makefile,
+    // the current screen the user is looking at, and will later determine what is rendered.
+    pub should_quit: bool,
+    pub state: ListState,
 }
 
 impl Model {
@@ -55,17 +62,46 @@ impl Model {
             key_input: String::new(),
             current_pain: CurrentPain::Main,
             should_quit: false,
-            makefile,
+            makefile: makefile.clone(),
+            state: ListState::default(),
         })
     }
 
-    pub fn update_key_input(&mut self, key_input: String) -> String {
+    pub fn update_key_input(&self, key_input: String) -> String {
         self.key_input.clone() + &key_input
     }
-    pub fn pop(&mut self) -> String {
+    pub fn pop(&self) -> String {
         let mut origin = self.key_input.clone();
         origin.pop();
         origin
+    }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.makefile.to_targets_string().len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.makefile.to_targets_string().len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
     }
 }
 
@@ -77,8 +113,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stderr);
     let mut terminal = Terminal::new(backend)?;
 
-    if let Ok(mut model) = Model::new() {
-        let _ = run(&mut terminal, &mut model); // TODO: error handling
+    if let Ok(model) = Model::new() {
+        let _ = run(&mut terminal, model); // TODO: error handling
     }
 
     disable_raw_mode()?;
@@ -92,12 +128,12 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run<B: Backend>(terminal: &mut Terminal<B>, model: &mut Model) -> io::Result<()> {
+fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, model))?;
-        match handle_event(model) {
+        terminal.draw(|f| ui(f, &mut model.clone()))?;
+        match handle_event(&model) {
             Ok(message) => {
-                let model = update(model, message);
+                update(&mut model, message);
                 if model.should_quit {
                     break;
                 }
@@ -118,6 +154,8 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                 _ => match model.current_pain {
                     CurrentPain::Main => match key.code {
                         KeyCode::Backspace => Some(Message::Backspace),
+                        KeyCode::Down => Some(Message::Next),
+                        KeyCode::Up => Some(Message::Previous),
                         KeyCode::Char(char) => Some(Message::KeyInput(char.to_string())),
                         _ => None,
                     },
@@ -136,22 +174,18 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     Ok(message)
 }
 
-fn update(model: &mut Model, message: Option<Message>) -> &mut Model {
+// TODO: Add UT
+fn update(model: &mut Model, message: Option<Message>) {
     match message {
         Some(Message::MoveToNextPain) => match model.current_pain {
             CurrentPain::Main => model.current_pain = CurrentPain::History,
             CurrentPain::History => model.current_pain = CurrentPain::Main,
         },
-        Some(Message::Quit) => {
-            model.should_quit = true;
-        }
-        Some(Message::KeyInput(key_input)) => {
-            model.key_input = model.update_key_input(key_input);
-        }
-        Some(Message::Backspace) => {
-            model.key_input = model.pop();
-        }
+        Some(Message::Quit) => model.should_quit = true,
+        Some(Message::KeyInput(key_input)) => model.key_input = model.update_key_input(key_input),
+        Some(Message::Backspace) => model.key_input = model.pop(),
+        Some(Message::Next) => model.next(),
+        Some(Message::Previous) => model.previous(),
         None => {}
     }
-    model
 }

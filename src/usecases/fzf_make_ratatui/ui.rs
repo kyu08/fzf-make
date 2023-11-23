@@ -1,19 +1,17 @@
+use super::app::Model;
+use crate::models::makefile::Makefile;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
-use crate::models::makefile::Makefile;
-
-use super::app::Model;
-
-pub fn ui<B: Backend>(f: &mut Frame<B>, model: &Model) {
+pub fn ui<B: Backend>(f: &mut Frame<B>, model: &mut Model) {
     // Create the layout sections.
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -37,7 +35,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, model: &Model) {
         rounded_border_block("Preview", model.current_pain.is_main()),
         fzf_make_preview_chunks[0],
     );
-    f.render_widget(
+    f.render_stateful_widget(
         targets_block(
             "Targets",
             model.key_input.clone(),
@@ -45,6 +43,8 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, model: &Model) {
             model.current_pain.is_main(),
         ),
         fzf_make_preview_chunks[1],
+        // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
+        &mut model.state,
     );
     f.render_widget(
         // NOTE: To show cursor, use rhysd/tui-textarea
@@ -89,7 +89,6 @@ fn input_block<'a>(title: &'a str, target_input: &'a str, is_current: bool) -> P
         .style(Style::default())
 }
 fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current: bool) -> List<'_> {
-    // TODO: 選択する
     let fg_color = if is_current {
         Color::Yellow
     } else {
@@ -127,6 +126,12 @@ fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current:
                 .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
         )
         .style(Style::default())
+        .highlight_style(
+            Style::default()
+                .bg(Color::LightGreen)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol(">> ")
 }
 
 fn rounded_border_block(title: &str, is_current: bool) -> Block {
