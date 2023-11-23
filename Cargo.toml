@@ -16,3 +16,4 @@ colored = "2"
 ratatui = "0.23.0"
 crossterm = "0.27.0"
 serde = { version = "1.0.181", features = ["derive"] }
+fuzzy-matcher = "0.3.7"

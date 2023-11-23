@@ -452,6 +452,7 @@ version = "0.8.0"
 dependencies = [
  "colored",
  "crossterm",
+ "fuzzy-matcher",
  "ratatui",
  "regex",
  "serde",

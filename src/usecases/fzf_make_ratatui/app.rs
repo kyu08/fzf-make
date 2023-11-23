@@ -1,3 +1,5 @@
+use crate::models::makefile::Makefile;
+
 use super::ui::ui;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode},
@@ -8,7 +10,7 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
 };
-use std::{error::Error, io};
+use std::{error::Error, io, process};
 
 pub enum CurrentPain {
     Main,
@@ -28,21 +30,42 @@ impl CurrentPain {
 enum Message {
     MoveToNextPain,
     Quit,
+    KeyInput(String),
+    Backspace, // TODO: Delegate to rhysd/tui-textarea
 }
 
 pub struct Model {
     pub key_input: String,
     pub current_pain: CurrentPain, // the current screen the user is looking at, and will later determine what is rendered.
     pub should_quit: bool,
+    pub makefile: Makefile,
 }
 
 impl Model {
-    pub fn new() -> Model {
-        Model {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
+        let makefile = match Makefile::create_makefile() {
+            Err(e) => {
+                println!("[ERR] {}", e);
+                process::exit(1)
+            }
+            Ok(f) => f,
+        };
+
+        Ok(Model {
             key_input: String::new(),
             current_pain: CurrentPain::Main,
             should_quit: false,
-        }
+            makefile,
+        })
+    }
+
+    pub fn update_key_input(&mut self, key_input: String) -> String {
+        self.key_input.clone() + &key_input
+    }
+    pub fn pop(&mut self) -> String {
+        let mut origin = self.key_input.clone();
+        origin.pop();
+        origin
     }
 }
 
@@ -54,8 +77,9 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stderr);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut model = Model::new();
-    let _ = run(&mut terminal, &mut model); // TODO: error handling
+    if let Ok(mut model) = Model::new() {
+        let _ = run(&mut terminal, &mut model); // TODO: error handling
+    }
 
     disable_raw_mode()?;
     execute!(
@@ -93,8 +117,8 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                 KeyCode::Esc => Some(Message::Quit),
                 _ => match model.current_pain {
                     CurrentPain::Main => match key.code {
-                        KeyCode::Char('e') => Some(Message::MoveToNextPain),
-                        KeyCode::Tab => Some(Message::MoveToNextPain),
+                        KeyCode::Backspace => Some(Message::Backspace),
+                        KeyCode::Char(char) => Some(Message::KeyInput(char.to_string())),
                         _ => None,
                     },
                     CurrentPain::History => match key.code {
@@ -120,6 +144,12 @@ fn update(model: &mut Model, message: Option<Message>) -> &mut Model {
         },
         Some(Message::Quit) => {
             model.should_quit = true;
+        }
+        Some(Message::KeyInput(key_input)) => {
+            model.key_input = model.update_key_input(key_input);
+        }
+        Some(Message::Backspace) => {
+            model.key_input = model.pop();
         }
         None => {}
     }
