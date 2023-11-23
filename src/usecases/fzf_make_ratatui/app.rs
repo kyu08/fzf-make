@@ -15,6 +15,16 @@ pub enum CurrentPain {
     History,
 }
 
+impl CurrentPain {
+    pub fn is_main(&self) -> bool {
+        matches!(self, CurrentPain::Main)
+    }
+
+    pub fn is_history(&self) -> bool {
+        matches!(self, CurrentPain::History)
+    }
+}
+
 enum Message {
     MoveToNextPain,
     Quit,
