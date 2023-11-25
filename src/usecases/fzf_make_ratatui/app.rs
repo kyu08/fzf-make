@@ -63,7 +63,7 @@ impl Model {
             current_pain: CurrentPain::Main,
             should_quit: false,
             makefile: makefile.clone(),
-            state: ListState::default(),
+            state: ListState::with_selected(ListState::default(), Some(0)),
         })
     }
 
