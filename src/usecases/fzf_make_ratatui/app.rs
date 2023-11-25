@@ -194,6 +194,7 @@ fn update(model: &mut Model, message: Option<Message>) {
             model.reset();
         }
         Some(Message::Backspace) => model.key_input = model.pop(),
+        // TODO: (絞り込まれた)ターゲットの一番上から上に、一番下から下に移動した際にそれぞれ一番下、一番上に移動するようにす(今は見えない要素をselectしてしまっている)
         Some(Message::Next) => model.next(),
         Some(Message::Previous) => model.previous(),
         None => {}
