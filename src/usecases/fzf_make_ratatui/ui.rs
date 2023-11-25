@@ -68,9 +68,13 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, model: &mut Model) {
     f.render_widget(key_notes_footer, main_chunks[1]);
 }
 
+fn fg_color() -> Color {
+    Color::LightBlue
+}
+
 fn input_block<'a>(title: &'a str, target_input: &'a str, is_current: bool) -> Paragraph<'a> {
     let fg_color = if is_current {
-        Color::Yellow
+        fg_color()
     } else {
         Color::default()
     };
@@ -89,7 +93,7 @@ fn input_block<'a>(title: &'a str, target_input: &'a str, is_current: bool) -> P
 }
 fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current: bool) -> List<'_> {
     let fg_color = if is_current {
-        Color::Yellow
+        fg_color()
     } else {
         Color::default()
     };
@@ -99,7 +103,7 @@ fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current:
         .to_targets_string()
         .into_iter()
         .map(|target| match matcher.fuzzy_indices(&target, &key_input) {
-            Some((score, _)) => (Some(score), target), // TODO: highligh matched part
+            Some((score, _)) => (Some(score), target), // TODO: highligh matched part?
             None => (None, target),
         })
         .filter(|(score, _)| score.is_some())
@@ -111,11 +115,11 @@ fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current:
     // Sort filtered_list by first element of tuple
     let list: Vec<ListItem> = filtered_list
         .into_iter()
-        .map(|(_, target)| ListItem::new(target).style(Style::default().fg(Color::Yellow)))
+        .map(|(_, target)| ListItem::new(target).style(Style::default()))
         .collect();
 
     List::new(list)
-        .style(Style::default().fg(Color::default()))
+        .style(Style::default())
         .block(
             Block::default()
                 .title(title)
@@ -131,7 +135,7 @@ fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current:
 
 fn rounded_border_block(title: &str, is_current: bool) -> Block {
     let fg_color = if is_current {
-        Color::Yellow
+        fg_color()
     } else {
         Color::default()
     };
