@@ -28,6 +28,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, model: &mut Model) {
         .split(fzf_make_chunks[0]);
 
     f.render_widget(
+        // TODO: Implement preview window using tui-term
         rounded_border_block("Preview", model.current_pain.is_main()),
         fzf_make_preview_chunks[0],
     );
