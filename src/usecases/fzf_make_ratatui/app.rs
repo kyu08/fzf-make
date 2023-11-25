@@ -103,6 +103,13 @@ impl Model {
         };
         self.state.select(Some(i));
     }
+
+    fn reset(&mut self) {
+        if self.makefile.to_targets_string().is_empty() {
+            self.state.select(None);
+        }
+        self.state.select(Some(0));
+    }
 }
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -182,7 +189,10 @@ fn update(model: &mut Model, message: Option<Message>) {
             CurrentPain::History => model.current_pain = CurrentPain::Main,
         },
         Some(Message::Quit) => model.should_quit = true,
-        Some(Message::KeyInput(key_input)) => model.key_input = model.update_key_input(key_input),
+        Some(Message::KeyInput(key_input)) => {
+            model.key_input = model.update_key_input(key_input);
+            model.reset();
+        }
         Some(Message::Backspace) => model.key_input = model.pop(),
         Some(Message::Next) => model.next(),
         Some(Message::Previous) => model.previous(),

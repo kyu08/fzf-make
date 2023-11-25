@@ -5,7 +5,7 @@ use fuzzy_matcher::FuzzyMatcher;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
@@ -31,7 +31,6 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, model: &mut Model) {
         .split(fzf_make_chunks[0]);
 
     f.render_widget(
-        // TODO: ハイライトしてtargetの内容を表示する
         rounded_border_block("Preview", model.current_pain.is_main()),
         fzf_make_preview_chunks[0],
     );
@@ -116,6 +115,7 @@ fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current:
         .collect();
 
     List::new(list)
+        .style(Style::default().fg(Color::default()))
         .block(
             Block::default()
                 .title(title)
@@ -125,13 +125,8 @@ fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current:
                 .style(Style::default())
                 .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
         )
-        .style(Style::default())
-        .highlight_style(
-            Style::default()
-                .bg(Color::LightGreen)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol(">> ")
+        .highlight_style(Style::default().fg(Color::White).bg(Color::DarkGray))
+        .highlight_symbol("> ")
 }
 
 fn rounded_border_block(title: &str, is_current: bool) -> Block {
