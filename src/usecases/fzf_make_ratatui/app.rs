@@ -1,11 +1,14 @@
 use crate::models::makefile::Makefile;
 
 use super::ui::ui;
+use colored::*;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     widgets::ListState,
@@ -36,6 +39,7 @@ enum Message {
     Backspace, // TODO: Delegate to rhysd/tui-textarea
     Next,
     Previous,
+    ExecuteTarget,
 }
 
 #[derive(Clone)]
@@ -43,13 +47,15 @@ pub struct Model {
     pub current_pain: CurrentPain,
     pub key_input: String,
     pub makefile: Makefile,
-    // the current screen the user is looking at, and will later determine what is rendered.
-    pub should_quit: bool,
+    pub should_quit: bool, // TODO: quit || notQuuitYe || executeTarget (String)
+    // という3択のenumにした方が make impossible state
+    // impossibleにできてbetter
     pub state: ListState,
+    pub selected_target: Option<String>,
 }
 
 impl Model {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self, ()> {
         let makefile = match Makefile::create_makefile() {
             Err(e) => {
                 println!("[ERR] {}", e);
@@ -64,6 +70,7 @@ impl Model {
             should_quit: false,
             makefile: makefile.clone(),
             state: ListState::with_selected(ListState::default(), Some(0)),
+            selected_target: None,
         })
     }
 
@@ -74,6 +81,30 @@ impl Model {
         let mut origin = self.key_input.clone();
         origin.pop();
         origin
+    }
+
+    pub fn narrow_down_targets(&self) -> Vec<String> {
+        let matcher = SkimMatcherV2::default();
+        let mut filtered_list: Vec<(Option<i64>, String)> = self
+            .makefile
+            .to_targets_string()
+            .into_iter()
+            .map(
+                |target| match matcher.fuzzy_indices(&target, &self.key_input) {
+                    Some((score, _)) => (Some(score), target), // TODO: highligh matched part?
+                    None => (None, target),
+                },
+            )
+            .filter(|(score, _)| score.is_some())
+            .collect();
+
+        filtered_list.sort_by(|(score1, _), (score2, _)| score1.cmp(score2));
+        filtered_list.reverse();
+
+        filtered_list
+            .into_iter()
+            .map(|(_, target)| target)
+            .collect()
     }
 
     fn next(&mut self) {
@@ -120,9 +151,13 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stderr);
     let mut terminal = Terminal::new(backend)?;
 
-    if let Ok(model) = Model::new() {
-        let _ = run(&mut terminal, model); // TODO: error handling
-    }
+    let target = match Model::new() {
+        Err(_) => None, // TODO: error handling
+        Ok(model) => match run(&mut terminal, model) {
+            Err(_) => None, // TODO: error handling
+            Ok(t) => t,
+        },
+    };
 
     disable_raw_mode()?;
     execute!(
@@ -132,23 +167,37 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     )?;
     terminal.show_cursor()?;
 
-    Ok(())
+    match target {
+        Some(t) => {
+            println!("{}", ("make ".to_string() + &t).blue()); // TODO: Make output color configurable via config file
+            process::Command::new("make")
+                .stdin(process::Stdio::inherit())
+                .arg(t)
+                .spawn()
+                .expect("Failed to execute process")
+                .wait()
+                .expect("Failed to execute process");
+
+            Ok(())
+        }
+        None => Ok(()),
+    }
 }
 
-fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> io::Result<()> {
+fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> io::Result<Option<String>> {
     loop {
         terminal.draw(|f| ui(f, &mut model.clone()))?;
         match handle_event(&model) {
             Ok(message) => {
                 update(&mut model, message);
-                if model.should_quit {
+                if model.should_quit || model.selected_target.is_some() {
                     break;
                 }
             }
             Err(_) => break,
         }
     }
-    Ok(())
+    Ok(model.selected_target)
 }
 
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
@@ -163,6 +212,7 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                         KeyCode::Backspace => Some(Message::Backspace),
                         KeyCode::Down => Some(Message::Next),
                         KeyCode::Up => Some(Message::Previous),
+                        KeyCode::Enter => Some(Message::ExecuteTarget),
                         KeyCode::Char(char) => Some(Message::KeyInput(char.to_string())),
                         _ => None,
                     },
@@ -194,9 +244,15 @@ fn update(model: &mut Model, message: Option<Message>) {
             model.reset();
         }
         Some(Message::Backspace) => model.key_input = model.pop(),
-        // TODO: (絞り込まれた)ターゲットの一番上から上に、一番下から下に移動した際にそれぞれ一番下、一番上に移動するようにす(今は見えない要素をselectしてしまっている)
+        // TODO: (絞り込まれた)ターゲットの一番上から上に、一番下から下に移動した際にそれぞれ一番下、一番上に移動するようにする(今は見えない要素をselectしてしまっている)
         Some(Message::Next) => model.next(),
         Some(Message::Previous) => model.previous(),
+        Some(Message::ExecuteTarget) => {
+            model.selected_target = model
+                .state
+                .selected()
+                .map(|i| model.narrow_down_targets()[i].clone());
+        }
         None => {}
     }
 }

@@ -1,7 +1,4 @@
 use super::app::Model;
-use crate::models::makefile::Makefile;
-use fuzzy_matcher::skim::SkimMatcherV2;
-use fuzzy_matcher::FuzzyMatcher;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
@@ -37,8 +34,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, model: &mut Model) {
     f.render_stateful_widget(
         targets_block(
             "Targets",
-            model.key_input.clone(),
-            model.makefile.clone(),
+            model.narrow_down_targets(),
             model.current_pain.is_main(),
         ),
         fzf_make_preview_chunks[1],
@@ -91,31 +87,16 @@ fn input_block<'a>(title: &'a str, target_input: &'a str, is_current: bool) -> P
         )
         .style(Style::default())
 }
-fn targets_block(title: &str, key_input: String, makefile: Makefile, is_current: bool) -> List<'_> {
+fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bool) -> List<'_> {
     let fg_color = if is_current {
         fg_color()
     } else {
         Color::default()
     };
 
-    let matcher = SkimMatcherV2::default();
-    let mut filtered_list: Vec<(Option<i64>, String)> = makefile
-        .to_targets_string()
+    let list: Vec<ListItem> = narrowed_down_targets
         .into_iter()
-        .map(|target| match matcher.fuzzy_indices(&target, &key_input) {
-            Some((score, _)) => (Some(score), target), // TODO: highligh matched part?
-            None => (None, target),
-        })
-        .filter(|(score, _)| score.is_some())
-        .collect();
-
-    filtered_list.sort_by(|(score1, _), (score2, _)| score1.cmp(score2));
-    filtered_list.reverse();
-
-    // Sort filtered_list by first element of tuple
-    let list: Vec<ListItem> = filtered_list
-        .into_iter()
-        .map(|(_, target)| ListItem::new(target).style(Style::default()))
+        .map(|target| ListItem::new(target).style(Style::default()))
         .collect();
 
     List::new(list)
