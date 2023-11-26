@@ -43,6 +43,7 @@ pub fn get_preview_command(mut file_paths: Vec<String>) -> String {
         "{}",
     );
 
+    // MEMO: Keep it for using cat
     // let preview_command = format!(
     //     r#"
     // files="{}" \

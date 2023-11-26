@@ -28,7 +28,8 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
         .split(fzf_make_chunks[0]);
 
-    // MEMO: ここから
+    // MEMO: Lines to render preview window with bat using tui-term start here.
+    // It is not well cut out into a function due to the scope. It may be okay if it is cut out into a function until the execution of the f.render_widget function.
     let pty_system = NativePtySystem::default();
     let cwd = std::env::current_dir().unwrap();
 
@@ -113,7 +114,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         .border_style(Style::default().fg(fg_color))
         .title(title)
         .style(Style::default());
-    // MEMO: ここまで
+    // MEMO: Lines to render preview window with bat using tui-term end here.
 
     f.render_widget(
         PseudoTerminal::new(screen).block(block),
