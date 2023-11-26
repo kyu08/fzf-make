@@ -136,7 +136,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
 
     let hint_text = match model.current_pain {
         super::app::CurrentPain::Main => {
-            "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab"
+            "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character"
         }
         super::app::CurrentPain::History => "q/<esc>: Quit, <tab> Move to next tab",
     };

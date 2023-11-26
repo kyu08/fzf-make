@@ -3,7 +3,7 @@ use crate::models::makefile::Makefile;
 use super::ui::ui;
 use colored::*;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyCode},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyModifiers, ModifierKeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -214,6 +214,9 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                 _ => match model.current_pain {
                     CurrentPain::Main => match key.code {
                         KeyCode::Backspace => Some(Message::Backspace),
+                        KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            Some(Message::Backspace)
+                        }
                         KeyCode::Down => Some(Message::Next),
                         KeyCode::Up => Some(Message::Previous),
                         KeyCode::Enter => Some(Message::ExecuteTarget),
