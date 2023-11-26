@@ -129,10 +129,11 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         input_block("Input", &model.key_input, model.current_pain.is_main()),
         fzf_make_chunks[1],
     );
-    f.render_widget(
-        rounded_border_block("History", model.current_pain.is_history()),
-        fzf_preview_and_history_chunks[1],
+    let hints_block = Paragraph::new(Line::from("Comming soon...")).block(
+        rounded_border_block("History", model.current_pain.is_history())
+            .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
     );
+    f.render_widget(hints_block, fzf_preview_and_history_chunks[1]);
 
     let hint_text = match model.current_pain {
         super::app::CurrentPain::Main => {
