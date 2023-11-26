@@ -37,6 +37,7 @@ enum Message {
     Quit,
     KeyInput(String),
     Backspace, // TODO: Delegate to rhysd/tui-textarea
+    DeleteAll,
     Next,
     Previous,
     ExecuteTarget,
@@ -216,6 +217,9 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                         KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             Some(Message::Backspace)
                         }
+                        KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            Some(Message::DeleteAll)
+                        }
                         KeyCode::Down => Some(Message::Next),
                         KeyCode::Up => Some(Message::Previous),
                         KeyCode::Enter => Some(Message::ExecuteTarget),
@@ -250,6 +254,7 @@ fn update(model: &mut Model, message: Option<Message>) {
             model.reset();
         }
         Some(Message::Backspace) => model.key_input = model.pop(),
+        Some(Message::DeleteAll) => model.key_input = String::new(),
         Some(Message::Next) => model.next(),
         Some(Message::Previous) => model.previous(),
         Some(Message::ExecuteTarget) => {

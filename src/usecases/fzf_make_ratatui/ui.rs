@@ -223,7 +223,7 @@ fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
 fn render_hins_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let hint_text = match model.current_pain {
         super::app::CurrentPain::Main => {
-            "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character"
+            "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character, <c-w>: Delete all key input"
         }
         super::app::CurrentPain::History => "q/<esc>: Quit, <tab> Move to next tab",
     };
