@@ -30,21 +30,26 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(fzf_make_chunks[0]);
 
-    // TODO: ここから
-
     // let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
     // let binding = parser.read().unwrap();
     // let screen = binding.screen();
-    // let pt = preview_block(model.clone(), &screen);
+    // let block = preview_block(
+    //     model
+    //         .makefile
+    //         .target_to_file_and_line_number(model.key_input.clone()),
+    //     // screen,
+    // );
+    // let pt = PseudoTerminal::new(screen).block(block);
+
+    // TODO: ここから
 
     let pty_system = NativePtySystem::default();
     let cwd = std::env::current_dir().unwrap();
 
     let mut cmd = CommandBuilder::new("bat");
 
-    let (file_name, line_number) = model
-        .makefile
-        .target_to_file_and_line_number(model.key_input.clone());
+    let a = &model.narrow_down_targets()[model.state.selected().unwrap_or(0)];
+    let (file_name, line_number) = model.makefile.target_to_file_and_line_number(a);
     // FIXME: 関数に切り出したら修正する
     let file_name = match file_name {
         Some(file_name) => file_name,
@@ -115,11 +120,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
     let pt = PseudoTerminal::new(screen).block(block);
     // TODO: ここまで
 
-    f.render_widget(
-        // TODO: Implement preview window using tui-term
-        pt,
-        fzf_make_preview_chunks[0],
-    );
+    f.render_widget(pt, fzf_make_preview_chunks[0]);
     f.render_stateful_widget(
         targets_block(
             "Targets",
@@ -218,16 +219,17 @@ fn rounded_border_block(title: &str, is_current: bool) -> Block {
         .style(Style::default())
 }
 
-fn preview_block(model: Model, screen: &Screen) -> PseudoTerminal {
+fn preview_block(
+    file_name_and_line_number: (Option<String>, Option<u32>),
+    // screen: &Screen,
+) -> Block<'static> {
     let pty_system = NativePtySystem::default();
     let cwd = std::env::current_dir().unwrap();
 
     let mut cmd = CommandBuilder::new("bat");
 
-    let (file_name, line_number) = model
-        .makefile
-        .target_to_file_and_line_number(model.key_input.clone());
-    // FIXME: 関数に切り出したら修正する
+    let (file_name, line_number) = file_name_and_line_number;
+    // FIXME: 修正する
     let file_name = match file_name {
         Some(file_name) => file_name,
         None => "Makefile".to_string(),
@@ -294,5 +296,6 @@ fn preview_block(model: Model, screen: &Screen) -> PseudoTerminal {
         .title(title)
         .style(Style::default().add_modifier(Modifier::BOLD));
 
-    PseudoTerminal::new(screen).block(block)
+    block
+    // PseudoTerminal::new(screen).block(block)
 }
