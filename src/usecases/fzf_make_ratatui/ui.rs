@@ -2,7 +2,7 @@ use super::app::Model;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
@@ -38,15 +38,8 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         .makefile
         .target_to_file_and_line_number(selecting_target);
 
-    // FIXME: 関数に切り出したら固定値を返しているのを修正する
-    let file_name = match file_name {
-        Some(file_name) => file_name,
-        None => "Makefile".to_string(),
-    };
-    let line_number = match line_number {
-        Some(line_number) => line_number,
-        None => 1,
-    };
+    let file_name = file_name.unwrap_or("".to_string());
+    let line_number = line_number.unwrap_or(1);
 
     let mut cmd = CommandBuilder::new("bat");
     cmd.cwd(cwd);
