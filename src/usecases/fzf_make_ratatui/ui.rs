@@ -15,139 +15,26 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(3)])
         .split(f.size());
+    render_hins_block(model, f, main_chunks[1]);
+
     let fzf_preview_and_history_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Min(3), Constraint::Max(40)])
         .split(main_chunks[0]);
+    render_history_block(model, f, fzf_preview_and_history_chunks[1]);
+
     let fzf_make_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(3)])
         .split(fzf_preview_and_history_chunks[0]);
+    render_input_block(model, f, fzf_make_chunks[1]);
+
     let fzf_make_preview_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
         .split(fzf_make_chunks[0]);
-
-    // MEMO: Lines to render preview window with bat using tui-term start here.
-    // It is not well cut out into a function due to the scope. It may be okay if it is cut out into a function until the execution of the f.render_widget function.
-    let pty_system = NativePtySystem::default();
-    let cwd = std::env::current_dir().unwrap();
-
-    let narrow_down_targets = model.narrow_down_targets();
-    let selecting_target = &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
-    let (file_name, line_number) = model
-        .makefile
-        .target_to_file_and_line_number(selecting_target);
-
-    let file_name = file_name.unwrap_or(model.makefile.path.to_string_lossy().to_string());
-    let line_number = line_number.unwrap_or(1);
-
-    let mut cmd = CommandBuilder::new("bat");
-    cmd.cwd(cwd);
-    cmd.args([
-        file_name.as_str(),
-        "-p",
-        "--style=numbers",
-        "--color=always",
-        "--line-range",
-        (line_number.to_string() + ":").as_str(),
-        "--highlight-line",
-        line_number.to_string().as_str(),
-    ]);
-
-    let pair = pty_system
-        .openpty(PtySize {
-            rows: 1000,
-            cols: 1000,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .unwrap();
-    let mut child = pair.slave.spawn_command(cmd).unwrap();
-
-    drop(pair.slave);
-
-    let mut reader = pair.master.try_clone_reader().unwrap();
-    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
-
-    {
-        let parser = parser.clone();
-        std::thread::spawn(move || {
-            // Consume the output from the child
-            let mut s = String::new();
-            reader.read_to_string(&mut s).unwrap();
-            if !s.is_empty() {
-                let mut parser = parser.write().unwrap();
-                parser.process(s.as_bytes());
-            }
-        });
-    }
-
-    {
-        // Drop writer on purpose
-        let _writer = pair.master.take_writer().unwrap();
-    }
-
-    // Wait for the child to complete
-    let _child_exit_status = child.wait().unwrap();
-
-    drop(pair.master);
-
-    let fg_color_ = if model.current_pain.is_main() {
-        fg_color()
-    } else {
-        Color::default()
-    };
-
-    let binding = parser.read().unwrap();
-    let screen = binding.screen();
-    let title = Line::from("Preview");
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(ratatui::widgets::BorderType::Rounded)
-        .border_style(Style::default().fg(fg_color_))
-        .title(title)
-        .style(Style::default());
-    // MEMO: Lines to render preview window with bat using tui-term end here.
-
-    f.render_widget(
-        PseudoTerminal::new(screen).block(block),
-        fzf_make_preview_chunks[0],
-    );
-    f.render_stateful_widget(
-        targets_block(
-            "Targets",
-            model.narrow_down_targets(),
-            model.current_pain.is_main(),
-        ),
-        fzf_make_preview_chunks[1],
-        // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
-        &mut model.targets_list_state,
-    );
-    f.render_widget(
-        // NOTE: To show cursor, use rhysd/tui-textarea
-        input_block("Input", &model.key_input, model.current_pain.is_main()),
-        fzf_make_chunks[1],
-    );
-    let hints_block = Paragraph::new(Line::from("Comming soon...")).block(
-        rounded_border_block("History", model.current_pain.is_history())
-            .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
-    );
-    f.render_widget(hints_block, fzf_preview_and_history_chunks[1]);
-
-    let hint_text = match model.current_pain {
-        super::app::CurrentPain::Main => {
-            "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character"
-        }
-        super::app::CurrentPain::History => "q/<esc>: Quit, <tab> Move to next tab",
-    };
-    let current_keys_hint = { Span::styled(hint_text, Style::default().fg(fg_color())) };
-
-    let key_notes_footer = Paragraph::new(Line::from(current_keys_hint)).block(
-        rounded_border_block("Hints", false).padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
-    );
-
-    f.render_widget(key_notes_footer, main_chunks[1]);
+    render_preview_block(model, f, fzf_make_preview_chunks[0]);
+    render_targets_block(model, f, fzf_make_preview_chunks[1]);
 }
 
 fn fg_color() -> Color {
@@ -213,4 +100,138 @@ fn rounded_border_block(title: &str, is_current: bool) -> Block {
         .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(fg_color))
         .style(Style::default())
+}
+
+fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
+    let cwd = std::env::current_dir().unwrap();
+    let mut cmd = CommandBuilder::new("bat");
+    cmd.cwd(cwd);
+    cmd.args([
+        file_name.as_str(),
+        "-p",
+        "--style=numbers",
+        "--color=always",
+        "--line-range",
+        (line_number.to_string() + ":").as_str(),
+        "--highlight-line",
+        line_number.to_string().as_str(),
+    ]);
+    cmd
+}
+
+// Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
+fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    let pty_system = NativePtySystem::default();
+
+    let narrow_down_targets = model.narrow_down_targets();
+    let selecting_target =
+        &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
+    let (file_name, line_number) = model
+        .makefile
+        .target_to_file_and_line_number(selecting_target);
+
+    let file_name = file_name.unwrap_or(model.makefile.path.to_string_lossy().to_string());
+    let line_number = line_number.unwrap_or(1);
+    let cmd = preview_command(file_name, line_number);
+
+    let pair = pty_system
+        .openpty(PtySize {
+            rows: 1000,
+            cols: 1000,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .unwrap();
+    let mut child = pair.slave.spawn_command(cmd).unwrap();
+
+    drop(pair.slave);
+
+    let mut reader = pair.master.try_clone_reader().unwrap();
+    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
+
+    {
+        let parser = parser.clone();
+        std::thread::spawn(move || {
+            // Consume the output from the child
+            let mut s = String::new();
+            reader.read_to_string(&mut s).unwrap();
+            if !s.is_empty() {
+                let mut parser = parser.write().unwrap();
+                parser.process(s.as_bytes());
+            }
+        });
+    }
+
+    {
+        // Drop writer on purpose
+        let _writer = pair.master.take_writer().unwrap();
+    }
+
+    // Wait for the child to complete
+    let _child_exit_status = child.wait().unwrap();
+
+    drop(pair.master);
+
+    let fg_color_ = if model.current_pain.is_main() {
+        fg_color()
+    } else {
+        Color::default()
+    };
+
+    let binding = parser.read().unwrap();
+    let screen = binding.screen();
+    let title = Line::from("Preview");
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(fg_color_))
+        .title(title)
+        .style(Style::default());
+
+    f.render_widget(PseudoTerminal::new(screen).block(block), chunk);
+}
+
+fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    f.render_stateful_widget(
+        targets_block(
+            "Targets",
+            model.narrow_down_targets(),
+            model.current_pain.is_main(),
+        ),
+        chunk,
+        // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
+        &mut model.targets_list_state,
+    );
+}
+
+fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    f.render_widget(
+        // NOTE: To show cursor, use rhysd/tui-textarea
+        input_block("Input", &model.key_input, model.current_pain.is_main()),
+        chunk,
+    );
+}
+
+fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    let history_block = Paragraph::new(Line::from("Comming soon...")).block(
+        rounded_border_block("History", model.current_pain.is_history())
+            .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
+    );
+    f.render_widget(history_block, chunk);
+}
+
+fn render_hins_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    let hint_text = match model.current_pain {
+        super::app::CurrentPain::Main => {
+            "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character"
+        }
+        super::app::CurrentPain::History => "q/<esc>: Quit, <tab> Move to next tab",
+    };
+    let current_keys_hint = { Span::styled(hint_text, Style::default().fg(fg_color())) };
+
+    let key_notes_footer = Paragraph::new(Line::from(current_keys_hint)).block(
+        rounded_border_block("Hints", false).padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
+    );
+
+    f.render_widget(key_notes_footer, chunk);
 }
