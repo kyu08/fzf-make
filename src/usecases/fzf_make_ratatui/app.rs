@@ -1,6 +1,7 @@
 use crate::models::makefile::Makefile;
 
 use super::ui::ui;
+use anyhow::{anyhow, Result};
 use colored::*;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyModifiers},
@@ -14,7 +15,7 @@ use ratatui::{
     widgets::ListState,
     Terminal,
 };
-use std::{error::Error, io, process};
+use std::{io, panic, process};
 
 #[derive(Clone)]
 pub enum CurrentPain {
@@ -55,12 +56,9 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new() -> Result<Self, ()> {
+    pub fn new() -> Result<Self> {
         let makefile = match Makefile::create_makefile() {
-            Err(e) => {
-                println!("[ERR] {}", e);
-                process::exit(1)
-            }
+            Err(e) => return Err(e),
             Ok(f) => f,
         };
 
@@ -148,44 +146,70 @@ impl Model {
     }
 }
 
-pub fn main() -> Result<(), Box<dyn Error>> {
-    enable_raw_mode()?;
-    let mut stderr = io::stderr();
-    execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stderr);
-    let mut terminal = Terminal::new(backend)?;
+pub fn main() -> Result<()> {
+    let result = panic::catch_unwind(|| {
+        enable_raw_mode()?;
+        let mut stderr = io::stderr();
+        execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
+        let backend = CrosstermBackend::new(stderr);
+        let mut terminal = Terminal::new(backend)?;
 
-    let target = match Model::new() {
-        Err(_) => None, // TODO: error handling
-        Ok(model) => match run(&mut terminal, model) {
-            Err(_) => None, // TODO: error handling
+        let target: Result<Option<String>> = match Model::new() {
+            Err(e) => Err(e),
+            Ok(model) => match run(&mut terminal, model) {
+                Ok(target_o) => Ok(target_o),
+                Err(e) => Err(anyhow!(e)),
+            },
+        };
+
+        let target = match target {
             Ok(t) => t,
-        },
-    };
+            Err(e) => {
+                disable_raw_mode()?;
+                execute!(
+                    terminal.backend_mut(),
+                    LeaveAlternateScreen,
+                    DisableMouseCapture
+                )?;
+                terminal.show_cursor()?;
+                return Err(e);
+            }
+        };
 
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+        disable_raw_mode()?;
+        execute!(
+            terminal.backend_mut(),
+            LeaveAlternateScreen,
+            DisableMouseCapture
+        )?;
+        terminal.show_cursor()?;
 
-    match target {
-        Some(t) => {
-            // Make output color configurable via config file https://github.com/kyu08/fzf-make/issues/67
-            println!("{}", ("make ".to_string() + &t).blue());
-            process::Command::new("make")
-                .stdin(process::Stdio::inherit())
-                .arg(t)
-                .spawn()
-                .expect("Failed to execute process")
-                .wait()
-                .expect("Failed to execute process");
+        match target {
+            Some(t) => {
+                // Make output color configurable via config file https://github.com/kyu08/fzf-make/issues/67
+                println!("{}", ("make ".to_string() + &t).blue());
+                process::Command::new("make")
+                    .stdin(process::Stdio::inherit())
+                    .arg(t)
+                    .spawn()
+                    .expect("Failed to execute process")
+                    .wait()
+                    .expect("Failed to execute process");
 
-            Ok(())
+                Ok(())
+            }
+            None => Ok(()),
         }
-        None => Ok(()),
+    });
+
+    match result {
+        Ok(_) => Ok(()),
+        Err(_) => {
+            disable_raw_mode()?;
+            execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+            panic::set_hook(Box::new(|_| {}));
+            process::exit(1);
+        }
     }
 }
 
