@@ -3,7 +3,7 @@ use crate::models::makefile::Makefile;
 use super::ui::ui;
 use colored::*;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyModifiers, ModifierKeyCode},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -47,9 +47,8 @@ pub struct Model {
     pub current_pain: CurrentPain,
     pub key_input: String,
     pub makefile: Makefile,
-    pub should_quit: bool, // TODO: quit || notQuuitYe || executeTarget (String)
-    // という3択のenumにした方が make impossible state
-    // impossibleにできてbetter
+    // TODO: It is better make `should_quit` like following `quit || notQuuitYe || executeTarget (String)`.
+    pub should_quit: bool,
     pub state: ListState,
     pub selected_target: Option<String>,
 }
