@@ -9,10 +9,8 @@ use ratatui::{
 };
 use std::sync::{Arc, RwLock};
 use tui_term::widget::PseudoTerminal;
-use vt100::Screen;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
-    // Create the layout sections.
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(3)])
@@ -27,30 +25,19 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         .split(fzf_preview_and_history_chunks[0]);
     let fzf_make_preview_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
         .split(fzf_make_chunks[0]);
 
-    // let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
-    // let binding = parser.read().unwrap();
-    // let screen = binding.screen();
-    // let block = preview_block(
-    //     model
-    //         .makefile
-    //         .target_to_file_and_line_number(model.key_input.clone()),
-    //     // screen,
-    // );
-    // let pt = PseudoTerminal::new(screen).block(block);
-
-    // TODO: ここから
-
+    // MEMO: ここから
     let pty_system = NativePtySystem::default();
     let cwd = std::env::current_dir().unwrap();
 
-    let mut cmd = CommandBuilder::new("bat");
+    let selecting_target = &model.narrow_down_targets()[model.state.selected().unwrap_or(0)];
+    let (file_name, line_number) = model
+        .makefile
+        .target_to_file_and_line_number(selecting_target);
 
-    let a = &model.narrow_down_targets()[model.state.selected().unwrap_or(0)];
-    let (file_name, line_number) = model.makefile.target_to_file_and_line_number(a);
-    // FIXME: 関数に切り出したら修正する
+    // FIXME: 関数に切り出したら固定値を返しているのを修正する
     let file_name = match file_name {
         Some(file_name) => file_name,
         None => "Makefile".to_string(),
@@ -60,10 +47,12 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         None => 1,
     };
 
+    let mut cmd = CommandBuilder::new("bat");
     cmd.cwd(cwd);
     cmd.args([
         file_name.as_str(),
         "-p",
+        "--style=numbers",
         "--color=always",
         "--line-range",
         (line_number.to_string() + ":").as_str(),
@@ -109,18 +98,27 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
 
     drop(pair.master);
 
+    let fg_color = if model.current_pain.is_main() {
+        fg_color()
+    } else {
+        Color::default()
+    };
+
     let binding = parser.read().unwrap();
     let screen = binding.screen();
     let title = Line::from("Preview");
     let block = Block::default()
         .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(fg_color))
         .title(title)
-        .style(Style::default().add_modifier(Modifier::BOLD));
+        .style(Style::default());
+    // MEMO: ここまで
 
-    let pt = PseudoTerminal::new(screen).block(block);
-    // TODO: ここまで
-
-    f.render_widget(pt, fzf_make_preview_chunks[0]);
+    f.render_widget(
+        PseudoTerminal::new(screen).block(block),
+        fzf_make_preview_chunks[0],
+    );
     f.render_stateful_widget(
         targets_block(
             "Targets",
@@ -217,85 +215,4 @@ fn rounded_border_block(title: &str, is_current: bool) -> Block {
         .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(fg_color))
         .style(Style::default())
-}
-
-fn preview_block(
-    file_name_and_line_number: (Option<String>, Option<u32>),
-    // screen: &Screen,
-) -> Block<'static> {
-    let pty_system = NativePtySystem::default();
-    let cwd = std::env::current_dir().unwrap();
-
-    let mut cmd = CommandBuilder::new("bat");
-
-    let (file_name, line_number) = file_name_and_line_number;
-    // FIXME: 修正する
-    let file_name = match file_name {
-        Some(file_name) => file_name,
-        None => "Makefile".to_string(),
-    };
-    let line_number = match line_number {
-        Some(line_number) => line_number,
-        None => 1,
-    };
-
-    cmd.cwd(cwd);
-    cmd.args([
-        file_name.as_str(),
-        "-p",
-        "--color=always",
-        "--line-range",
-        (line_number.to_string() + ":").as_str(),
-        "--highlight-line",
-        line_number.to_string().as_str(),
-    ]);
-
-    let pair = pty_system
-        .openpty(PtySize {
-            rows: 1000,
-            cols: 1000,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .unwrap();
-    let mut child = pair.slave.spawn_command(cmd).unwrap();
-
-    drop(pair.slave);
-
-    let mut reader = pair.master.try_clone_reader().unwrap();
-    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
-
-    {
-        let parser = parser.clone();
-        std::thread::spawn(move || {
-            // Consume the output from the child
-            let mut s = String::new();
-            reader.read_to_string(&mut s).unwrap();
-            if !s.is_empty() {
-                let mut parser = parser.write().unwrap();
-                parser.process(s.as_bytes());
-            }
-        });
-    }
-
-    {
-        // Drop writer on purpose
-        let _writer = pair.master.take_writer().unwrap();
-    }
-
-    // Wait for the child to complete
-    let _child_exit_status = child.wait().unwrap();
-
-    drop(pair.master);
-
-    // let binding = parser.read().unwrap();
-    // let screen = binding.screen();
-    let title = Line::from("Preview");
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(title)
-        .style(Style::default().add_modifier(Modifier::BOLD));
-
-    block
-    // PseudoTerminal::new(screen).block(block)
 }
