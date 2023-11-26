@@ -34,7 +34,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
     let cwd = std::env::current_dir().unwrap();
 
     let narrow_down_targets = model.narrow_down_targets();
-    let selecting_target = &narrow_down_targets.get(model.state.selected().unwrap_or(0));
+    let selecting_target = &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
     let (file_name, line_number) = model
         .makefile
         .target_to_file_and_line_number(selecting_target);
@@ -122,7 +122,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         ),
         fzf_make_preview_chunks[1],
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
-        &mut model.state,
+        &mut model.targets_list_state,
     );
     f.render_widget(
         // NOTE: To show cursor, use rhysd/tui-textarea

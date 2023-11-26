@@ -49,7 +49,7 @@ pub struct Model {
     pub makefile: Makefile,
     // TODO: It is better make `should_quit` like following `quit || notQuuitYe || executeTarget (String)`.
     pub should_quit: bool,
-    pub state: ListState,
+    pub targets_list_state: ListState,
     pub selected_target: Option<String>,
 }
 
@@ -68,7 +68,7 @@ impl Model {
             current_pain: CurrentPain::Main,
             should_quit: false,
             makefile: makefile.clone(),
-            state: ListState::with_selected(ListState::default(), Some(0)),
+            targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             selected_target: None,
         })
     }
@@ -76,6 +76,7 @@ impl Model {
     pub fn update_key_input(&self, key_input: String) -> String {
         self.key_input.clone() + &key_input
     }
+
     pub fn pop(&self) -> String {
         let mut origin = self.key_input.clone();
         origin.pop();
@@ -111,7 +112,7 @@ impl Model {
     }
 
     fn next(&mut self) {
-        let i = match self.state.selected() {
+        let i = match self.targets_list_state.selected() {
             Some(i) => {
                 if self.narrow_down_targets().len() - 1 <= i {
                     0
@@ -121,11 +122,11 @@ impl Model {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.targets_list_state.select(Some(i));
     }
 
     fn previous(&mut self) {
-        let i = match self.state.selected() {
+        let i = match self.targets_list_state.selected() {
             Some(i) => {
                 if i == 0 {
                     self.narrow_down_targets().len() - 1
@@ -135,14 +136,14 @@ impl Model {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.targets_list_state.select(Some(i));
     }
 
     fn reset(&mut self) {
         if self.makefile.to_targets_string().is_empty() {
-            self.state.select(None);
+            self.targets_list_state.select(None);
         }
-        self.state.select(Some(0));
+        self.targets_list_state.select(Some(0));
     }
 }
 
@@ -254,7 +255,7 @@ fn update(model: &mut Model, message: Option<Message>) {
         Some(Message::Previous) => model.previous(),
         Some(Message::ExecuteTarget) => {
             model.selected_target = model
-                .state
+                .targets_list_state
                 .selected()
                 .map(|i| model.narrow_down_targets()[i].clone());
         }
