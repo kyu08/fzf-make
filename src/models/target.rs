@@ -20,7 +20,6 @@ impl Targets {
     }
 }
 
-// TODO: Add unit tests
 pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32> {
     let content = util::path_to_content(path);
     for (index, line) in content.lines().enumerate() {
