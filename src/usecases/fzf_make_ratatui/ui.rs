@@ -33,12 +33,13 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
     let pty_system = NativePtySystem::default();
     let cwd = std::env::current_dir().unwrap();
 
-    let selecting_target = &model.narrow_down_targets()[model.state.selected().unwrap_or(0)];
+    let narrow_down_targets = model.narrow_down_targets();
+    let selecting_target = &narrow_down_targets.get(model.state.selected().unwrap_or(0));
     let (file_name, line_number) = model
         .makefile
         .target_to_file_and_line_number(selecting_target);
 
-    let file_name = file_name.unwrap_or("".to_string());
+    let file_name = file_name.unwrap_or(model.makefile.path.to_string_lossy().to_string());
     let line_number = line_number.unwrap_or(1);
 
     let mut cmd = CommandBuilder::new("bat");

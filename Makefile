@@ -1,3 +1,6 @@
+export
+RUST_BACKTRACE=full
+
 .PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2
 toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
 	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
@@ -23,7 +26,7 @@ run:
 
 .PHONY: run-ratatui
 run-ratatui:
-	@cargo run -- -r
+	@RUST_BACKTRACE=full cargo run -- -r
 
 .PHONY: build
 build:

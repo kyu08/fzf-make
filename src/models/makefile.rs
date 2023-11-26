@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 /// Makefile represents a Makefile.
 #[derive(Clone)]
 pub struct Makefile {
-    path: PathBuf,
+    pub path: PathBuf,
     include_files: Vec<Makefile>,
     targets: Targets,
 }
@@ -73,9 +73,14 @@ impl Makefile {
     // TODO: Add unit tests
     pub fn target_to_file_and_line_number(
         &self,
-        target_to_search: &String,
+        target_to_search: &Option<&String>,
     ) -> (Option<String>, Option<u32>) {
         let mut result: (Option<String>, Option<u32>) = (None, None);
+
+        if target_to_search.is_none() {
+            return result;
+        }
+        let target_to_search = target_to_search.unwrap();
 
         if self.targets.0.contains(target_to_search) {
             result.0 = Some(self.path.to_string_lossy().to_string());
@@ -90,7 +95,8 @@ impl Makefile {
         }
 
         for include_file in &self.include_files {
-            let result = include_file.target_to_file_and_line_number(&target_to_search.clone());
+            let result =
+                include_file.target_to_file_and_line_number(&Some(&target_to_search.clone()));
             if result.0.is_some() {
                 return result;
             }
