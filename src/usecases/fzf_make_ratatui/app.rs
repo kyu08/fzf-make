@@ -84,6 +84,10 @@ impl Model {
     }
 
     pub fn narrow_down_targets(&self) -> Vec<String> {
+        if self.key_input.is_empty() {
+            return self.makefile.to_targets_string();
+        }
+
         let matcher = SkimMatcherV2::default();
         let mut filtered_list: Vec<(Option<i64>, String)> = self
             .makefile
@@ -91,8 +95,8 @@ impl Model {
             .into_iter()
             .map(
                 |target| match matcher.fuzzy_indices(&target, &self.key_input) {
-                    Some((score, _)) => (Some(score), target), // TODO: highligh matched part?
-                    None => (None, target),
+                    Some((score, _)) => (Some(score), target),
+                    None => (None, String::new()),
                 },
             )
             .filter(|(score, _)| score.is_some())

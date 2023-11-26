@@ -24,7 +24,7 @@ pub fn run(makefile: Makefile) -> String {
     }
 }
 
-fn get_preview_command(mut file_paths: Vec<String>) -> String {
+pub fn get_preview_command(mut file_paths: Vec<String>) -> String {
     // workaround for https://stackoverflow.com/questions/15432156/display-filename-before-matching-line
     // For more information, see https://github.com/kyu08/fzf-make/issues/53#issuecomment-1684872018
     if file_paths.len() == 1 {
@@ -35,13 +35,26 @@ fn get_preview_command(mut file_paths: Vec<String>) -> String {
     let preview_command = format!(
         r#"
     files="{}" \
-    result=$(grep -rnE '^{}\s*:' $(echo $files)); \
+    result=$(grep -rnE '^\s*{}\s*:' $(echo $files)); \
     IFS=':' read -r filename lineno _ <<< $result; \
     bat --style=numbers --color=always --line-range $lineno: \
     --highlight-line $lineno $filename;"#,
         file_paths.join(" "),
         "{}",
     );
+
+    // let preview_command = format!(
+    //     r#"
+    // files="{}" \
+    // result=$(grep -rnE '^{}\s*:' $(echo $files)); \
+    // IFS=':' read -r filename lineno _ <<< $result; \
+    // total_lines=$(wc -l < $filename); \
+    // cat -n $filename | tail -n $((total_lines - lineno + 1)) $filename"#,
+    //     // cat -n $filename | tail -n$lineno;"#,
+    //     // cat -n $filename | tail -n$lineno;"#,
+    //     file_paths.join(" "),
+    //     "{}",
+    // );
 
     preview_command
 }

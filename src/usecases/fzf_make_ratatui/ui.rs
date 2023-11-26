@@ -1,14 +1,17 @@
 use super::app::Model;
+use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
-    backend::Backend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
+use std::sync::{Arc, RwLock};
+use tui_term::widget::PseudoTerminal;
+use vt100::Screen;
 
-pub fn ui<B: Backend>(f: &mut Frame<B>, model: &mut Model) {
+pub fn ui(f: &mut Frame, model: &mut Model) {
     // Create the layout sections.
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -27,9 +30,94 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, model: &mut Model) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(fzf_make_chunks[0]);
 
+    // TODO: ここから
+
+    // let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
+    // let binding = parser.read().unwrap();
+    // let screen = binding.screen();
+    // let pt = preview_block(model.clone(), &screen);
+
+    let pty_system = NativePtySystem::default();
+    let cwd = std::env::current_dir().unwrap();
+
+    let mut cmd = CommandBuilder::new("bat");
+
+    let (file_name, line_number) = model
+        .makefile
+        .target_to_file_and_line_number(model.key_input.clone());
+    // FIXME: 関数に切り出したら修正する
+    let file_name = match file_name {
+        Some(file_name) => file_name,
+        None => "Makefile".to_string(),
+    };
+    let line_number = match line_number {
+        Some(line_number) => line_number,
+        None => 1,
+    };
+
+    cmd.cwd(cwd);
+    cmd.args([
+        file_name.as_str(),
+        "-p",
+        "--color=always",
+        "--line-range",
+        (line_number.to_string() + ":").as_str(),
+        "--highlight-line",
+        line_number.to_string().as_str(),
+    ]);
+
+    let pair = pty_system
+        .openpty(PtySize {
+            rows: 1000,
+            cols: 1000,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .unwrap();
+    let mut child = pair.slave.spawn_command(cmd).unwrap();
+
+    drop(pair.slave);
+
+    let mut reader = pair.master.try_clone_reader().unwrap();
+    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
+
+    {
+        let parser = parser.clone();
+        std::thread::spawn(move || {
+            // Consume the output from the child
+            let mut s = String::new();
+            reader.read_to_string(&mut s).unwrap();
+            if !s.is_empty() {
+                let mut parser = parser.write().unwrap();
+                parser.process(s.as_bytes());
+            }
+        });
+    }
+
+    {
+        // Drop writer on purpose
+        let _writer = pair.master.take_writer().unwrap();
+    }
+
+    // Wait for the child to complete
+    let _child_exit_status = child.wait().unwrap();
+
+    drop(pair.master);
+
+    let binding = parser.read().unwrap();
+    let screen = binding.screen();
+    let title = Line::from("Preview");
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(title)
+        .style(Style::default().add_modifier(Modifier::BOLD));
+
+    let pt = PseudoTerminal::new(screen).block(block);
+    // TODO: ここまで
+
     f.render_widget(
         // TODO: Implement preview window using tui-term
-        rounded_border_block("Preview", model.current_pain.is_main()),
+        pt,
         fzf_make_preview_chunks[0],
     );
     f.render_stateful_widget(
@@ -128,4 +216,83 @@ fn rounded_border_block(title: &str, is_current: bool) -> Block {
         .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(fg_color))
         .style(Style::default())
+}
+
+fn preview_block(model: Model, screen: &Screen) -> PseudoTerminal {
+    let pty_system = NativePtySystem::default();
+    let cwd = std::env::current_dir().unwrap();
+
+    let mut cmd = CommandBuilder::new("bat");
+
+    let (file_name, line_number) = model
+        .makefile
+        .target_to_file_and_line_number(model.key_input.clone());
+    // FIXME: 関数に切り出したら修正する
+    let file_name = match file_name {
+        Some(file_name) => file_name,
+        None => "Makefile".to_string(),
+    };
+    let line_number = match line_number {
+        Some(line_number) => line_number,
+        None => 1,
+    };
+
+    cmd.cwd(cwd);
+    cmd.args([
+        file_name.as_str(),
+        "-p",
+        "--color=always",
+        "--line-range",
+        (line_number.to_string() + ":").as_str(),
+        "--highlight-line",
+        line_number.to_string().as_str(),
+    ]);
+
+    let pair = pty_system
+        .openpty(PtySize {
+            rows: 1000,
+            cols: 1000,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .unwrap();
+    let mut child = pair.slave.spawn_command(cmd).unwrap();
+
+    drop(pair.slave);
+
+    let mut reader = pair.master.try_clone_reader().unwrap();
+    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
+
+    {
+        let parser = parser.clone();
+        std::thread::spawn(move || {
+            // Consume the output from the child
+            let mut s = String::new();
+            reader.read_to_string(&mut s).unwrap();
+            if !s.is_empty() {
+                let mut parser = parser.write().unwrap();
+                parser.process(s.as_bytes());
+            }
+        });
+    }
+
+    {
+        // Drop writer on purpose
+        let _writer = pair.master.take_writer().unwrap();
+    }
+
+    // Wait for the child to complete
+    let _child_exit_status = child.wait().unwrap();
+
+    drop(pair.master);
+
+    // let binding = parser.read().unwrap();
+    // let screen = binding.screen();
+    let title = Line::from("Preview");
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(title)
+        .style(Style::default().add_modifier(Modifier::BOLD));
+
+    PseudoTerminal::new(screen).block(block)
 }

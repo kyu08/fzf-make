@@ -1,3 +1,7 @@
+.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2
+toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
+	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
+
 .PHONY: test
 test : # Run unit tests
 	RUST_BACKTRACE=full cargo nextest run
@@ -26,7 +30,7 @@ build:
 	@cargo build
 
 .PHONY: check
-check:
+ check:
 	@cargo clippy -- -D warnings
 
 .PHONY: build-release
