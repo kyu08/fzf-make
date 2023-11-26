@@ -114,7 +114,7 @@ impl Model {
     fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.makefile.to_targets_string().len() - 1 {
+                if self.narrow_down_targets().len() - 1 <= i {
                     0
                 } else {
                     i + 1
@@ -129,7 +129,7 @@ impl Model {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.makefile.to_targets_string().len() - 1
+                    self.narrow_down_targets().len() - 1
                 } else {
                     i - 1
                 }
@@ -249,7 +249,6 @@ fn update(model: &mut Model, message: Option<Message>) {
             model.reset();
         }
         Some(Message::Backspace) => model.key_input = model.pop(),
-        // TODO: (絞り込まれた)ターゲットの一番上から上に、一番下から下に移動した際にそれぞれ一番下、一番上に移動するようにする(今は見えない要素をselectしてしまっている)
         Some(Message::Next) => model.next(),
         Some(Message::Previous) => model.previous(),
         Some(Message::ExecuteTarget) => {
