@@ -208,7 +208,6 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     let message = if crossterm::event::poll(std::time::Duration::from_millis(250))? {
         if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
             match key.code {
-                // Commons key bindings
                 KeyCode::Tab => Some(Message::MoveToNextPain),
                 KeyCode::Esc => Some(Message::Quit),
                 _ => match model.current_pain {
