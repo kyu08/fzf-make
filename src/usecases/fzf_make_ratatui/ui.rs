@@ -93,7 +93,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
 
     drop(pair.master);
 
-    let fg_color = if model.current_pain.is_main() {
+    let fg_color_ = if model.current_pain.is_main() {
         fg_color()
     } else {
         Color::default()
@@ -105,7 +105,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(ratatui::widgets::BorderType::Rounded)
-        .border_style(Style::default().fg(fg_color))
+        .border_style(Style::default().fg(fg_color_))
         .title(title)
         .style(Style::default());
     // MEMO: Lines to render preview window with bat using tui-term end here.
@@ -136,14 +136,16 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
 
     let hint_text = match model.current_pain {
         super::app::CurrentPain::Main => {
-            "(Any key except the following): Narrow down targets, <esc>: Quit, <tab> Move to next tab"
+            "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab"
         }
-        super::app::CurrentPain::History => "q / <esc>: Quit, <tab> Move to next tab",
+        super::app::CurrentPain::History => "q/<esc>: Quit, <tab> Move to next tab",
     };
-    let current_keys_hint = { Span::styled(hint_text, Style::default()) };
+    let current_keys_hint = { Span::styled(hint_text, Style::default().fg(fg_color())) };
 
-    let key_notes_footer =
-        Paragraph::new(Line::from(current_keys_hint)).block(rounded_border_block("hints", false));
+    let key_notes_footer = Paragraph::new(Line::from(current_keys_hint)).block(
+        rounded_border_block("Hints", false).padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
+    );
+
     f.render_widget(key_notes_footer, main_chunks[1]);
 }
 
