@@ -497,7 +497,6 @@ dependencies = [
  "portable-pty",
  "ratatui",
  "regex",
- "serde",
  "skim",
  "tui-term",
  "uuid",
