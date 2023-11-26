@@ -27,7 +27,8 @@ impl Usecase for FzfMake {
 
         let target = fuzzy_finder::run(makefile);
 
-        println!("{}", ("make ".to_string() + &target).blue()); // TODO: Make output color configurable via config file
+        // Make output color configurable via config file https://github.com/kyu08/fzf-make/issues/67
+        println!("{}", ("make ".to_string() + &target).blue());
         process::Command::new("make")
             .stdin(process::Stdio::inherit())
             .arg(target)

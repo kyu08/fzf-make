@@ -173,7 +173,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     match target {
         Some(t) => {
-            println!("{}", ("make ".to_string() + &t).blue()); // TODO: Make output color configurable via config file
+            // Make output color configurable via config file https://github.com/kyu08/fzf-make/issues/67
+            println!("{}", ("make ".to_string() + &t).blue());
             process::Command::new("make")
                 .stdin(process::Stdio::inherit())
                 .arg(t)
