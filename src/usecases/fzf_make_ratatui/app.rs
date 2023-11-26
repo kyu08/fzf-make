@@ -92,12 +92,14 @@ impl Model {
             .makefile
             .to_targets_string()
             .into_iter()
-            .map(
-                |target| match matcher.fuzzy_indices(&target, &self.key_input) {
+            .map(|target| {
+                let mut key_input = self.key_input.clone();
+                key_input.retain(|c| !c.is_whitespace());
+                match matcher.fuzzy_indices(&target, key_input.as_str()) {
                     Some((score, _)) => (Some(score), target),
                     None => (None, String::new()),
-                },
-            )
+                }
+            })
             .filter(|(score, _)| score.is_some())
             .collect();
 
