@@ -13,7 +13,7 @@ impl FzfMake {
 
 impl Usecase for FzfMake {
     fn command_str(&self) -> Vec<&'static str> {
-        vec![]
+        vec!["--s", "-s", "skim"]
     }
 
     fn run(&self) {

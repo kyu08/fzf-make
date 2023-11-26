@@ -11,7 +11,7 @@ impl FzfMakeRatatui {
 
 impl Usecase for FzfMakeRatatui {
     fn command_str(&self) -> Vec<&'static str> {
-        vec!["--r", "-r", "r"]
+        vec![]
     }
 
     fn run(&self) {

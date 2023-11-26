@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::{collections::HashMap, env};
 
+use crate::usecases::fzf_make_ratatui_main::FzfMakeRatatui;
 use crate::usecases::{fzf_make_main, fzf_make_ratatui_main, help, invalid_arg, usecase, version};
 
 pub fn run() {
@@ -18,7 +19,7 @@ fn args_to_usecase(args: Vec<String>) -> Arc<dyn usecase::Usecase> {
 
     let command = match args.get(1) {
         Some(s) => s,
-        None => return Arc::new(fzf_make_main::FzfMake),
+        None => return Arc::new(FzfMakeRatatui),
     };
 
     match usecases().get(command.as_str()) {
