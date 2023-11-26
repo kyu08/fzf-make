@@ -149,8 +149,7 @@ impl Model {
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
-    let mut stderr = io::stderr(); // This is a special case. Normally using stdout is fine
-                                   // TODO: あとで検討する
+    let mut stderr = io::stderr();
     execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stderr);
     let mut terminal = Terminal::new(backend)?;
