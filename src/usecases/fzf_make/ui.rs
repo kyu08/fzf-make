@@ -37,59 +37,16 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
     render_targets_block(model, f, fzf_make_preview_chunks[1]);
 }
 
-fn fg_color() -> Color {
+fn fg_color_selected() -> Color {
     Color::LightBlue
 }
-
-fn input_block<'a>(title: &'a str, target_input: &'a str, is_current: bool) -> Paragraph<'a> {
-    let fg_color = if is_current {
-        fg_color()
-    } else {
-        Color::default()
-    };
-
-    Paragraph::new(Line::from(target_input))
-        .block(
-            Block::default()
-                .title(title)
-                .borders(Borders::ALL)
-                .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(fg_color))
-                .style(Style::default())
-                .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
-        )
-        .style(Style::default())
-}
-fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bool) -> List<'_> {
-    let fg_color = if is_current {
-        fg_color()
-    } else {
-        Color::default()
-    };
-
-    let list: Vec<ListItem> = narrowed_down_targets
-        .into_iter()
-        .map(|target| ListItem::new(target).style(Style::default()))
-        .collect();
-
-    List::new(list)
-        .style(Style::default())
-        .block(
-            Block::default()
-                .title(title)
-                .borders(Borders::ALL)
-                .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(fg_color))
-                .style(Style::default())
-                .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
-        )
-        .highlight_style(Style::default().fg(Color::White).bg(Color::DarkGray))
-        .highlight_symbol("> ")
+fn fg_color_not_selected() -> Color {
+    Color::DarkGray
 }
 
 fn rounded_border_block(title: &str, is_current: bool) -> Block {
     let fg_color = if is_current {
-        fg_color()
+        fg_color_selected()
     } else {
         Color::default()
     };
@@ -100,23 +57,6 @@ fn rounded_border_block(title: &str, is_current: bool) -> Block {
         .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(fg_color))
         .style(Style::default())
-}
-
-fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
-    let cwd = std::env::current_dir().unwrap();
-    let mut cmd = CommandBuilder::new("bat");
-    cmd.cwd(cwd);
-    cmd.args([
-        file_name.as_str(),
-        "-p",
-        "--style=numbers",
-        "--color=always",
-        "--line-range",
-        (line_number.to_string() + ":").as_str(),
-        "--highlight-line",
-        line_number.to_string().as_str(),
-    ]);
-    cmd
 }
 
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
@@ -173,14 +113,14 @@ fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Re
     drop(pair.master);
 
     let fg_color_ = if model.current_pain.is_main() {
-        fg_color()
+        fg_color_selected()
     } else {
-        Color::default()
+        fg_color_not_selected()
     };
 
     let binding = parser.read().unwrap();
     let screen = binding.screen();
-    let title = Line::from("Preview");
+    let title = Line::from(" Preview ");
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(ratatui::widgets::BorderType::Rounded)
@@ -191,10 +131,27 @@ fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Re
     f.render_widget(PseudoTerminal::new(screen).block(block), chunk);
 }
 
+fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
+    let cwd = std::env::current_dir().unwrap();
+    let mut cmd = CommandBuilder::new("bat");
+    cmd.cwd(cwd);
+    cmd.args([
+        file_name.as_str(),
+        "-p",
+        "--style=numbers",
+        "--color=always",
+        "--line-range",
+        (line_number.to_string() + ":").as_str(),
+        "--highlight-line",
+        line_number.to_string().as_str(),
+    ]);
+    cmd
+}
+
 fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
         targets_block(
-            "Targets",
+            " Targets ",
             model.narrow_down_targets(),
             model.current_pain.is_main(),
         ),
@@ -207,14 +164,14 @@ fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
 fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_widget(
         // NOTE: To show cursor, use rhysd/tui-textarea
-        input_block("Input", &model.key_input, model.current_pain.is_main()),
+        input_block(" Input ", &model.key_input, model.current_pain.is_main()),
         chunk,
     );
 }
 
 fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let history_block = Paragraph::new(Line::from("Comming soon...")).block(
-        rounded_border_block("History", model.current_pain.is_history())
+        rounded_border_block(" History ", model.current_pain.is_history())
             .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
     );
     f.render_widget(history_block, chunk);
@@ -227,14 +184,64 @@ fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::l
         }
         super::app::CurrentPain::History => "q/<esc>: Quit, <tab> Move to next tab",
     };
-    let current_keys_hint = Span::styled(hint_text, Style::default().fg(fg_color()));
+    let current_keys_hint = Span::styled(hint_text, Style::default().fg(fg_color_selected()));
 
-    let title = "Key bindings";
+    let title = " Key bindings ";
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(Color::default()))
+        .style(Style::default())
+        .padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
     let key_notes_footer = Paragraph::new(current_keys_hint)
         .wrap(Wrap { trim: true })
-        .block(
-            rounded_border_block(title, false).padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
-        );
+        .block(block);
 
     f.render_widget(key_notes_footer, chunk);
+}
+fn input_block<'a>(title: &'a str, target_input: &'a str, is_current: bool) -> Paragraph<'a> {
+    let fg_color = if is_current {
+        fg_color_selected()
+    } else {
+        fg_color_not_selected()
+    };
+
+    Paragraph::new(Line::from(target_input))
+        .block(
+            Block::default()
+                .title(title)
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(fg_color))
+                .style(Style::default())
+                .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
+        )
+        .style(Style::default())
+}
+fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bool) -> List<'_> {
+    let fg_color = if is_current {
+        fg_color_selected()
+    } else {
+        fg_color_not_selected()
+    };
+
+    let list: Vec<ListItem> = narrowed_down_targets
+        .into_iter()
+        .map(|target| ListItem::new(target).style(Style::default()))
+        .collect();
+
+    List::new(list)
+        .style(Style::default())
+        .block(
+            Block::default()
+                .title(title)
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(fg_color))
+                .style(Style::default())
+                .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
+        )
+        .highlight_style(Style::default().fg(Color::White).bg(Color::DarkGray))
+        .highlight_symbol("> ")
 }
