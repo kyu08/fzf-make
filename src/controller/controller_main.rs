@@ -1,7 +1,8 @@
 use std::sync::Arc;
 use std::{collections::HashMap, env};
 
-use crate::usecases::{fzf_make_main, help, invalid_arg, usecase, version};
+use crate::usecases::fzf_make_main::FzfMake;
+use crate::usecases::{fzf_make_main, fzf_make_main_old, help, invalid_arg, usecase, version};
 
 pub fn run() {
     let command_line_args = env::args().collect();
@@ -18,7 +19,7 @@ fn args_to_usecase(args: Vec<String>) -> Arc<dyn usecase::Usecase> {
 
     let command = match args.get(1) {
         Some(s) => s,
-        None => return Arc::new(fzf_make_main::FzfMake),
+        None => return Arc::new(FzfMake),
     };
 
     match usecases().get(command.as_str()) {
@@ -29,10 +30,11 @@ fn args_to_usecase(args: Vec<String>) -> Arc<dyn usecase::Usecase> {
 
 fn usecases() -> HashMap<&'static str, Arc<dyn usecase::Usecase>> {
     let usecases: Vec<Arc<dyn usecase::Usecase>> = vec![
-        Arc::new(fzf_make_main::FzfMake::new()),
+        Arc::new(fzf_make_main_old::FzfMakeOld::new()),
         Arc::new(help::Help::new()),
         Arc::new(invalid_arg::InvalidArg::new()),
         Arc::new(version::Version::new()),
+        Arc::new(fzf_make_main::FzfMake::new()),
     ];
 
     let mut usecases_hash_map = HashMap::new();

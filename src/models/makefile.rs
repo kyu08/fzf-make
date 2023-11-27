@@ -1,19 +1,19 @@
-use super::target::*;
+use super::{target::*, util};
+use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::path::{Path, PathBuf};
-use std::{fs::File, io::Read};
 
 /// Makefile represents a Makefile.
 #[derive(Clone)]
 pub struct Makefile {
-    path: PathBuf,
+    pub path: PathBuf,
     include_files: Vec<Makefile>,
     targets: Targets,
 }
 
 impl Makefile {
-    pub fn create_makefile() -> Result<Makefile, &'static str> {
-        let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else { return Err("makefile not found\n") };
+    pub fn create_makefile() -> Result<Makefile> {
+        let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else { return Err(anyhow!("makefile not found\n")) };
         Ok(Makefile::new(Path::new(&makefile_name).to_path_buf()))
     }
 
@@ -42,7 +42,7 @@ impl Makefile {
     fn new(path: PathBuf) -> Makefile {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
-        let file_content = path_to_content(path.clone());
+        let file_content = util::path_to_content(path.clone());
         let include_files = content_to_include_file_paths(file_content.clone())
             .iter()
             .map(|included_file_path| Makefile::new(included_file_path.clone()))
@@ -70,17 +70,41 @@ impl Makefile {
 
         None
     }
-}
 
-pub fn path_to_content(path: PathBuf) -> String {
-    let mut content = String::new();
+    // TODO: Add unit tests
+    pub fn target_to_file_and_line_number(
+        &self,
+        target_to_search: &Option<&String>,
+    ) -> (Option<String>, Option<u32>) {
+        let mut result: (Option<String>, Option<u32>) = (None, None);
 
-    // Not handle cases where files are not found because make command cannot be
-    // executed in the first place if Makefile or included files are not found.
-    let mut f = File::open(path).unwrap();
-    f.read_to_string(&mut content).unwrap();
+        if target_to_search.is_none() {
+            return result;
+        }
+        let target_to_search = target_to_search.unwrap();
 
-    content
+        if self.targets.0.contains(target_to_search) {
+            result.0 = Some(self.path.to_string_lossy().to_string());
+        }
+
+        if let Some(line_number) = target_line_number(self.path.clone(), target_to_search.clone()) {
+            result.1 = Some(line_number)
+        }
+
+        if result.0.is_some() && result.1.is_some() {
+            return result.clone();
+        }
+
+        for include_file in &self.include_files {
+            let result =
+                include_file.target_to_file_and_line_number(&Some(&target_to_search.clone()));
+            if result.0.is_some() {
+                return result;
+            }
+        }
+
+        (None, None)
+    }
 }
 
 /// The path should be relative path from current directory where make command is executed.

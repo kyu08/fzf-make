@@ -29,6 +29,8 @@ USAGE:
 SUBCOMMANDS:
     help, --help, -h
         Prints help message.
+    old, --old, -o
+        Launches fzf-make@v0.8.0. (For recovery. Because big change made on v0.9.0. This command will be removed in the future.)
     version, --version, -v
         Prints version information.
     "#

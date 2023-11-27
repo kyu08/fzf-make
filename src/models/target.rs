@@ -1,4 +1,8 @@
+use std::path::PathBuf;
+
 use regex::Regex;
+
+use super::util;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Targets(pub Vec<String>);
@@ -16,8 +20,21 @@ impl Targets {
     }
 }
 
+pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32> {
+    let content = util::path_to_content(path);
+    for (index, line) in content.lines().enumerate() {
+        if let Some(t) = line_to_target(line.to_string()) {
+            if t == target_to_search {
+                return Some(index as u32 + 1); // Line number starts from 1
+            }
+        }
+    }
+
+    None
+}
+
 fn line_to_target(line: String) -> Option<String> {
-    let regex = Regex::new(r"^[^.#\s\t].+:[^=]*$").unwrap();
+    let regex = Regex::new(r"^ *[^.#\s　].+:[^=]*$").unwrap();
     regex.find(line.as_str()).map(|m| {
         m.as_str()
             .to_string()
@@ -161,6 +178,11 @@ build:
                 title: "hoge := 1",
                 contents: "hoge := 1",
                 expect: None,
+            },
+            Case {
+                title: " hoge:",
+                contents: " hoge:",
+                expect: Some("hoge"),
             },
         ];
 
