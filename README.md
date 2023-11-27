@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-logo.png" />
+<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
 
 `fzf-make` is a command line tool that executes make target using fuzzy finder with preview window.
 
@@ -76,13 +76,14 @@ cargo install fzf-make
 1. Execute `fzf-make` in the directory include makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile`)
 1. Select make command you want to execute
 
-## Misc
+## Commands
 | Command | Output |
 |--------|--------|
-| `fzf-make --help` / `fzf-make -h` / `fzf-make help` |  <img width="752" alt="fzf-make-help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-help.png">|
-| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | <img width="752" alt="fzf-make-version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-version.png"> |
-| `fzf-make --old` / `fzf-make -o` / `fzf-make old` | Comming soon... |
-| `fzf-make ${some_invalid_command}` | <img width="752" alt="fzf-make-invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-invalid-arg.png"> |
+| `fzf-make` |  <img width="752" alt="help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.png">|
+| `fzf-make --help` / `fzf-make -h` / `fzf-make help` |  <img width="752" alt="help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/help.png">|
+| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | <img width="752" alt="version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/version.png"> |
+| `fzf-make --old` / `fzf-make -o` / `fzf-make old` | <img width="752" alt="version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/old.png"> |
+| `fzf-make ${some_invalid_command}` | <img width="752" alt="invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/invalid-arg.png"> |
 
 # 💻 Development
 1. Clone this repository
