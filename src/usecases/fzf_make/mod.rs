@@ -1,1 +1,2 @@
-pub(super) mod fuzzy_finder;
+pub(super) mod app;
+pub(super) mod ui;
