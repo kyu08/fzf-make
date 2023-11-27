@@ -74,8 +74,9 @@ cargo install fzf-make
 ## Misc
 | Command | Output |
 |--------|--------|
-| `fzf-make --help` |  <img width="752" alt="fzf-make-help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-help.png">|
-| `fzf-make --version` | <img width="752" alt="fzf-make-version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-version.png"> |
+| `fzf-make --help` / `fzf-make -h` / `fzf-make help` |  <img width="752" alt="fzf-make-help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-help.png">|
+| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | <img width="752" alt="fzf-make-version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-version.png"> |
+| `fzf-make --old` / `fzf-make -o` / `fzf-make old` | Comming soon... |
 | `fzf-make ${some_invalid_command}` | <img width="752" alt="fzf-make-invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-invalid-arg.png"> |
 
 # 💻 Development
