@@ -48,7 +48,7 @@ fn rounded_border_block(title: &str, is_current: bool) -> Block {
     let fg_color = if is_current {
         fg_color_selected()
     } else {
-        Color::default()
+        fg_color_not_selected()
     };
 
     Block::default()
