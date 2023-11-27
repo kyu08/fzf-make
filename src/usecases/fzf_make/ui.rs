@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 use std::sync::{Arc, RwLock};
@@ -13,9 +13,9 @@ use tui_term::widget::PseudoTerminal;
 pub fn ui(f: &mut Frame, model: &mut Model) {
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(3), Constraint::Length(3)])
+        .constraints([Constraint::Min(3), Constraint::Length(5)])
         .split(f.size());
-    render_hins_block(model, f, main_chunks[1]);
+    render_key_bindings_block(model, f, main_chunks[1]);
 
     let fzf_preview_and_history_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -220,18 +220,21 @@ fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
     f.render_widget(history_block, chunk);
 }
 
-fn render_hins_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let hint_text = match model.current_pain {
         super::app::CurrentPain::Main => {
             "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character, <c-w>: Delete all key input"
         }
         super::app::CurrentPain::History => "q/<esc>: Quit, <tab> Move to next tab",
     };
-    let current_keys_hint = { Span::styled(hint_text, Style::default().fg(fg_color())) };
+    let current_keys_hint = Span::styled(hint_text, Style::default().fg(fg_color()));
 
-    let key_notes_footer = Paragraph::new(Line::from(current_keys_hint)).block(
-        rounded_border_block("Hints", false).padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
-    );
+    let title = "Key bindings";
+    let key_notes_footer = Paragraph::new(current_keys_hint)
+        .wrap(Wrap { trim: true })
+        .block(
+            rounded_border_block(title, false).padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
+        );
 
     f.render_widget(key_notes_footer, chunk);
 }
