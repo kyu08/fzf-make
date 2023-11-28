@@ -6,7 +6,7 @@
 
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
-![crates.io](https://img.shields.io/crates/v/fzf-make?style=flatflat-square)
+[![crates.io](https://img.shields.io/crates/v/fzf-make?style=flatflat-square)](https://crates.io/crates/fzf-make)
 
 <p align="center">
     [<a href="../README.md">English</a>]
