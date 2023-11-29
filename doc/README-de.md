@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-logo.png" />
+<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
 
 `fzf-make` ist ein Kommandozeilenwerkzeug, das make target unter Verwendung des Fuzzy Finders mit Vorschaufenster ausführt.
 
