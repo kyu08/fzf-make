@@ -21,5 +21,5 @@ impl Usecase for InvalidArg {
 }
 
 fn get_message() -> String {
-    "Invalid argment.".to_string()
+    "Invalid argument.".to_string()
 }
