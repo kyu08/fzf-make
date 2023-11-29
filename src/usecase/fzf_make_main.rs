@@ -1,5 +1,5 @@
-use crate::usecases::fzf_make::app;
-use crate::usecases::usecase::Usecase;
+use crate::usecase::fzf_make::app;
+use crate::usecase::usecase_main::Usecase;
 
 pub struct FzfMake;
 

@@ -1,5 +1,5 @@
 use crate::models::makefile::Makefile;
-use crate::usecases::{fzf_make_old::fuzzy_finder, usecase::Usecase};
+use crate::usecase::{fzf_make_old::fuzzy_finder, usecase_main::Usecase};
 use colored::*;
 use std::process;
 

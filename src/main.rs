@@ -1,6 +1,6 @@
 mod controller;
 mod models;
-mod usecases;
+mod usecase;
 
 use crate::controller::controller_main;
 use std::panic;
