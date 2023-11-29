@@ -13,7 +13,7 @@ pub struct Makefile {
 
 impl Makefile {
     pub fn create_makefile() -> Result<Makefile> {
-        let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else { return Err(anyhow!("makefile not found\n")) };
+        let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else { return Err(anyhow!("makefile not found.\n")) };
         Ok(Makefile::new(Path::new(&makefile_name).to_path_buf()))
     }
 

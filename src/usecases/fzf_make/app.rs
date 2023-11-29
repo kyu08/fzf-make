@@ -158,10 +158,7 @@ pub fn main() -> Result<()> {
 
         let target: Result<Option<String>> = match Model::new() {
             Err(e) => Err(e),
-            Ok(model) => match run(&mut terminal, model) {
-                Ok(target_o) => Ok(target_o),
-                Err(e) => Err(anyhow!(e)),
-            },
+            Ok(model) => run(&mut terminal, model),
         };
 
         let target = match target {
@@ -174,6 +171,7 @@ pub fn main() -> Result<()> {
                     DisableMouseCapture
                 )?;
                 terminal.show_cursor()?;
+                print_error(&e);
                 return Err(e);
             }
         };
@@ -206,18 +204,25 @@ pub fn main() -> Result<()> {
 
     match result {
         Ok(_) => Ok(()),
-        Err(_) => {
+        Err(e) => {
             disable_raw_mode()?;
             execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+            println!("panic catched: {:?}", e);
             panic::set_hook(Box::new(|_| {}));
             process::exit(1);
         }
     }
 }
 
-fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> io::Result<Option<String>> {
+fn print_error(e: &anyhow::Error) {
+    println!("{}", e.to_string().red());
+}
+
+fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Option<String>> {
     loop {
-        terminal.draw(|f| ui(f, &mut model.clone()))?;
+        if let Err(e) = terminal.draw(|f| ui(f, &mut model.clone())) {
+            return Err(anyhow!(e));
+        }
         match handle_event(&model) {
             Ok(message) => {
                 update(&mut model, message);
