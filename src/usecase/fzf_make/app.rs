@@ -168,7 +168,6 @@ pub fn main() -> Result<()> {
             Ok(t) => t,
             Err(e) => {
                 shutdown_terminal(&mut terminal)?;
-                print_error(&e);
                 return Err(e);
             }
         };
@@ -202,11 +201,6 @@ pub fn main() -> Result<()> {
             process::exit(1);
         }
     }
-}
-
-// TODO: いずれはmainかcontrollerに移動するはず
-fn print_error(e: &anyhow::Error) {
-    println!("{}", e.to_string().red());
 }
 
 fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Option<String>> {
@@ -289,15 +283,20 @@ fn update(model: &mut Model, message: Option<Message>) {
     }
 }
 
-fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> io::Result<()> {
-    disable_raw_mode()?;
+fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Result<()> {
+    if let Err(e) = disable_raw_mode() {
+        return Err(anyhow!(e));
+    }
+
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
-    terminal.show_cursor()?;
+
+    if let Err(e) = terminal.show_cursor() {
+        return Err(anyhow!(e));
+    }
 
     Ok(())
 }
-

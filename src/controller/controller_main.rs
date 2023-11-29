@@ -1,15 +1,29 @@
+use colored::Colorize;
 use std::sync::Arc;
 use std::{collections::HashMap, env};
 
 use crate::usecase::fzf_make_main::FzfMake;
 use crate::usecase::{fzf_make_main, fzf_make_main_old, help, invalid_arg, usecase_main, version};
 
-// TODO: return error
 pub fn run() {
     let command_line_args = env::args().collect();
     let usecase = args_to_usecase(command_line_args);
 
-    usecase.run();
+    match usecase.run() {
+        Err(e) => {
+            // TODO: makefile not found が出力されない原因を調査するところから
+            // TODO: makefile not found が出力されない原因を調査するところから
+            // TODO: makefile not found が出力されない原因を調査するところから
+            // TODO: makefile not found が出力されない原因を調査するところから
+            // TODO: makefile not found が出力されない原因を調査するところから
+            // TODO: makefile not found が出力されない原因を調査するところから
+            // TODO: makefile not found が出力されない原因を調査するところから
+            // TODO: makefile not found が出力されない原因を調査するところから
+            print_error(&e);
+            std::process::exit(1);
+        }
+        Ok(_) => std::process::exit(0),
+    }
 }
 
 fn args_to_usecase(args: Vec<String>) -> Arc<dyn usecase_main::Usecase> {
@@ -46,4 +60,8 @@ fn usecases() -> HashMap<&'static str, Arc<dyn usecase_main::Usecase>> {
     });
 
     usecases_hash_map
+}
+
+fn print_error(e: &anyhow::Error) {
+    println!("{}", e.to_string().red());
 }
