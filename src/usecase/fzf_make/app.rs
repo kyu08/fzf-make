@@ -15,7 +15,10 @@ use ratatui::{
     widgets::ListState,
     Terminal,
 };
-use std::{io, panic, process};
+use std::{
+    io::{self, Stderr},
+    panic, process,
+};
 
 #[derive(Clone)]
 pub enum CurrentPain {
@@ -164,25 +167,13 @@ pub fn main() -> Result<()> {
         let target = match target {
             Ok(t) => t,
             Err(e) => {
-                disable_raw_mode()?;
-                execute!(
-                    terminal.backend_mut(),
-                    LeaveAlternateScreen,
-                    DisableMouseCapture
-                )?;
-                terminal.show_cursor()?;
+                shutdown_terminal(&mut terminal)?;
                 print_error(&e);
                 return Err(e);
             }
         };
 
-        disable_raw_mode()?;
-        execute!(
-            terminal.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )?;
-        terminal.show_cursor()?;
+        shutdown_terminal(&mut terminal)?;
 
         match target {
             Some(t) => {
@@ -207,13 +198,13 @@ pub fn main() -> Result<()> {
         Err(e) => {
             disable_raw_mode()?;
             execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
-            println!("panic catched: {:?}", e);
-            panic::set_hook(Box::new(|_| {}));
+            println!("panic: {:?}", e);
             process::exit(1);
         }
     }
 }
 
+// TODO: いずれはmainかcontrollerに移動するはず
 fn print_error(e: &anyhow::Error) {
     println!("{}", e.to_string().red());
 }
@@ -297,3 +288,16 @@ fn update(model: &mut Model, message: Option<Message>) {
         None => {}
     }
 }
+
+fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> io::Result<()> {
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    Ok(())
+}
+

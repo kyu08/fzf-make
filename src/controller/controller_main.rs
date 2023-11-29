@@ -4,6 +4,7 @@ use std::{collections::HashMap, env};
 use crate::usecase::fzf_make_main::FzfMake;
 use crate::usecase::{fzf_make_main, fzf_make_main_old, help, invalid_arg, usecase_main, version};
 
+// TODO: return error
 pub fn run() {
     let command_line_args = env::args().collect();
     let usecase = args_to_usecase(command_line_args);
