@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-logo.png" />
+<img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
 
 `fzf-make` ist ein Kommandozeilenwerkzeug, das make target unter Verwendung des Fuzzy Finders mit Vorschaufenster ausführt.
 
@@ -79,9 +79,10 @@ cargo install fzf-make
 ## Sonstiges
 | Command | Output |
 |--------|--------|
-| `fzf-make --help` |  <img width="752" alt="fzf-make-help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-help.png">|
-| `fzf-make --version` | <img width="752" alt="fzf-make-version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-version.png"> |
-| `fzf-make ${some_invalid_command}` | <img width="752" alt="fzf-make-invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/fzf-make-invalid-arg.png"> |
+| `fzf-make --help` |  <img width="752" alt="fzf-make-help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/help.png">|
+| `fzf-make --version` | <img width="752" alt="fzf-make-version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/version.png"> |
+| `fzf-make --old` / `fzf-make -o` / `fzf-make old` | <img width="752" alt="version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/old.png"> |
+| `fzf-make ${some_invalid_command}` | <img width="752" alt="fzf-make-invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/invalid-arg.png"> |
 
 # 💻 Entwicklung
 1. Dieses repository klonen
