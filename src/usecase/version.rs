@@ -1,4 +1,5 @@
 use crate::usecase::usecase_main::Usecase;
+use anyhow::Result;
 use std::env;
 
 pub struct Version;
@@ -14,8 +15,9 @@ impl Usecase for Version {
         vec!["--version", "-v", "version"]
     }
 
-    fn run(&self) {
+    fn run(&self) -> Result<()> {
         println!("v{}", get_version());
+        Ok(())
     }
 }
 

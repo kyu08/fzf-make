@@ -1,4 +1,5 @@
 use crate::usecase::usecase_main::Usecase;
+use anyhow::Result;
 
 pub struct Help;
 
@@ -13,8 +14,9 @@ impl Usecase for Help {
         vec!["--help", "-h", "help"]
     }
 
-    fn run(&self) {
+    fn run(&self) -> Result<()> {
         println!("{}", get_help());
+        Ok(())
     }
 }
 

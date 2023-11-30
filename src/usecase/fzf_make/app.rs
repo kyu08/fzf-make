@@ -15,7 +15,10 @@ use ratatui::{
     widgets::ListState,
     Terminal,
 };
-use std::{io, panic, process};
+use std::{
+    io::{self, Stderr},
+    panic, process,
+};
 
 #[derive(Clone)]
 pub enum CurrentPain {
@@ -164,25 +167,12 @@ pub fn main() -> Result<()> {
         let target = match target {
             Ok(t) => t,
             Err(e) => {
-                disable_raw_mode()?;
-                execute!(
-                    terminal.backend_mut(),
-                    LeaveAlternateScreen,
-                    DisableMouseCapture
-                )?;
-                terminal.show_cursor()?;
-                print_error(&e);
+                shutdown_terminal(&mut terminal)?;
                 return Err(e);
             }
         };
 
-        disable_raw_mode()?;
-        execute!(
-            terminal.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )?;
-        terminal.show_cursor()?;
+        shutdown_terminal(&mut terminal)?;
 
         match target {
             Some(t) => {
@@ -203,19 +193,14 @@ pub fn main() -> Result<()> {
     });
 
     match result {
-        Ok(_) => Ok(()),
+        Ok(usecase_result) => usecase_result,
         Err(e) => {
             disable_raw_mode()?;
             execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
-            println!("panic catched: {:?}", e);
-            panic::set_hook(Box::new(|_| {}));
+            println!("panic: {:?}", e);
             process::exit(1);
         }
     }
-}
-
-fn print_error(e: &anyhow::Error) {
-    println!("{}", e.to_string().red());
 }
 
 fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Option<String>> {
@@ -296,4 +281,22 @@ fn update(model: &mut Model, message: Option<Message>) {
         }
         None => {}
     }
+}
+
+fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Result<()> {
+    if let Err(e) = disable_raw_mode() {
+        return Err(anyhow!(e));
+    }
+
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+
+    if let Err(e) = terminal.show_cursor() {
+        return Err(anyhow!(e));
+    }
+
+    Ok(())
 }

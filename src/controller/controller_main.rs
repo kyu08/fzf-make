@@ -1,3 +1,4 @@
+use colored::Colorize;
 use std::sync::Arc;
 use std::{collections::HashMap, env};
 
@@ -8,7 +9,13 @@ pub fn run() {
     let command_line_args = env::args().collect();
     let usecase = args_to_usecase(command_line_args);
 
-    usecase.run();
+    match usecase.run() {
+        Err(e) => {
+            print_error(&e);
+            std::process::exit(1);
+        }
+        Ok(_) => std::process::exit(0),
+    }
 }
 
 fn args_to_usecase(args: Vec<String>) -> Arc<dyn usecase_main::Usecase> {
@@ -45,4 +52,8 @@ fn usecases() -> HashMap<&'static str, Arc<dyn usecase_main::Usecase>> {
     });
 
     usecases_hash_map
+}
+
+fn print_error(e: &anyhow::Error) {
+    println!("{}", e.to_string().red());
 }

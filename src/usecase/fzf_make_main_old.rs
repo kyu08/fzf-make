@@ -1,5 +1,6 @@
 use crate::models::makefile::Makefile;
 use crate::usecase::{fzf_make_old::fuzzy_finder, usecase_main::Usecase};
+use anyhow::Result;
 use colored::*;
 use std::process;
 
@@ -16,11 +17,10 @@ impl Usecase for FzfMakeOld {
         vec!["--o", "-o", "old"]
     }
 
-    fn run(&self) {
+    fn run(&self) -> Result<()> {
         let makefile = match Makefile::create_makefile() {
             Err(e) => {
-                println!("[ERR] {}", e);
-                process::exit(1)
+                return Err(e);
             }
             Ok(f) => f,
         };
@@ -36,5 +36,7 @@ impl Usecase for FzfMakeOld {
             .expect("Failed to execute process")
             .wait()
             .expect("Failed to execute process");
+
+        Ok(())
     }
 }

@@ -1,5 +1,6 @@
 use super::help;
 use crate::usecase::usecase_main::Usecase;
+use anyhow::Result;
 
 pub struct InvalidArg;
 
@@ -14,9 +15,10 @@ impl Usecase for InvalidArg {
         vec![]
     }
 
-    fn run(&self) {
+    fn run(&self) -> Result<()> {
         println!("{}", get_message());
         println!("{}", help::get_help());
+        Ok(())
     }
 }
 

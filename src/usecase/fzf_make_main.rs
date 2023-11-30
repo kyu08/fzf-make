@@ -1,5 +1,6 @@
 use crate::usecase::fzf_make::app;
 use crate::usecase::usecase_main::Usecase;
+use anyhow::Result;
 
 pub struct FzfMake;
 
@@ -14,7 +15,7 @@ impl Usecase for FzfMake {
         vec![]
     }
 
-    fn run(&self) {
-        let _ = app::main();
+    fn run(&self) -> Result<()> {
+        app::main()
     }
 }
