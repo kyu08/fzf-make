@@ -34,7 +34,7 @@ pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32
 }
 
 fn line_to_target(line: String) -> Option<String> {
-    let regex = Regex::new(r"^ *[^.#\s　].+:[^=]*$").unwrap();
+    let regex = Regex::new(r"^ *[^.#\s　][^=]+:[^=]*$").unwrap();
     regex.find(line.as_str()).map(|m| {
         m.as_str()
             .to_string()
@@ -177,6 +177,16 @@ build:
             Case {
                 title: "hoge := 1",
                 contents: "hoge := 1",
+                expect: None,
+            },
+            Case {
+                title: "hoge?=fuga:1",
+                contents: "hoge?=fuga:1",
+                expect: None,
+            },
+            Case {
+                title: "hoge=fuga:1",
+                contents: "hoge=fuga:1",
                 expect: None,
             },
             Case {
