@@ -39,7 +39,6 @@ brew install kyu08/tap/fzf-make
 
 ```sh
 # update 
-brew update
 brew upgrade fzf-make
 ```
 
