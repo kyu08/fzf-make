@@ -193,7 +193,7 @@ pub fn main() -> Result<()> {
     });
 
     match result {
-        Ok(_) => Ok(()),
+        Ok(usecase_result) => usecase_result,
         Err(e) => {
             disable_raw_mode()?;
             execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;

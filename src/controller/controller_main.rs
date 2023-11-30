@@ -11,14 +11,6 @@ pub fn run() {
 
     match usecase.run() {
         Err(e) => {
-            // TODO: makefile not found が出力されない原因を調査するところから
-            // TODO: makefile not found が出力されない原因を調査するところから
-            // TODO: makefile not found が出力されない原因を調査するところから
-            // TODO: makefile not found が出力されない原因を調査するところから
-            // TODO: makefile not found が出力されない原因を調査するところから
-            // TODO: makefile not found が出力されない原因を調査するところから
-            // TODO: makefile not found が出力されない原因を調査するところから
-            // TODO: makefile not found が出力されない原因を調査するところから
             print_error(&e);
             std::process::exit(1);
         }
