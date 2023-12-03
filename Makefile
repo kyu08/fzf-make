@@ -18,7 +18,6 @@ tools:
 	@if ! which cargo-set-version > /dev/null; then \
 		cargo install cargo-edit; \
 	fi
-	@echo "Installation completed! 🎉"
 
 .PHONY: run
 run:
@@ -40,13 +39,9 @@ build:
 build-release:
 	@cargo build --verbose --release
 
-.PHONY: upgrade-and-build-release-binary
-upgrade-and-build-release-binary: tools
-	@read -p "Upgrade to new version? (If n or empty, the version will not be upgraded) y/n: " ans; \
-	if [ "$$ans" = y ]; then \
-		cargo set-version --bump minor; \
-	fi; \
-	make build-release
+.PHONY: bump-fzf-make-version
+bump-fzf-make-version: tools
+	cargo set-version --bump minor; \
 
 # Targets for test
 include ./makefiles/test.mk
