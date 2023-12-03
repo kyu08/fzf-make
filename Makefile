@@ -42,9 +42,20 @@ build:
 build-release:
 	@cargo build --verbose --release
 
+CURRENT_VERSION := $(shell cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
 .PHONY: bump-fzf-make-version
 bump-fzf-make-version: tools
 	cargo set-version --bump minor; \
+	git checkout -b "$${CURRENT_VERSION}"; \
+	git add .; \
+	git commit -m "bump version to $${CURRENT_VERSION}"; \
+	git push origin "$${CURRENT_VERSION}"; \
+	gh pr create --fill
+# # TODO: add commit push, make PR
+# # 参考にできそうなスクリプトを雑に置いておく
+# 	git checkout -b "$${version}"; \
+# 	hugo new "posts/$${version}/index.md"
+
 
 # Targets for test
 include ./makefiles/test.mk
