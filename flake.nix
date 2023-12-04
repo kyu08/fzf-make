@@ -9,6 +9,7 @@
   outputs = { nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages.${system};
+      cargoTOML = builtins.fromTOML (builtins.readFile (./. + "/Cargo.toml"));
         in
       {
         devShells.default = pkgs.mkShell {
@@ -22,7 +23,7 @@
         packages = rec {
           fzf-make = pkgs.rustPlatform.buildRustPackage {
             pname = "fzf-make";
-            version = "0.7.0";
+            inherit (cargoTOML.package) version;
 
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
