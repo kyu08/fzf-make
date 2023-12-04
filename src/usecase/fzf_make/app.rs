@@ -222,7 +222,7 @@ fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Optio
 }
 
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
-    let message = if crossterm::event::poll(std::time::Duration::from_millis(250))? {
+    let message = if crossterm::event::poll(std::time::Duration::from_millis(2000))? {
         if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
             match key.code {
                 KeyCode::Tab => Some(Message::MoveToNextPain),
