@@ -128,7 +128,12 @@ fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Re
         .title(title)
         .style(Style::default());
 
-    f.render_widget(PseudoTerminal::new(screen).block(block), chunk);
+    f.render_widget(
+        PseudoTerminal::new(screen)
+            .cursor(tui_term::widget::Cursor::default().symbol(""))
+            .block(block),
+        chunk,
+    );
 }
 
 fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
