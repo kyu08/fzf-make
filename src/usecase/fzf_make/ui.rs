@@ -112,7 +112,7 @@ fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Re
 
     drop(pair.master);
 
-    let fg_color_ = if model.current_pain.is_main() {
+    let fg_color_ = if model.current_pane.is_main() {
         fg_color_selected()
     } else {
         fg_color_not_selected()
@@ -158,7 +158,7 @@ fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
         targets_block(
             " Targets ",
             model.narrow_down_targets(),
-            model.current_pain.is_main(),
+            model.current_pane.is_main(),
         ),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
@@ -169,25 +169,25 @@ fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
 fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_widget(
         // NOTE: To show cursor, use rhysd/tui-textarea
-        input_block(" Input ", &model.key_input, model.current_pain.is_main()),
+        input_block(" Input ", &model.key_input, model.current_pane.is_main()),
         chunk,
     );
 }
 
 fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let history_block = Paragraph::new(Line::from("Comming soon...")).block(
-        rounded_border_block(" History ", model.current_pain.is_history())
+        rounded_border_block(" History ", model.current_pane.is_history())
             .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
     );
     f.render_widget(history_block, chunk);
 }
 
 fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let hint_text = match model.current_pain {
-        super::app::CurrentPain::Main => {
+    let hint_text = match model.current_pane {
+        super::app::CurrentPane::Main => {
             "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character, <c-w>: Delete all key input"
         }
-        super::app::CurrentPain::History => "q/<esc>: Quit, <tab> Move to next tab",
+        super::app::CurrentPane::History => "q/<esc>: Quit, <tab> Move to next tab",
     };
     let current_keys_hint = Span::styled(hint_text, Style::default().fg(fg_color_selected()));
 

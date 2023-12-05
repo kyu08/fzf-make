@@ -21,23 +21,23 @@ use std::{
 };
 
 #[derive(Clone)]
-pub enum CurrentPain {
+pub enum CurrentPane {
     Main,
     History,
 }
 
-impl CurrentPain {
+impl CurrentPane {
     pub fn is_main(&self) -> bool {
-        matches!(self, CurrentPain::Main)
+        matches!(self, CurrentPane::Main)
     }
 
     pub fn is_history(&self) -> bool {
-        matches!(self, CurrentPain::History)
+        matches!(self, CurrentPane::History)
     }
 }
 
 enum Message {
-    MoveToNextPain,
+    MoveToNextPane,
     Quit,
     KeyInput(String),
     Backspace, // TODO: Delegate to rhysd/tui-textarea
@@ -49,7 +49,7 @@ enum Message {
 
 #[derive(Clone)]
 pub struct Model {
-    pub current_pain: CurrentPain,
+    pub current_pane: CurrentPane,
     pub key_input: String,
     pub makefile: Makefile,
     // TODO: It is better make `should_quit` like following `quit || notQuuitYe || executeTarget (String)`.
@@ -67,7 +67,7 @@ impl Model {
 
         Ok(Model {
             key_input: String::new(),
-            current_pain: CurrentPain::Main,
+            current_pane: CurrentPane::Main,
             should_quit: false,
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
@@ -225,10 +225,10 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     let message = if crossterm::event::poll(std::time::Duration::from_millis(2000))? {
         if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
             match key.code {
-                KeyCode::Tab => Some(Message::MoveToNextPain),
+                KeyCode::Tab => Some(Message::MoveToNextPane),
                 KeyCode::Esc => Some(Message::Quit),
-                _ => match model.current_pain {
-                    CurrentPain::Main => match key.code {
+                _ => match model.current_pane {
+                    CurrentPane::Main => match key.code {
                         KeyCode::Backspace => Some(Message::Backspace),
                         KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             Some(Message::Backspace)
@@ -242,7 +242,7 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                         KeyCode::Char(char) => Some(Message::KeyInput(char.to_string())),
                         _ => None,
                     },
-                    CurrentPain::History => match key.code {
+                    CurrentPane::History => match key.code {
                         KeyCode::Char('q') => Some(Message::Quit),
                         _ => None,
                     },
@@ -260,9 +260,9 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
 // TODO: Add UT
 fn update(model: &mut Model, message: Option<Message>) {
     match message {
-        Some(Message::MoveToNextPain) => match model.current_pain {
-            CurrentPain::Main => model.current_pain = CurrentPain::History,
-            CurrentPain::History => model.current_pain = CurrentPain::Main,
+        Some(Message::MoveToNextPane) => match model.current_pane {
+            CurrentPane::Main => model.current_pane = CurrentPane::History,
+            CurrentPane::History => model.current_pane = CurrentPane::Main,
         },
         Some(Message::Quit) => model.should_quit = true,
         Some(Message::KeyInput(key_input)) => {
