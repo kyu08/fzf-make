@@ -18,6 +18,9 @@ tools:
 	@if ! which cargo-set-version > /dev/null; then \
 		cargo install cargo-edit; \
 	fi
+	@if ! which typos > /dev/null; then \
+		cargo install typos-cli; \
+	fi
 
 .PHONY: run
 run:
@@ -60,3 +63,7 @@ cmd:
 	if [ "$$ans" = y ]; then  \
 		echo "Doing something..."; \
 	fi
+
+.PHONY: spell-check
+spell-check:
+	typos
