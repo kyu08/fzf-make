@@ -93,7 +93,7 @@ cargo install fzf-make
 To execute test, run `make test`(needs `nextest`). Or just run `cargo test`.
 
 ## nix
-Or you can use `nix` to create a developement shell with the project dependencies.
+Or you can use `nix` to create a development shell with the project dependencies.
 
 Within the repo root, execute the following command:
 ```nix

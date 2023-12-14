@@ -175,7 +175,7 @@ fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::
 }
 
 fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let history_block = Paragraph::new(Line::from("Comming soon...")).block(
+    let history_block = Paragraph::new(Line::from("Coming soon...")).block(
         rounded_border_block(" History ", model.current_pane.is_history())
             .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
     );
