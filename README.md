@@ -11,6 +11,7 @@
 <p align="center">
     [English]
     [<a href="doc/README-de.md">Deutsch</a>]
+    [<a href="doc/README-fr.md">Français</a>]
 </p>
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.gif" />
