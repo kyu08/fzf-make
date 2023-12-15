@@ -21,7 +21,10 @@ impl Targets {
 }
 
 pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32> {
-    let content = util::path_to_content(path);
+    let content = match util::path_to_content(path) {
+        Ok(c) => c,
+        Err(_) => return None,
+    };
     for (index, line) in content.lines().enumerate() {
         if let Some(t) = line_to_target(line.to_string()) {
             if t == target_to_search {

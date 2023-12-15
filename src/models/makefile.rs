@@ -14,7 +14,7 @@ pub struct Makefile {
 impl Makefile {
     pub fn create_makefile() -> Result<Makefile> {
         let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else { return Err(anyhow!("makefile not found.\n")) };
-        Ok(Makefile::new(Path::new(&makefile_name).to_path_buf()))
+        Makefile::new(Path::new(&makefile_name).to_path_buf())
     }
 
     pub fn to_include_files_string(&self) -> Vec<String> {
@@ -39,20 +39,21 @@ impl Makefile {
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
     // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
-    fn new(path: PathBuf) -> Makefile {
+    fn new(path: PathBuf) -> Result<Makefile> {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
-        let file_content = util::path_to_content(path.clone());
+        let file_content = util::path_to_content(path.clone())?;
         let include_files = content_to_include_file_paths(file_content.clone())
             .iter()
             .map(|included_file_path| Makefile::new(included_file_path.clone()))
+            .filter_map(Result::ok)
             .collect();
 
-        Makefile {
+        Ok(Makefile {
             path,
             include_files,
             targets: Targets::new(file_content),
-        }
+        })
     }
 
     fn specify_makefile_name(target_path: String) -> Option<String> {
