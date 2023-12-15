@@ -2,4 +2,4 @@
 ratatui = "ratatui"
 
 [files]
-extend-exclude = ["doc/README-de.md"]
+extend-exclude = ["doc/README-*.md"]
