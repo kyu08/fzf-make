@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::{collections::HashMap, env};
 
 use crate::usecase::fzf_make_main::FzfMake;
-use crate::usecase::{fzf_make_main, fzf_make_main_old, help, invalid_arg, usecase_main, version};
+use crate::usecase::{fzf_make_main, help, invalid_arg, usecase_main, version};
 
 pub fn run() {
     let command_line_args = env::args().collect();
@@ -37,7 +37,6 @@ fn args_to_usecase(args: Vec<String>) -> Arc<dyn usecase_main::Usecase> {
 
 fn usecases() -> HashMap<&'static str, Arc<dyn usecase_main::Usecase>> {
     let usecases: Vec<Arc<dyn usecase_main::Usecase>> = vec![
-        Arc::new(fzf_make_main_old::FzfMakeOld::new()),
         Arc::new(help::Help::new()),
         Arc::new(invalid_arg::InvalidArg::new()),
         Arc::new(version::Version::new()),
