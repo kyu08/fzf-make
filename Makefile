@@ -44,7 +44,13 @@ build-release:
 
 .PHONY: bump-fzf-make-version
 bump-fzf-make-version: tools
-	cargo set-version --bump minor; \
+	@cargo set-version --bump minor; \
+	export CURRENT_VERSION=$$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version'); \
+	git checkout -b "release_v$${CURRENT_VERSION}"; \
+	git add .; \
+	git commit -m "Bump fzf-make's version to v$${CURRENT_VERSION}"; \
+	git push origin "release_v$${CURRENT_VERSION}"; \
+	gh pr create --fill --web
 
 # Targets for test
 include ./makefiles/test.mk
