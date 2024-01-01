@@ -69,7 +69,7 @@ nix run nixpkgs#fzf-make
 ## OS-unabhängige Methode
 ### Cargo
 ```sh
-cargo install fzf-make
+cargo install --locked fzf-make
 ```
 
 # 💡 Nutzung
