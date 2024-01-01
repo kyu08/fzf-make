@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - 'src/**.rs'
+      - Cargo.toml
+      - Cargo.lock
 env:
   CARGO_TERM_COLOR: always
 
