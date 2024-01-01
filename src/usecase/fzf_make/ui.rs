@@ -169,7 +169,9 @@ fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
 fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_widget(
         // NOTE: To show cursor, use rhysd/tui-textarea
-        input_block(" Input ", &model.key_input, model.current_pane.is_main()),
+        // input_block(" Input ", &model.key_input, model.current_pane.is_main()),
+        // TODO: text_areaのスタイルを良い感じにする
+        model.text_area.widget(),
         chunk,
     );
 }

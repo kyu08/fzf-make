@@ -4,7 +4,7 @@ use super::ui::ui;
 use anyhow::{anyhow, Result};
 use colored::*;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyModifiers},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -19,6 +19,7 @@ use std::{
     io::{self, Stderr},
     panic, process,
 };
+use tui_textarea::TextArea;
 
 #[derive(Clone)]
 pub enum CurrentPane {
@@ -39,16 +40,16 @@ impl CurrentPane {
 enum Message {
     MoveToNextPane,
     Quit,
-    KeyInput(String),
-    Backspace, // TODO: Delegate to rhysd/tui-textarea
+    KeyInput(KeyEvent),
+    Backspace(KeyEvent), // TODO: Delegate to rhysd/tui-textarea
     DeleteAll,
-    Next,
-    Previous,
+    Next(KeyEvent),
+    Previous(KeyEvent),
     ExecuteTarget,
 }
 
 #[derive(Clone)]
-pub struct Model {
+pub struct Model<'a> {
     pub current_pane: CurrentPane,
     pub key_input: String,
     pub makefile: Makefile,
@@ -56,14 +57,16 @@ pub struct Model {
     pub should_quit: bool,
     pub targets_list_state: ListState,
     pub selected_target: Option<String>,
+    pub text_area: TextArea<'a>,
 }
 
-impl Model {
+impl Model<'_> {
     pub fn new() -> Result<Self> {
         let makefile = match Makefile::create_makefile() {
             Err(e) => return Err(e),
             Ok(f) => f,
         };
+        let text_area = TextArea::default();
 
         Ok(Model {
             key_input: String::new(),
@@ -72,6 +75,7 @@ impl Model {
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             selected_target: None,
+            text_area,
         })
     }
 
@@ -143,7 +147,7 @@ impl Model {
         self.targets_list_state.select(Some(i));
     }
 
-    fn reset(&mut self) {
+    fn reset_select(&mut self) {
         if self.makefile.to_targets_string().is_empty() {
             self.targets_list_state.select(None);
         }
@@ -229,18 +233,18 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                 KeyCode::Esc => Some(Message::Quit),
                 _ => match model.current_pane {
                     CurrentPane::Main => match key.code {
-                        KeyCode::Backspace => Some(Message::Backspace),
-                        KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            Some(Message::Backspace)
-                        }
-                        KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            Some(Message::DeleteAll)
-                        }
-                        KeyCode::Down => Some(Message::Next),
-                        KeyCode::Up => Some(Message::Previous),
+                        KeyCode::Backspace => Some(Message::Backspace(key)),
+                        // KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        //     Some(Message::Backspace(key))
+                        // }
+                        // KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        //     Some(Message::DeleteAll)
+                        // }
+                        KeyCode::Down => Some(Message::Next(key)),
+                        KeyCode::Up => Some(Message::Previous(key)),
                         KeyCode::Enter => Some(Message::ExecuteTarget),
-                        KeyCode::Char(char) => Some(Message::KeyInput(char.to_string())),
-                        _ => None,
+                        KeyCode::Char(char) => Some(Message::KeyInput(key)),
+                        _ => Some(Message::KeyInput(key)), // _ => None,
                     },
                     CurrentPane::History => match key.code {
                         KeyCode::Char('q') => Some(Message::Quit),
@@ -265,14 +269,31 @@ fn update(model: &mut Model, message: Option<Message>) {
             CurrentPane::History => model.current_pane = CurrentPane::Main,
         },
         Some(Message::Quit) => model.should_quit = true,
-        Some(Message::KeyInput(key_input)) => {
-            model.key_input = model.update_key_input(key_input);
-            model.reset();
+        Some(Message::KeyInput(key_event)) => {
+            let key_code = key_event.code;
+            match key_code {
+                KeyCode::Char(key_input) => {
+                    model.key_input = model.update_key_input(key_input.to_string());
+                    model.reset_select();
+                }
+                _ => {}
+            };
+            model.text_area.input(key_event);
+            model.key_input = model.text_area.lines().first().unwrap().to_string();
         }
-        Some(Message::Backspace) => model.key_input = model.pop(),
+        Some(Message::Backspace(key_event)) => {
+            model.text_area.input(key_event);
+            model.key_input = model.pop()
+        }
         Some(Message::DeleteAll) => model.key_input = String::new(),
-        Some(Message::Next) => model.next(),
-        Some(Message::Previous) => model.previous(),
+        Some(Message::Next(key_event)) => {
+            model.text_area.input(key_event);
+            model.next()
+        }
+        Some(Message::Previous(key_event)) => {
+            model.text_area.input(key_event);
+            model.previous()
+        }
         Some(Message::ExecuteTarget) => {
             model.selected_target = model
                 .targets_list_state
