@@ -80,10 +80,10 @@ cargo install --locked fzf-make
 ## Sonstiges
 | Command | Output |
 |--------|--------|
-| `fzf-make --help` |  <img width="752" alt="fzf-make-help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/help.png">|
-| `fzf-make --version` | <img width="752" alt="fzf-make-version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/version.png"> |
-| `fzf-make --old` / `fzf-make -o` / `fzf-make old` | <img width="752" alt="version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/old.png"> |
-| `fzf-make ${some_invalid_command}` | <img width="752" alt="fzf-make-invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/invalid-arg.png"> |
+| `fzf-make` |  <img width="752" alt="help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.png">|
+| `fzf-make --help` / `fzf-make -h` / `fzf-make help` |  <img width="752" alt="help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/help.png">|
+| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | <img width="752" alt="version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/version.png"> |
+| `fzf-make ${some_invalid_command}` | <img width="752" alt="invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/invalid-arg.png"> |
 
 # 💻 Entwicklung
 1. Dieses repository klonen
