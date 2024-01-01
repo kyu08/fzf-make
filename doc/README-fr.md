@@ -70,7 +70,7 @@ nix run nixpkgs#fzf-make
 ## Méthode indépendante du système d'exploitation
 ### Cargo
 ```sh
-cargo install fzf-make
+cargo install --locked fzf-make
 ```
 
 # 💡 Usage
