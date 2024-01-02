@@ -21,7 +21,7 @@ use std::{
 };
 use tui_textarea::TextArea;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum CurrentPane {
     Main,
     History,
@@ -47,7 +47,7 @@ enum Message {
     ExecuteTarget,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Model<'a> {
     pub current_pane: CurrentPane,
     pub key_input: String,
@@ -57,7 +57,16 @@ pub struct Model<'a> {
     pub targets_list_state: ListState,
     pub selected_target: Option<String>,
     // TODO: key_inputと二重管理になっているの見直す
-    pub search_text_area: TextArea<'a>,
+    pub search_text_area: TextArea_<'a>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TextArea_<'a>(pub TextArea<'a>);
+
+impl<'a> PartialEq for TextArea_<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.lines().join("") == other.0.lines().join("")
+    }
 }
 
 impl Model<'_> {
@@ -74,7 +83,7 @@ impl Model<'_> {
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             selected_target: None,
-            search_text_area: text_area,
+            search_text_area: TextArea_(text_area),
         })
     }
 
@@ -262,11 +271,11 @@ fn update(model: &mut Model, message: Option<Message>) {
         },
         Some(Message::Quit) => model.should_quit = true,
         Some(Message::Next(key_event)) => {
-            model.search_text_area.input(key_event);
+            model.search_text_area.0.input(key_event);
             model.next()
         }
         Some(Message::Previous(key_event)) => {
-            model.search_text_area.input(key_event);
+            model.search_text_area.0.input(key_event);
             model.previous()
         }
         Some(Message::ExecuteTarget) => {
@@ -277,18 +286,21 @@ fn update(model: &mut Model, message: Option<Message>) {
         }
         Some(Message::SearchTextAreaKeyInput(key_event)) => {
             // TODO: これを参考にして改行するイベントを無視する https://github.com/rhysd/tui-textarea?tab=readme-ov-file#single-line-input-like-input-in-html
-            match key_event.code {
-                KeyCode::Char(key_input) => {
-                    model.key_input = model.update_key_input(key_input.to_string());
-                    model.reset_select();
-                }
-                _ => {}
+            if let KeyCode::Char(key_input) = key_event.code {
+                model.key_input = model.update_key_input(key_input.to_string());
+                model.reset_select();
             };
-            model.search_text_area.input(key_event);
-            model.key_input = model.search_text_area.lines().first().unwrap().to_string();
+            model.search_text_area.0.input(key_event);
+            model.key_input = model
+                .search_text_area
+                .0
+                .lines()
+                .first()
+                .unwrap()
+                .to_string();
         }
         Some(Message::Backspace(key_event)) => {
-            model.search_text_area.input(key_event);
+            model.search_text_area.0.input(key_event);
             model.key_input = model.pop()
         }
         None => {}
@@ -311,4 +323,29 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn update_test() {
+        struct Case<'a> {
+            title: &'static str,
+            model: Model<'a>,
+            message: Option<Message>,
+            expect_model: Model<'a>,
+        }
+        let cases: Vec<Case> = vec![];
+
+        for mut case in cases {
+            update(&mut case.model, case.message);
+            assert_eq!(
+                case.expect_model, case.model,
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            );
+        }
+    }
 }

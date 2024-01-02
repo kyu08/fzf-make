@@ -2,7 +2,7 @@ use super::app::Model;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
@@ -167,16 +167,22 @@ fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
 }
 
 fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    let fg_color = if model.current_pane.is_main() {
+        fg_color_selected()
+    } else {
+        fg_color_not_selected()
+    };
+
     let block = Block::default()
         .title("Input")
         .borders(Borders::ALL)
         .border_type(ratatui::widgets::BorderType::Rounded)
-        .border_style(Style::default().fg(Color::default()))
+        .border_style(Style::default().fg(fg_color))
         .style(Style::default())
         .padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
 
-    model.search_text_area.set_block(block);
-    f.render_widget(model.search_text_area.widget(), chunk);
+    model.search_text_area.0.set_block(block);
+    f.render_widget(model.search_text_area.0.widget(), chunk);
 }
 
 fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
@@ -209,25 +215,6 @@ fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::l
         .block(block);
 
     f.render_widget(key_notes_footer, chunk);
-}
-fn input_block<'a>(title: &'a str, target_input: &'a str, is_current: bool) -> Paragraph<'a> {
-    let fg_color = if is_current {
-        fg_color_selected()
-    } else {
-        fg_color_not_selected()
-    };
-
-    Paragraph::new(Line::from(target_input))
-        .block(
-            Block::default()
-                .title(title)
-                .borders(Borders::ALL)
-                .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(fg_color))
-                .style(Style::default())
-                .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
-        )
-        .style(Style::default())
 }
 fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bool) -> List<'_> {
     let fg_color = if is_current {
