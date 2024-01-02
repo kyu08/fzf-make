@@ -41,9 +41,8 @@ enum Message {
     MoveToNextPane,
     Quit,
     SearchTextAreaKeyInput(KeyEvent),
-    Backspace(KeyEvent), // TODO: Delegate to rhysd/tui-textarea
-    Next(KeyEvent),
-    Previous(KeyEvent),
+    Next,
+    Previous,
     ExecuteTarget,
 }
 
@@ -64,6 +63,7 @@ pub struct Model<'a> {
 pub struct TextArea_<'a>(pub TextArea<'a>);
 
 impl<'a> PartialEq for TextArea_<'a> {
+    // for testing
     fn eq(&self, other: &Self) -> bool {
         self.0.lines().join("") == other.0.lines().join("")
     }
@@ -89,12 +89,6 @@ impl Model<'_> {
 
     pub fn update_key_input(&self, key_input: String) -> String {
         self.key_input.clone() + &key_input
-    }
-
-    pub fn pop(&self) -> String {
-        let mut origin = self.key_input.clone();
-        origin.pop();
-        origin
     }
 
     pub fn narrow_down_targets(&self) -> Vec<String> {
@@ -241,9 +235,8 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                 KeyCode::Esc => Some(Message::Quit),
                 _ => match model.current_pane {
                     CurrentPane::Main => match key.code {
-                        KeyCode::Backspace => Some(Message::Backspace(key)),
-                        KeyCode::Down => Some(Message::Next(key)),
-                        KeyCode::Up => Some(Message::Previous(key)),
+                        KeyCode::Down => Some(Message::Next),
+                        KeyCode::Up => Some(Message::Previous),
                         KeyCode::Enter => Some(Message::ExecuteTarget),
                         _ => Some(Message::SearchTextAreaKeyInput(key)),
                     },
@@ -262,7 +255,6 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     Ok(message)
 }
 
-// TODO: Add UT
 fn update(model: &mut Model, message: Option<Message>) {
     match message {
         Some(Message::MoveToNextPane) => match model.current_pane {
@@ -270,14 +262,8 @@ fn update(model: &mut Model, message: Option<Message>) {
             CurrentPane::History => model.current_pane = CurrentPane::Main,
         },
         Some(Message::Quit) => model.should_quit = true,
-        Some(Message::Next(key_event)) => {
-            model.search_text_area.0.input(key_event);
-            model.next()
-        }
-        Some(Message::Previous(key_event)) => {
-            model.search_text_area.0.input(key_event);
-            model.previous()
-        }
+        Some(Message::Next) => model.next(),
+        Some(Message::Previous) => model.previous(),
         Some(Message::ExecuteTarget) => {
             model.selected_target = model
                 .targets_list_state
@@ -298,10 +284,6 @@ fn update(model: &mut Model, message: Option<Message>) {
                 .first()
                 .unwrap()
                 .to_string();
-        }
-        Some(Message::Backspace(key_event)) => {
-            model.search_text_area.0.input(key_event);
-            model.key_input = model.pop()
         }
         None => {}
     }
@@ -338,6 +320,15 @@ mod test {
             expect_model: Model<'a>,
         }
         let cases: Vec<Case> = vec![];
+        // let cases: Vec<Case> = vec![Case {
+        //     title: "MoveToNextPane",
+        //     model: Model::default(),
+        //     message: Some(Message::MoveToNextPane),
+        //     expect_model: Model {
+        //         current_pane: CurrentPane::History,
+        //         ..Model::default()
+        //     },
+        // }];
 
         for mut case in cases {
             update(&mut case.model, case.message);
