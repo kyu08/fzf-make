@@ -2,9 +2,9 @@ use crate::models::makefile::Makefile;
 
 use super::ui::ui;
 use anyhow::{anyhow, Result};
-use colored::*;
+use colored::Colorize;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -40,9 +40,8 @@ impl CurrentPane {
 enum Message {
     MoveToNextPane,
     Quit,
-    KeyInput(KeyEvent),
+    SearchTextAreaKeyInput(KeyEvent),
     Backspace(KeyEvent), // TODO: Delegate to rhysd/tui-textarea
-    DeleteAll,
     Next(KeyEvent),
     Previous(KeyEvent),
     ExecuteTarget,
@@ -57,7 +56,8 @@ pub struct Model<'a> {
     pub should_quit: bool,
     pub targets_list_state: ListState,
     pub selected_target: Option<String>,
-    pub text_area: TextArea<'a>,
+    // TODO: key_inputと二重管理になっているの見直す
+    pub search_text_area: TextArea<'a>,
 }
 
 impl Model<'_> {
@@ -67,7 +67,6 @@ impl Model<'_> {
             Ok(f) => f,
         };
         let text_area = TextArea::default();
-
         Ok(Model {
             key_input: String::new(),
             current_pane: CurrentPane::Main,
@@ -75,7 +74,7 @@ impl Model<'_> {
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             selected_target: None,
-            text_area,
+            search_text_area: text_area,
         })
     }
 
@@ -234,17 +233,10 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                 _ => match model.current_pane {
                     CurrentPane::Main => match key.code {
                         KeyCode::Backspace => Some(Message::Backspace(key)),
-                        // KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        //     Some(Message::Backspace(key))
-                        // }
-                        // KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        //     Some(Message::DeleteAll)
-                        // }
                         KeyCode::Down => Some(Message::Next(key)),
                         KeyCode::Up => Some(Message::Previous(key)),
                         KeyCode::Enter => Some(Message::ExecuteTarget),
-                        KeyCode::Char(char) => Some(Message::KeyInput(key)),
-                        _ => Some(Message::KeyInput(key)), // _ => None,
+                        _ => Some(Message::SearchTextAreaKeyInput(key)),
                     },
                     CurrentPane::History => match key.code {
                         KeyCode::Char('q') => Some(Message::Quit),
@@ -269,29 +261,12 @@ fn update(model: &mut Model, message: Option<Message>) {
             CurrentPane::History => model.current_pane = CurrentPane::Main,
         },
         Some(Message::Quit) => model.should_quit = true,
-        Some(Message::KeyInput(key_event)) => {
-            let key_code = key_event.code;
-            match key_code {
-                KeyCode::Char(key_input) => {
-                    model.key_input = model.update_key_input(key_input.to_string());
-                    model.reset_select();
-                }
-                _ => {}
-            };
-            model.text_area.input(key_event);
-            model.key_input = model.text_area.lines().first().unwrap().to_string();
-        }
-        Some(Message::Backspace(key_event)) => {
-            model.text_area.input(key_event);
-            model.key_input = model.pop()
-        }
-        Some(Message::DeleteAll) => model.key_input = String::new(),
         Some(Message::Next(key_event)) => {
-            model.text_area.input(key_event);
+            model.search_text_area.input(key_event);
             model.next()
         }
         Some(Message::Previous(key_event)) => {
-            model.text_area.input(key_event);
+            model.search_text_area.input(key_event);
             model.previous()
         }
         Some(Message::ExecuteTarget) => {
@@ -299,6 +274,22 @@ fn update(model: &mut Model, message: Option<Message>) {
                 .targets_list_state
                 .selected()
                 .map(|i| model.narrow_down_targets()[i].clone());
+        }
+        Some(Message::SearchTextAreaKeyInput(key_event)) => {
+            // TODO: これを参考にして改行するイベントを無視する https://github.com/rhysd/tui-textarea?tab=readme-ov-file#single-line-input-like-input-in-html
+            match key_event.code {
+                KeyCode::Char(key_input) => {
+                    model.key_input = model.update_key_input(key_input.to_string());
+                    model.reset_select();
+                }
+                _ => {}
+            };
+            model.search_text_area.input(key_event);
+            model.key_input = model.search_text_area.lines().first().unwrap().to_string();
+        }
+        Some(Message::Backspace(key_event)) => {
+            model.search_text_area.input(key_event);
+            model.key_input = model.pop()
         }
         None => {}
     }

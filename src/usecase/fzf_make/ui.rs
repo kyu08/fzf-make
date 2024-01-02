@@ -2,7 +2,7 @@ use super::app::Model;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
@@ -167,13 +167,16 @@ fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
 }
 
 fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    f.render_widget(
-        // NOTE: To show cursor, use rhysd/tui-textarea
-        // input_block(" Input ", &model.key_input, model.current_pane.is_main()),
-        // TODO: text_areaのスタイルを良い感じにする
-        model.text_area.widget(),
-        chunk,
-    );
+    let block = Block::default()
+        .title("Input")
+        .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(Color::default()))
+        .style(Style::default())
+        .padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
+
+    model.search_text_area.set_block(block);
+    f.render_widget(model.search_text_area.widget(), chunk);
 }
 
 fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
