@@ -169,6 +169,7 @@ impl Model<'_> {
 
     pub fn target_to_execute(&self) -> Option<String> {
         match self.app_state.clone() {
+            // TODO: 対象のtargetが存在しない場合はUI側でエラーを表示する
             AppState::ExecuteTarget(Some(target)) => Some(target.clone()),
             _ => None,
         }
@@ -212,10 +213,7 @@ pub fn main() -> Result<()> {
 
                 Ok(())
             }
-            None => {
-                println!("{}", ("no target selected.".to_string()).red());
-                Ok(())
-            }
+            None => Ok(()),
         }
     });
 
