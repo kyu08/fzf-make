@@ -248,21 +248,24 @@ fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Optio
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     let message = if crossterm::event::poll(std::time::Duration::from_millis(2000))? {
         if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
-            match key.code {
-                KeyCode::Tab => Some(Message::MoveToNextPane),
-                KeyCode::Esc => Some(Message::Quit),
-                _ => match model.current_pane {
-                    CurrentPane::Main => match key.code {
-                        KeyCode::Down => Some(Message::Next),
-                        KeyCode::Up => Some(Message::Previous),
-                        KeyCode::Enter => Some(Message::ExecuteTarget),
-                        _ => Some(Message::SearchTextAreaKeyInput(key)),
-                    },
-                    CurrentPane::History => match key.code {
-                        KeyCode::Char('q') => Some(Message::Quit),
-                        _ => None,
+            match model.app_state {
+                AppState::SelectingTarget => match key.code {
+                    KeyCode::Tab => Some(Message::MoveToNextPane),
+                    KeyCode::Esc => Some(Message::Quit),
+                    _ => match model.current_pane {
+                        CurrentPane::Main => match key.code {
+                            KeyCode::Down => Some(Message::Next),
+                            KeyCode::Up => Some(Message::Previous),
+                            KeyCode::Enter => Some(Message::ExecuteTarget),
+                            _ => Some(Message::SearchTextAreaKeyInput(key)),
+                        },
+                        CurrentPane::History => match key.code {
+                            KeyCode::Char('q') => Some(Message::Quit),
+                            _ => None,
+                        },
                     },
                 },
+                _ => None,
             }
         } else {
             return Ok(None);
