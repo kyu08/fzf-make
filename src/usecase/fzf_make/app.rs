@@ -153,9 +153,10 @@ impl Model<'_> {
     }
 
     fn selected_target(&self) -> Option<String> {
-        self.targets_list_state
-            .selected()
-            .map(|i| self.narrow_down_targets()[i].clone())
+        match self.targets_list_state.selected() {
+            Some(i) => self.narrow_down_targets().get(i).map(|s| s.to_string()),
+            None => None,
+        }
     }
 
     pub fn should_quit(&self) -> bool {
@@ -163,7 +164,7 @@ impl Model<'_> {
     }
 
     pub fn is_target_selected(&self) -> bool {
-        matches!(self.app_state, AppState::ExecuteTarget(Some(_)))
+        matches!(self.app_state, AppState::ExecuteTarget(_))
     }
 
     pub fn target_to_execute(&self) -> Option<String> {
