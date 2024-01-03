@@ -104,7 +104,11 @@ impl Makefile {
         Makefile {
             path: Path::new("test").to_path_buf(),
             include_files: vec![],
-            targets: Targets(vec!["foo".to_string(), "bar".to_string()]),
+            targets: Targets(vec![
+                "target0".to_string(),
+                "target1".to_string(),
+                "target2".to_string(),
+            ]),
         }
     }
 }

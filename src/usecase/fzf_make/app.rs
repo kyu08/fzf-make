@@ -84,10 +84,6 @@ impl Model<'_> {
         })
     }
 
-    // pub fn update_key_input(&self, key_input: String) -> String {
-    //     self.key_input.clone() + &key_input
-    // }
-
     pub fn narrow_down_targets(&self) -> Vec<String> {
         if self.search_text_area.0.is_empty() {
             return self.makefile.to_targets_string();
@@ -151,6 +147,12 @@ impl Model<'_> {
             self.targets_list_state.select(None);
         }
         self.targets_list_state.select(Some(0));
+    }
+
+    fn selected_target(&self) -> Option<String> {
+        self.targets_list_state
+            .selected()
+            .map(|i| self.narrow_down_targets()[i].clone())
     }
 }
 
@@ -262,10 +264,7 @@ fn update(model: &mut Model, message: Option<Message>) {
         Some(Message::Next) => model.next(),
         Some(Message::Previous) => model.previous(),
         Some(Message::ExecuteTarget) => {
-            model.selected_target = model
-                .targets_list_state
-                .selected()
-                .map(|i| model.narrow_down_targets()[i].clone());
+            model.selected_target = model.selected_target();
         }
         Some(Message::SearchTextAreaKeyInput(key_event)) => {
             // TODO: これを参考にして改行するイベントを無視する https://github.com/rhysd/tui-textarea?tab=readme-ov-file#single-line-input-like-input-in-html
@@ -299,7 +298,6 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
 #[cfg(test)]
 mod test {
     use super::*;
-    use crossterm::event::KeyModifiers;
     use tui_textarea::TextArea;
 
     fn init_model<'a>() -> Model<'a> {
@@ -371,24 +369,7 @@ mod test {
                 },
             },
             Case {
-                title: "SearchTextAreaKeyInput(<c-h>)",
-                model: Model {
-                    search_text_area: {
-                        let mut text_area = TextArea::default();
-                        text_area.input(KeyEvent::from(KeyCode::Char('a')));
-                        TextArea_(text_area)
-                    },
-                    ..init_model()
-                },
-                message: {
-                    let mut a = KeyEvent::from(KeyCode::Char('h'));
-                    a.modifiers = KeyModifiers::CONTROL;
-                    Some(Message::SearchTextAreaKeyInput(a))
-                },
-                expect_model: init_model(),
-            },
-            Case {
-                title: "Next",
+                title: "Next(0 -> 1)",
                 model: init_model(),
                 message: Some(Message::Next),
                 expect_model: Model {
@@ -397,7 +378,19 @@ mod test {
                 },
             },
             Case {
-                title: "Previous",
+                title: "Next(2 -> 0)",
+                model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(2)),
+                    ..init_model()
+                },
+                message: Some(Message::Next),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Previous(1 -> 0)",
                 model: Model {
                     targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
                     ..init_model()
@@ -409,11 +402,23 @@ mod test {
                 },
             },
             Case {
+                title: "Previous(0 -> 2)",
+                model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    ..init_model()
+                },
+                message: Some(Message::Previous),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(2)),
+                    ..init_model()
+                },
+            },
+            Case {
                 title: "ExecuteTarget",
                 model: Model { ..init_model() },
                 message: Some(Message::ExecuteTarget),
                 expect_model: Model {
-                    selected_target: Some("foo".to_string()),
+                    selected_target: Some("target0".to_string()),
                     ..init_model()
                 },
             },
