@@ -2,9 +2,9 @@ use crate::models::makefile::Makefile;
 
 use super::ui::ui;
 use anyhow::{anyhow, Result};
-use colored::*;
+use colored::Colorize;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyModifiers},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -19,8 +19,16 @@ use std::{
     io::{self, Stderr},
     panic, process,
 };
+use tui_textarea::TextArea;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
+pub enum AppState {
+    SelectingTarget,
+    ExecuteTarget(Option<String>),
+    ShouldQuite,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub enum CurrentPane {
     Main,
     History,
@@ -39,54 +47,48 @@ impl CurrentPane {
 enum Message {
     MoveToNextPane,
     Quit,
-    KeyInput(String),
-    Backspace, // TODO: Delegate to rhysd/tui-textarea
-    DeleteAll,
+    SearchTextAreaKeyInput(KeyEvent),
     Next,
     Previous,
     ExecuteTarget,
 }
 
-#[derive(Clone)]
-pub struct Model {
+#[derive(Clone, PartialEq, Debug)]
+pub struct Model<'a> {
+    pub app_state: AppState,
     pub current_pane: CurrentPane,
-    pub key_input: String,
     pub makefile: Makefile,
-    // TODO: It is better make `should_quit` like following `quit || notQuuitYe || executeTarget (String)`.
-    pub should_quit: bool,
     pub targets_list_state: ListState,
-    pub selected_target: Option<String>,
+    pub search_text_area: TextArea_<'a>,
 }
 
-impl Model {
+#[derive(Clone, Debug)]
+pub struct TextArea_<'a>(pub TextArea<'a>);
+
+impl<'a> PartialEq for TextArea_<'a> {
+    // for testing
+    fn eq(&self, other: &Self) -> bool {
+        self.0.lines().join("") == other.0.lines().join("")
+    }
+}
+
+impl Model<'_> {
     pub fn new() -> Result<Self> {
         let makefile = match Makefile::create_makefile() {
             Err(e) => return Err(e),
             Ok(f) => f,
         };
-
         Ok(Model {
-            key_input: String::new(),
+            app_state: AppState::SelectingTarget,
             current_pane: CurrentPane::Main,
-            should_quit: false,
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            selected_target: None,
+            search_text_area: TextArea_(TextArea::default()),
         })
     }
 
-    pub fn update_key_input(&self, key_input: String) -> String {
-        self.key_input.clone() + &key_input
-    }
-
-    pub fn pop(&self) -> String {
-        let mut origin = self.key_input.clone();
-        origin.pop();
-        origin
-    }
-
     pub fn narrow_down_targets(&self) -> Vec<String> {
-        if self.key_input.is_empty() {
+        if self.search_text_area.0.is_empty() {
             return self.makefile.to_targets_string();
         }
 
@@ -96,7 +98,7 @@ impl Model {
             .to_targets_string()
             .into_iter()
             .map(|target| {
-                let mut key_input = self.key_input.clone();
+                let mut key_input = self.search_text_area.0.lines().join("");
                 key_input.retain(|c| !c.is_whitespace());
                 match matcher.fuzzy_indices(&target, key_input.as_str()) {
                     Some((score, _)) => (Some(score), target),
@@ -143,11 +145,32 @@ impl Model {
         self.targets_list_state.select(Some(i));
     }
 
-    fn reset(&mut self) {
+    fn reset_selection(&mut self) {
         if self.makefile.to_targets_string().is_empty() {
             self.targets_list_state.select(None);
         }
         self.targets_list_state.select(Some(0));
+    }
+
+    fn selected_target(&self) -> Option<String> {
+        self.targets_list_state
+            .selected()
+            .map(|i| self.narrow_down_targets()[i].clone())
+    }
+
+    pub fn should_quit(&self) -> bool {
+        self.app_state == AppState::ShouldQuite
+    }
+
+    pub fn is_target_selected(&self) -> bool {
+        matches!(self.app_state, AppState::ExecuteTarget(Some(_)))
+    }
+
+    pub fn target_to_execute(&self) -> Option<String> {
+        match self.app_state.clone() {
+            AppState::ExecuteTarget(Some(target)) => Some(target.clone()),
+            _ => None,
+        }
     }
 }
 
@@ -211,42 +234,37 @@ fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Optio
         match handle_event(&model) {
             Ok(message) => {
                 update(&mut model, message);
-                if model.should_quit || model.selected_target.is_some() {
+                if model.should_quit() || model.is_target_selected() {
                     break;
                 }
             }
             Err(_) => break,
         }
     }
-    Ok(model.selected_target)
+    Ok(model.target_to_execute())
 }
 
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     let message = if crossterm::event::poll(std::time::Duration::from_millis(2000))? {
         if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
-            match key.code {
-                KeyCode::Tab => Some(Message::MoveToNextPane),
-                KeyCode::Esc => Some(Message::Quit),
-                _ => match model.current_pane {
-                    CurrentPane::Main => match key.code {
-                        KeyCode::Backspace => Some(Message::Backspace),
-                        KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            Some(Message::Backspace)
-                        }
-                        KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            Some(Message::DeleteAll)
-                        }
-                        KeyCode::Down => Some(Message::Next),
-                        KeyCode::Up => Some(Message::Previous),
-                        KeyCode::Enter => Some(Message::ExecuteTarget),
-                        KeyCode::Char(char) => Some(Message::KeyInput(char.to_string())),
-                        _ => None,
-                    },
-                    CurrentPane::History => match key.code {
-                        KeyCode::Char('q') => Some(Message::Quit),
-                        _ => None,
+            match model.app_state {
+                AppState::SelectingTarget => match key.code {
+                    KeyCode::Tab => Some(Message::MoveToNextPane),
+                    KeyCode::Esc => Some(Message::Quit),
+                    _ => match model.current_pane {
+                        CurrentPane::Main => match key.code {
+                            KeyCode::Down => Some(Message::Next),
+                            KeyCode::Up => Some(Message::Previous),
+                            KeyCode::Enter => Some(Message::ExecuteTarget),
+                            _ => Some(Message::SearchTextAreaKeyInput(key)),
+                        },
+                        CurrentPane::History => match key.code {
+                            KeyCode::Char('q') => Some(Message::Quit),
+                            _ => None,
+                        },
                     },
                 },
+                _ => None,
             }
         } else {
             return Ok(None);
@@ -257,27 +275,23 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     Ok(message)
 }
 
-// TODO: Add UT
 fn update(model: &mut Model, message: Option<Message>) {
     match message {
         Some(Message::MoveToNextPane) => match model.current_pane {
             CurrentPane::Main => model.current_pane = CurrentPane::History,
             CurrentPane::History => model.current_pane = CurrentPane::Main,
         },
-        Some(Message::Quit) => model.should_quit = true,
-        Some(Message::KeyInput(key_input)) => {
-            model.key_input = model.update_key_input(key_input);
-            model.reset();
-        }
-        Some(Message::Backspace) => model.key_input = model.pop(),
-        Some(Message::DeleteAll) => model.key_input = String::new(),
+        Some(Message::Quit) => model.app_state = AppState::ShouldQuite,
         Some(Message::Next) => model.next(),
         Some(Message::Previous) => model.previous(),
         Some(Message::ExecuteTarget) => {
-            model.selected_target = model
-                .targets_list_state
-                .selected()
-                .map(|i| model.narrow_down_targets()[i].clone());
+            model.app_state = AppState::ExecuteTarget(model.selected_target());
+        }
+        Some(Message::SearchTextAreaKeyInput(key_event)) => {
+            if let KeyCode::Char(_) = key_event.code {
+                model.reset_selection();
+            };
+            model.search_text_area.0.input(key_event);
         }
         None => {}
     }
@@ -299,4 +313,159 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use tui_textarea::TextArea;
+
+    fn init_model<'a>() -> Model<'a> {
+        Model {
+            app_state: AppState::SelectingTarget,
+            current_pane: CurrentPane::Main,
+            makefile: Makefile::new_for_test(),
+            targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            search_text_area: TextArea_(TextArea::default()),
+        }
+    }
+
+    #[test]
+    fn update_test() {
+        struct Case<'a> {
+            title: &'static str,
+            model: Model<'a>,
+            message: Option<Message>,
+            expect_model: Model<'a>,
+        }
+        let cases: Vec<Case> = vec![
+            Case {
+                title: "MoveToNextPane(Main -> History)",
+                model: init_model(),
+                message: Some(Message::MoveToNextPane),
+                expect_model: Model {
+                    current_pane: CurrentPane::History,
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "MoveToNextPane(History -> Main)",
+                model: Model {
+                    current_pane: CurrentPane::History,
+                    ..init_model()
+                },
+                message: Some(Message::MoveToNextPane),
+                expect_model: Model {
+                    current_pane: CurrentPane::Main,
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Quit",
+                model: init_model(),
+                message: Some(Message::Quit),
+                expect_model: Model {
+                    app_state: AppState::ShouldQuite,
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "SearchTextAreaKeyInput(a)",
+                model: init_model(),
+                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
+                    KeyCode::Char('a'),
+                ))),
+                expect_model: Model {
+                    search_text_area: {
+                        let mut text_area = TextArea::default();
+                        text_area.input(KeyEvent::from(KeyCode::Char('a')));
+                        TextArea_(text_area)
+                    },
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Next(0 -> 1)",
+                model: init_model(),
+                message: Some(Message::Next),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Next(2 -> 0)",
+                model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(2)),
+                    ..init_model()
+                },
+                message: Some(Message::Next),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Previous(1 -> 0)",
+                model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                    ..init_model()
+                },
+                message: Some(Message::Previous),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Previous(0 -> 2)",
+                model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    ..init_model()
+                },
+                message: Some(Message::Previous),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(2)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "ExecuteTarget",
+                model: Model { ..init_model() },
+                message: Some(Message::ExecuteTarget),
+                expect_model: Model {
+                    app_state: AppState::ExecuteTarget(Some("target0".to_string())),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "After Next, if char was inputted, select should be reset",
+                model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                    ..init_model()
+                },
+                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
+                    KeyCode::Char('a'),
+                ))),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    search_text_area: {
+                        let mut text_area = TextArea::default();
+                        text_area.input(KeyEvent::from(KeyCode::Char('a')));
+                        TextArea_(text_area)
+                    },
+                    ..init_model()
+                },
+            },
+        ];
+
+        for mut case in cases {
+            update(&mut case.model, case.message);
+            assert_eq!(
+                case.expect_model, case.model,
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            );
+        }
+    }
 }

@@ -26,10 +26,6 @@ tools:
 run:
 	@cargo run
 
-.PHONY: run-ratatui
-run-ratatui:
-	@RUST_BACKTRACE=full cargo run -- -r
-
 .PHONY: build
 build:
 	@cargo build

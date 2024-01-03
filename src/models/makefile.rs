@@ -4,7 +4,7 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 
 /// Makefile represents a Makefile.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Makefile {
     pub path: PathBuf,
     include_files: Vec<Makefile>,
@@ -95,6 +95,19 @@ impl Makefile {
         }
 
         (None, None)
+    }
+
+    #[cfg(test)]
+    pub fn new_for_test() -> Makefile {
+        Makefile {
+            path: Path::new("test").to_path_buf(),
+            include_files: vec![],
+            targets: Targets(vec![
+                "target0".to_string(),
+                "target1".to_string(),
+                "target2".to_string(),
+            ]),
+        }
     }
 }
 
