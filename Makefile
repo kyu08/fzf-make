@@ -5,6 +5,12 @@ RUST_BACKTRACE=full
 toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
 	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
 
+.PHONY: ci
+ci: # Checks same as CI
+	RUST_BACKTRACE=full make test; \
+	make check; \
+	make spell-check
+
 .PHONY: test
 test : # Run unit tests
 	RUST_BACKTRACE=full cargo nextest run
