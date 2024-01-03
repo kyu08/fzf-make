@@ -174,7 +174,7 @@ fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::
     };
 
     let block = Block::default()
-        .title("Input")
+        .title(" Input ")
         .borders(Borders::ALL)
         .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(fg_color))

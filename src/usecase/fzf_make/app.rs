@@ -437,6 +437,25 @@ mod test {
                     ..init_model()
                 },
             },
+            Case {
+                title: "After Next, if char was inputted, select should be reset",
+                model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                    ..init_model()
+                },
+                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
+                    KeyCode::Char('a'),
+                ))),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    search_text_area: {
+                        let mut text_area = TextArea::default();
+                        text_area.input(KeyEvent::from(KeyCode::Char('a')));
+                        TextArea_(text_area)
+                    },
+                    ..init_model()
+                },
+            },
         ];
 
         for mut case in cases {
