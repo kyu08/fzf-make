@@ -286,7 +286,6 @@ fn update(model: &mut Model, message: Option<Message>) {
             model.app_state = AppState::ExecuteTarget(model.selected_target());
         }
         Some(Message::SearchTextAreaKeyInput(key_event)) => {
-            // TODO: これを参考にして改行するイベントを無視する https://github.com/rhysd/tui-textarea?tab=readme-ov-file#single-line-input-like-input-in-html
             if let KeyCode::Char(_) = key_event.code {
                 model.reset_select();
             };
