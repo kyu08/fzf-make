@@ -146,16 +146,17 @@ impl Model<'_> {
     }
 
     fn reset_selection(&mut self) {
-        if self.makefile.to_targets_string().is_empty() {
+        if self.narrow_down_targets().is_empty() {
             self.targets_list_state.select(None);
         }
         self.targets_list_state.select(Some(0));
     }
 
     fn selected_target(&self) -> Option<String> {
-        self.targets_list_state
-            .selected()
-            .map(|i| self.narrow_down_targets()[i].clone())
+        match self.targets_list_state.selected() {
+            Some(i) => self.narrow_down_targets().get(i).map(|s| s.to_string()),
+            None => None,
+        }
     }
 
     pub fn should_quit(&self) -> bool {
@@ -163,7 +164,7 @@ impl Model<'_> {
     }
 
     pub fn is_target_selected(&self) -> bool {
-        matches!(self.app_state, AppState::ExecuteTarget(Some(_)))
+        matches!(self.app_state, AppState::ExecuteTarget(_))
     }
 
     pub fn target_to_execute(&self) -> Option<String> {
@@ -211,7 +212,10 @@ pub fn main() -> Result<()> {
 
                 Ok(())
             }
-            None => Ok(()),
+            None => {
+                println!("{}", ("no target selected.".to_string()).red());
+                Ok(())
+            }
         }
     });
 
