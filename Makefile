@@ -53,7 +53,7 @@ bump-fzf-make-version: tools
 	git add .; \
 	git commit -m "Bump fzf-make's version to v$${CURRENT_VERSION}"; \
 	git push origin HEAD; \
-	gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | xargs open
+	gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | sed 's@releases/tag@releases/edit@' | xargs open
 
 # Targets for test
 include ./makefiles/test.mk
