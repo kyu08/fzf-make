@@ -49,13 +49,11 @@ enum Message {
 #[derive(Clone, PartialEq, Debug)]
 pub struct Model<'a> {
     pub current_pane: CurrentPane,
-    pub key_input: String,
     pub makefile: Makefile,
     // TODO: It is better make `should_quit` like following `quit || notQuuitYe || executeTarget (String)`.
     pub should_quit: bool,
     pub targets_list_state: ListState,
     pub selected_target: Option<String>,
-    // TODO: key_inputと二重管理になっているの見直す
     pub search_text_area: TextArea_<'a>,
 }
 
@@ -77,7 +75,6 @@ impl Model<'_> {
         };
         let text_area = TextArea::default();
         Ok(Model {
-            key_input: String::new(),
             current_pane: CurrentPane::Main,
             should_quit: false,
             makefile: makefile.clone(),
@@ -87,12 +84,12 @@ impl Model<'_> {
         })
     }
 
-    pub fn update_key_input(&self, key_input: String) -> String {
-        self.key_input.clone() + &key_input
-    }
+    // pub fn update_key_input(&self, key_input: String) -> String {
+    //     self.key_input.clone() + &key_input
+    // }
 
     pub fn narrow_down_targets(&self) -> Vec<String> {
-        if self.key_input.is_empty() {
+        if self.search_text_area.0.is_empty() {
             return self.makefile.to_targets_string();
         }
 
@@ -102,7 +99,7 @@ impl Model<'_> {
             .to_targets_string()
             .into_iter()
             .map(|target| {
-                let mut key_input = self.key_input.clone();
+                let mut key_input = self.search_text_area.0.lines().join("");
                 key_input.retain(|c| !c.is_whitespace());
                 match matcher.fuzzy_indices(&target, key_input.as_str()) {
                     Some((score, _)) => (Some(score), target),
@@ -272,18 +269,10 @@ fn update(model: &mut Model, message: Option<Message>) {
         }
         Some(Message::SearchTextAreaKeyInput(key_event)) => {
             // TODO: これを参考にして改行するイベントを無視する https://github.com/rhysd/tui-textarea?tab=readme-ov-file#single-line-input-like-input-in-html
-            if let KeyCode::Char(key_input) = key_event.code {
-                model.key_input = model.update_key_input(key_input.to_string());
+            if let KeyCode::Char(_) = key_event.code {
                 model.reset_select();
             };
             model.search_text_area.0.input(key_event);
-            model.key_input = model
-                .search_text_area
-                .0
-                .lines()
-                .first()
-                .unwrap()
-                .to_string();
         }
         None => {}
     }
