@@ -22,6 +22,13 @@ use std::{
 use tui_textarea::TextArea;
 
 #[derive(Clone, PartialEq, Debug)]
+pub enum AppState {
+    SelectingTarget,
+    ExecuteTarget(Option<String>),
+    ShouldQuite,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub enum CurrentPane {
     Main,
     History,
@@ -48,12 +55,10 @@ enum Message {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Model<'a> {
+    pub app_state: AppState,
     pub current_pane: CurrentPane,
     pub makefile: Makefile,
-    // TODO: It is better make `should_quit` like following `quit || notQuuitYe || executeTarget (String)`.
-    pub should_quit: bool,
     pub targets_list_state: ListState,
-    pub selected_target: Option<String>,
     pub search_text_area: TextArea_<'a>,
 }
 
@@ -75,11 +80,10 @@ impl Model<'_> {
         };
         let text_area = TextArea::default();
         Ok(Model {
+            app_state: AppState::SelectingTarget,
             current_pane: CurrentPane::Main,
-            should_quit: false,
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            selected_target: None,
             search_text_area: TextArea_(text_area),
         })
     }
@@ -154,6 +158,21 @@ impl Model<'_> {
             .selected()
             .map(|i| self.narrow_down_targets()[i].clone())
     }
+
+    pub fn should_quit(&self) -> bool {
+        self.app_state == AppState::ShouldQuite
+    }
+
+    pub fn target_selected(&self) -> bool {
+        matches!(self.app_state, AppState::ExecuteTarget(Some(_)))
+    }
+
+    pub fn target_to_execute(&self) -> Option<String> {
+        match self.app_state.clone() {
+            AppState::ExecuteTarget(Some(target)) => Some(target.clone()),
+            _ => None,
+        }
+    }
 }
 
 pub fn main() -> Result<()> {
@@ -216,14 +235,14 @@ fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Optio
         match handle_event(&model) {
             Ok(message) => {
                 update(&mut model, message);
-                if model.should_quit || model.selected_target.is_some() {
+                if model.should_quit() || model.target_selected() {
                     break;
                 }
             }
             Err(_) => break,
         }
     }
-    Ok(model.selected_target)
+    Ok(model.target_to_execute())
 }
 
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
@@ -260,11 +279,11 @@ fn update(model: &mut Model, message: Option<Message>) {
             CurrentPane::Main => model.current_pane = CurrentPane::History,
             CurrentPane::History => model.current_pane = CurrentPane::Main,
         },
-        Some(Message::Quit) => model.should_quit = true,
+        Some(Message::Quit) => model.app_state = AppState::ShouldQuite,
         Some(Message::Next) => model.next(),
         Some(Message::Previous) => model.previous(),
         Some(Message::ExecuteTarget) => {
-            model.selected_target = model.selected_target();
+            model.app_state = AppState::ExecuteTarget(model.selected_target());
         }
         Some(Message::SearchTextAreaKeyInput(key_event)) => {
             // TODO: これを参考にして改行するイベントを無視する https://github.com/rhysd/tui-textarea?tab=readme-ov-file#single-line-input-like-input-in-html
@@ -301,16 +320,12 @@ mod test {
     use tui_textarea::TextArea;
 
     fn init_model<'a>() -> Model<'a> {
-        let makefile = Makefile::new_for_test();
-        let text_area = TextArea::default();
-
         Model {
+            app_state: AppState::SelectingTarget,
             current_pane: CurrentPane::Main,
-            should_quit: false,
-            makefile: makefile.clone(),
+            makefile: Makefile::new_for_test(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            selected_target: None,
-            search_text_area: TextArea_(text_area),
+            search_text_area: TextArea_(TextArea::default()),
         }
     }
 
@@ -349,7 +364,7 @@ mod test {
                 model: init_model(),
                 message: Some(Message::Quit),
                 expect_model: Model {
-                    should_quit: true,
+                    app_state: AppState::ShouldQuite,
                     ..init_model()
                 },
             },
@@ -418,7 +433,7 @@ mod test {
                 model: Model { ..init_model() },
                 message: Some(Message::ExecuteTarget),
                 expect_model: Model {
-                    selected_target: Some("target0".to_string()),
+                    app_state: AppState::ExecuteTarget(Some("target0".to_string())),
                     ..init_model()
                 },
             },
