@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 #[derive(Clone, Debug, PartialEq)]
 pub struct Makefile {
     pub path: PathBuf,
+    // TODO:
+    // Makefile構造体を他のmodのテスト内で初期化したいが一部フィールドがprivateなのでできない。どうしようかなー
     include_files: Vec<Makefile>,
     targets: Targets,
 }
@@ -95,6 +97,15 @@ impl Makefile {
         }
 
         (None, None)
+    }
+
+    #[cfg(test)]
+    pub fn new_for_test() -> Makefile {
+        Makefile {
+            path: Path::new("test").to_path_buf(),
+            include_files: vec![],
+            targets: Targets(vec!["foo".to_string(), "bar".to_string()]),
+        }
     }
 }
 

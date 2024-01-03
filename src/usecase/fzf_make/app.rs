@@ -299,6 +299,22 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
 #[cfg(test)]
 mod test {
     use super::*;
+    use crossterm::event::KeyModifiers;
+    use tui_textarea::TextArea;
+
+    fn init_model<'a>() -> Model<'a> {
+        let makefile = Makefile::new_for_test();
+        let text_area = TextArea::default();
+
+        Model {
+            current_pane: CurrentPane::Main,
+            should_quit: false,
+            makefile: makefile.clone(),
+            targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            selected_target: None,
+            search_text_area: TextArea_(text_area),
+        }
+    }
 
     #[test]
     fn update_test() {
@@ -308,16 +324,100 @@ mod test {
             message: Option<Message>,
             expect_model: Model<'a>,
         }
-        let cases: Vec<Case> = vec![];
-        // let cases: Vec<Case> = vec![Case {
-        //     title: "MoveToNextPane",
-        //     model: Model::default(),
-        //     message: Some(Message::MoveToNextPane),
-        //     expect_model: Model {
-        //         current_pane: CurrentPane::History,
-        //         ..Model::default()
-        //     },
-        // }];
+        let cases: Vec<Case> = vec![
+            Case {
+                title: "MoveToNextPane(Main -> History)",
+                model: init_model(),
+                message: Some(Message::MoveToNextPane),
+                expect_model: Model {
+                    current_pane: CurrentPane::History,
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "MoveToNextPane(History -> Main)",
+                model: Model {
+                    current_pane: CurrentPane::History,
+                    ..init_model()
+                },
+                message: Some(Message::MoveToNextPane),
+                expect_model: Model {
+                    current_pane: CurrentPane::Main,
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Quit",
+                model: init_model(),
+                message: Some(Message::Quit),
+                expect_model: Model {
+                    should_quit: true,
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "SearchTextAreaKeyInput(a)",
+                model: init_model(),
+                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
+                    KeyCode::Char('a'),
+                ))),
+                expect_model: Model {
+                    search_text_area: {
+                        let mut text_area = TextArea::default();
+                        text_area.input(KeyEvent::from(KeyCode::Char('a')));
+                        TextArea_(text_area)
+                    },
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "SearchTextAreaKeyInput(<c-h>)",
+                model: Model {
+                    search_text_area: {
+                        let mut text_area = TextArea::default();
+                        text_area.input(KeyEvent::from(KeyCode::Char('a')));
+                        TextArea_(text_area)
+                    },
+                    ..init_model()
+                },
+                message: {
+                    let mut a = KeyEvent::from(KeyCode::Char('h'));
+                    a.modifiers = KeyModifiers::CONTROL;
+                    Some(Message::SearchTextAreaKeyInput(a))
+                },
+                expect_model: init_model(),
+            },
+            Case {
+                title: "Next",
+                model: init_model(),
+                message: Some(Message::Next),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Previous",
+                model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                    ..init_model()
+                },
+                message: Some(Message::Previous),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "ExecuteTarget",
+                model: Model { ..init_model() },
+                message: Some(Message::ExecuteTarget),
+                expect_model: Model {
+                    selected_target: Some("foo".to_string()),
+                    ..init_model()
+                },
+            },
+        ];
 
         for mut case in cases {
             update(&mut case.model, case.message);
