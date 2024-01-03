@@ -212,7 +212,10 @@ pub fn main() -> Result<()> {
 
                 Ok(())
             }
-            None => Ok(()),
+            None => {
+                println!("{}", ("no target selected.".to_string()).red());
+                Ok(())
+            }
         }
     });
 
