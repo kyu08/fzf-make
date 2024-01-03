@@ -146,7 +146,7 @@ impl Model<'_> {
     }
 
     fn reset_selection(&mut self) {
-        if self.makefile.to_targets_string().is_empty() {
+        if self.narrow_down_targets().is_empty() {
             self.targets_list_state.select(None);
         }
         self.targets_list_state.select(Some(0));
