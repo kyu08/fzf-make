@@ -78,13 +78,12 @@ impl Model<'_> {
             Err(e) => return Err(e),
             Ok(f) => f,
         };
-        let text_area = TextArea::default();
         Ok(Model {
             app_state: AppState::SelectingTarget,
             current_pane: CurrentPane::Main,
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            search_text_area: TextArea_(text_area),
+            search_text_area: TextArea_(TextArea::default()),
         })
     }
 
@@ -146,7 +145,7 @@ impl Model<'_> {
         self.targets_list_state.select(Some(i));
     }
 
-    fn reset_select(&mut self) {
+    fn reset_selection(&mut self) {
         if self.makefile.to_targets_string().is_empty() {
             self.targets_list_state.select(None);
         }
@@ -163,7 +162,7 @@ impl Model<'_> {
         self.app_state == AppState::ShouldQuite
     }
 
-    pub fn target_selected(&self) -> bool {
+    pub fn is_target_selected(&self) -> bool {
         matches!(self.app_state, AppState::ExecuteTarget(Some(_)))
     }
 
@@ -235,7 +234,7 @@ fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Optio
         match handle_event(&model) {
             Ok(message) => {
                 update(&mut model, message);
-                if model.should_quit() || model.target_selected() {
+                if model.should_quit() || model.is_target_selected() {
                     break;
                 }
             }
@@ -290,7 +289,7 @@ fn update(model: &mut Model, message: Option<Message>) {
         }
         Some(Message::SearchTextAreaKeyInput(key_event)) => {
             if let KeyCode::Char(_) = key_event.code {
-                model.reset_select();
+                model.reset_selection();
             };
             model.search_text_area.0.input(key_event);
         }
