@@ -6,10 +6,7 @@ tooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
 
 .PHONY: ci
-ci: # Checks same as CI
-	RUST_BACKTRACE=full make test; \
-	make check; \
-	make spell-check
+ci: test check spell-check
 
 .PHONY: test
 test : # Run unit tests
