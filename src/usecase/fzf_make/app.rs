@@ -173,6 +173,10 @@ impl Model<'_> {
             _ => None,
         }
     }
+
+    pub fn get_search_area_text(&self) -> String {
+        self.search_text_area.0.lines().join("")
+    }
 }
 
 pub fn main() -> Result<()> {
@@ -212,10 +216,7 @@ pub fn main() -> Result<()> {
 
                 Ok(())
             }
-            None => {
-                println!("{}", ("no target selected.".to_string()).red());
-                Ok(())
-            }
+            None => Ok(()),
         }
     });
 
