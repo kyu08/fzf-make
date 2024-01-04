@@ -6,8 +6,6 @@ authors = ["kyu08"]
 description = "A command line tool that executes make target using fuzzy finder with preview window."
 license = "MIT"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 regex = "1.10.2"
 uuid = { version = "1.6.1", features = ["serde", "v4"] }
