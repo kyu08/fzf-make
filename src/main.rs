@@ -2,6 +2,7 @@ mod controller;
 mod models;
 mod usecase;
 
+// hoge
 use crate::controller::controller_main;
 use std::panic;
 
