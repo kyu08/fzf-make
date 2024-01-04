@@ -472,6 +472,60 @@ mod test {
                     ..init_model()
                 },
             },
+            Case {
+                title: "Next when there is no targets to select, panic should not occur",
+                model: {
+                    let mut m = Model {
+                        targets_list_state: ListState::with_selected(ListState::default(), None),
+                        ..init_model()
+                    };
+                    update(
+                        // There should not be targets because init_model has ["target0", "target1", "target2"] as target.
+                        &mut m,
+                        Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
+                            KeyCode::Char('w'),
+                        ))),
+                    );
+                    m
+                },
+                message: Some(Message::Next),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), None),
+                    search_text_area: {
+                        let mut text_area = TextArea::default();
+                        text_area.input(KeyEvent::from(KeyCode::Char('w')));
+                        TextArea_(text_area)
+                    },
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "Previous when there is no targets to select, panic should not occur",
+                model: {
+                    let mut m = Model {
+                        targets_list_state: ListState::with_selected(ListState::default(), None),
+                        ..init_model()
+                    };
+                    update(
+                        // There should not be targets because init_model has ["target0", "target1", "target2"] as target.
+                        &mut m,
+                        Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
+                            KeyCode::Char('w'),
+                        ))),
+                    );
+                    m
+                },
+                message: Some(Message::Previous),
+                expect_model: Model {
+                    targets_list_state: ListState::with_selected(ListState::default(), None),
+                    search_text_area: {
+                        let mut text_area = TextArea::default();
+                        text_area.input(KeyEvent::from(KeyCode::Char('w')));
+                        TextArea_(text_area)
+                    },
+                    ..init_model()
+                },
+            },
         ];
 
         for mut case in cases {
