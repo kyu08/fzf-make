@@ -61,14 +61,32 @@ fn rounded_border_block(title: &str, is_current: bool) -> Block {
 
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
 fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let pty_system = NativePtySystem::default();
-
     let narrow_down_targets = model.narrow_down_targets();
     let selecting_target =
         &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
     let (file_name, line_number) = model
         .makefile
         .target_to_file_and_line_number(selecting_target);
+
+    let fg_color_ = if model.current_pane.is_main() {
+        fg_color_selected()
+    } else {
+        fg_color_not_selected()
+    };
+    let title = Line::from(" Preview ");
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(fg_color_))
+        .title(title)
+        .style(Style::default());
+
+    if !model.get_search_area_text().is_empty() && narrow_down_targets.is_empty() {
+        f.render_widget(block, chunk);
+        return;
+    }
+
+    let pty_system = NativePtySystem::default();
 
     let file_name = file_name.unwrap_or(model.makefile.path.to_string_lossy().to_string());
     let line_number = line_number.unwrap_or(1);
@@ -112,21 +130,8 @@ fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Re
 
     drop(pair.master);
 
-    let fg_color_ = if model.current_pane.is_main() {
-        fg_color_selected()
-    } else {
-        fg_color_not_selected()
-    };
-
     let binding = parser.read().unwrap();
     let screen = binding.screen();
-    let title = Line::from(" Preview ");
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(ratatui::widgets::BorderType::Rounded)
-        .border_style(Style::default().fg(fg_color_))
-        .title(title)
-        .style(Style::default());
 
     f.render_widget(
         PseudoTerminal::new(screen)

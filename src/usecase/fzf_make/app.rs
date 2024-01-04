@@ -169,10 +169,13 @@ impl Model<'_> {
 
     pub fn target_to_execute(&self) -> Option<String> {
         match self.app_state.clone() {
-            // TODO: 対象のtargetが存在しない場合はUI側でエラーを表示する
             AppState::ExecuteTarget(Some(target)) => Some(target.clone()),
             _ => None,
         }
+    }
+
+    pub fn get_search_area_text(&self) -> String {
+        self.search_text_area.0.lines().join("")
     }
 }
 
