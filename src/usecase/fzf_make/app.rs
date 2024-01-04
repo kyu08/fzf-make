@@ -118,6 +118,11 @@ impl Model<'_> {
     }
 
     fn next(&mut self) {
+        if self.narrow_down_targets().is_empty() {
+            self.targets_list_state.select(None);
+            return;
+        }
+
         let i = match self.targets_list_state.selected() {
             Some(i) => {
                 if self.narrow_down_targets().len() - 1 <= i {
@@ -132,6 +137,11 @@ impl Model<'_> {
     }
 
     fn previous(&mut self) {
+        if self.narrow_down_targets().is_empty() {
+            self.targets_list_state.select(None);
+            return;
+        }
+
         let i = match self.targets_list_state.selected() {
             Some(i) => {
                 if i == 0 {
