@@ -20,5 +20,5 @@ jobs:
 
     - name: Lint
       run: |
-        cargo fmt
+        cargo-fmt
         cargo clippy -- -D warnings
