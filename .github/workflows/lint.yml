@@ -20,5 +20,6 @@ jobs:
 
     - name: Lint
       run: |
-        cargo-fmt
+        rustup component add rustfmt
+        cargo fmt
         cargo clippy -- -D warnings
