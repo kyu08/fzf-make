@@ -1,4 +1,4 @@
-use crate::model::makefile::Makefile;
+use crate::model::{history::History, makefile::Makefile};
 
 use super::ui::ui;
 use anyhow::{anyhow, Result};
@@ -60,6 +60,7 @@ pub struct Model<'a> {
     pub makefile: Makefile,
     pub targets_list_state: ListState,
     pub search_text_area: TextArea_<'a>,
+    pub history: History,
 }
 
 #[derive(Clone, Debug)]
@@ -84,6 +85,7 @@ impl Model<'_> {
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             search_text_area: TextArea_(TextArea::default()),
+            history: History,
         })
     }
 
@@ -342,6 +344,7 @@ mod test {
             makefile: Makefile::new_for_test(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             search_text_area: TextArea_(TextArea::default()),
+            history: History,
         }
     }
 
