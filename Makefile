@@ -1,10 +1,6 @@
 export
 RUST_BACKTRACE=full
 
-.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2
-toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
-	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
-
 .PHONY: ci
 ci: # Checks same as CI
 	RUST_BACKTRACE=full make test; \
@@ -55,8 +51,17 @@ bump-fzf-make-version: tools
 	git push origin HEAD; \
 	gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | sed 's@releases/tag@releases/edit@' | xargs open
 
+.PHONY: spell-check
+spell-check:
+	typos
+
 # Targets for test
 include ./makefiles/test.mk
+
+.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2
+toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
+	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
+
 
 .PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target
 toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target:
@@ -72,7 +77,3 @@ cmd:
 	if [ "$$ans" = y ]; then  \
 		echo "Doing something..."; \
 	fi
-
-.PHONY: spell-check
-spell-check:
-	typos
