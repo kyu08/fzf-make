@@ -14,6 +14,8 @@ impl Histories {
     }
 
     pub fn get_history(&self, path: &PathBuf) -> Option<Vec<String>> {
+        println!("👀self.histories: {:?}", self.histories);
+        println!("👀path: {:?}", path);
         self.histories
             .iter()
             .find(|h| h.path == *path)

@@ -213,6 +213,7 @@ impl Model<'_> {
 
         let i = match self.histories_list_state.selected() {
             Some(i) => {
+                println!("i: {}, len: {}", i, history_list.len());
                 if history_list.len() - 1 <= i {
                     0
                 } else {
@@ -412,11 +413,8 @@ fn update(model: &mut Model, message: Option<Message>) {
         Some(Message::Quit) => model.app_state = AppState::ShouldQuite,
         Some(Message::NextTarget) => model.next_target(),
         Some(Message::PreviousTarget) => model.previous_target(),
-        // TODO: add UT
         Some(Message::NextHistory) => model.next_history(),
-        // TODO: add UT
         Some(Message::PreviousHistory) => model.previous_history(),
-        // TODO: add UT
         Some(Message::ExecuteTarget) => match model.current_pane {
             CurrentPane::Main => {
                 model.app_state = AppState::ExecuteTarget(model.selected_target());
@@ -456,17 +454,30 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::{env, path::Path};
     use tui_textarea::TextArea;
 
     fn init_model<'a>() -> Model<'a> {
+        let histories = {
+            match env::current_dir() {
+                Err(_) => None,
+                Ok(current_dir) => {
+                    let path = current_dir.join(Path::new("Makefile"));
+                    Some(Histories::new(
+                        path.clone(),
+                        vec![(path, vec!["history0".to_string(), "history1".to_string()])],
+                    ))
+                }
+            }
+        };
         Model {
             app_state: AppState::SelectingTarget,
             current_pane: CurrentPane::Main,
             makefile: Makefile::new_for_test(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             search_text_area: TextArea_(TextArea::default()),
-            histories: None,
-            histories_list_state: ListState::default(), // TODO: 必要そうだったら変更する
+            histories,
+            histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         }
     }
 
@@ -570,11 +581,24 @@ mod test {
                 },
             },
             Case {
-                title: "ExecuteTarget",
+                title: "ExecuteTarget(Main)",
                 model: Model { ..init_model() },
                 message: Some(Message::ExecuteTarget),
                 expect_model: Model {
                     app_state: AppState::ExecuteTarget(Some("target0".to_string())),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "ExecuteTarget(History)",
+                model: Model {
+                    current_pane: CurrentPane::History,
+                    ..init_model()
+                },
+                message: Some(Message::ExecuteTarget),
+                expect_model: Model {
+                    current_pane: CurrentPane::History,
+                    app_state: AppState::ExecuteTarget(Some("history0".to_string())),
                     ..init_model()
                 },
             },
@@ -598,7 +622,7 @@ mod test {
                 },
             },
             Case {
-                title: "Next when there is no targets to select, panic should not occur",
+                title: "NextTarget when there is no targets to select, panic should not occur",
                 model: {
                     let mut m = Model {
                         targets_list_state: ListState::with_selected(ListState::default(), None),
@@ -625,7 +649,7 @@ mod test {
                 },
             },
             Case {
-                title: "Previous when there is no targets to select, panic should not occur",
+                title: "PreviousTarget when there is no targets to select, panic should not occur",
                 model: {
                     let mut m = Model {
                         targets_list_state: ListState::with_selected(ListState::default(), None),
@@ -648,6 +672,82 @@ mod test {
                         text_area.input(KeyEvent::from(KeyCode::Char('w')));
                         TextArea_(text_area)
                     },
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "NextHistory",
+                model: {
+                    Model {
+                        current_pane: CurrentPane::History,
+                        histories_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..init_model()
+                    }
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    current_pane: CurrentPane::History,
+                    histories_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "PreviousHistory",
+                model: {
+                    Model {
+                        current_pane: CurrentPane::History,
+                        histories_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..init_model()
+                    }
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    current_pane: CurrentPane::History,
+                    histories_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "When the last history is selected and NextHistory is received, it returns to the beginning.",
+                model: {
+                    Model {
+                        current_pane: CurrentPane::History,
+                        histories_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
+                        ..init_model()
+                    }
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    current_pane: CurrentPane::History,
+                    histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    ..init_model()
+                },
+            },
+            Case {
+                title: "When the first history is selected and PreviousHistory is received, it moves to the last history.",
+                model: {
+                    Model {
+                        current_pane: CurrentPane::History,
+                        histories_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..init_model()
+                    }
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    current_pane: CurrentPane::History,
+                    histories_list_state: ListState::with_selected(ListState::default(), Some(1)),
                     ..init_model()
                 },
             },
