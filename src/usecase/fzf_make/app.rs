@@ -1,4 +1,4 @@
-use crate::models::makefile::Makefile;
+use crate::model::makefile::Makefile;
 
 use super::ui::ui;
 use anyhow::{anyhow, Result};
