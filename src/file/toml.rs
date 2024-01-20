@@ -1,20 +1,33 @@
 use anyhow::Result;
-use serde::Deserialize;
-use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
+use std::{fs::File, io::Write, path::PathBuf};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Histories {
     history: Vec<History>,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct History {
-    executed_targets: Vec<String>,
-    path: String,
+impl Histories {
+    fn from(histories: Vec<(PathBuf, Vec<String>)>) -> Self {
+        let mut result: Vec<History> = vec![];
+        for h in histories {
+            result.push(History {
+                path: h.0.to_str().unwrap().to_string(),
+                executed_targets: h.1,
+            });
+        }
+        Histories { history: result }
+    }
 }
 
-pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct History {
+    path: String,
+    executed_targets: Vec<String>,
+}
+
+pub fn read_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
     let histories: Histories = toml::from_str(&content)?;
 
     let mut result: Vec<(PathBuf, Vec<String>)> = Vec::new();
@@ -23,6 +36,19 @@ pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
         result.push((PathBuf::from(history.path), history.executed_targets));
     }
     Ok(result)
+}
+
+pub fn write_history(
+    history_file_path: PathBuf,
+    histories_tuple: Vec<(PathBuf, Vec<String>)>,
+) -> Result<()> {
+    let histories = Histories::from(histories_tuple);
+
+    let mut history_file = File::create(history_file_path)?;
+    history_file.write_all(toml::to_string(&histories).unwrap().as_bytes())?;
+    history_file.flush()?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -78,13 +104,13 @@ executed-targets = ["run", "echo1"]
             match case.expect {
                 Ok(v) => assert_eq!(
                     v,
-                    parse_history(case.content).unwrap(),
+                    read_history(case.content).unwrap(),
                     "\nFailed: 🚨{:?}🚨\n",
                     case.title,
                 ),
                 Err(e) => assert_eq!(
                     e.to_string(),
-                    parse_history(case.content).unwrap_err().to_string(),
+                    read_history(case.content).unwrap_err().to_string(),
                     "\nFailed: 🚨{:?}🚨\n",
                     case.title,
                 ),

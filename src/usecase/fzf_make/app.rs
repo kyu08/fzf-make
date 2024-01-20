@@ -1,6 +1,9 @@
 use crate::{
     file::{path_to_content, toml},
-    model::{histories::Histories, makefile::Makefile},
+    model::{
+        histories::{history_file_path, Histories},
+        makefile::Makefile,
+    },
 };
 
 use super::ui::ui;
@@ -18,7 +21,6 @@ use ratatui::{
     widgets::ListState,
     Terminal,
 };
-use simple_home_dir::home_dir;
 use std::{
     io::{self, Stderr},
     panic,
@@ -95,9 +97,18 @@ impl Model<'_> {
             makefile: makefile.clone(),
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            histories: Model::get_histories(),
+            histories: Model::get_histories(makefile.path),
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         })
+    }
+
+    pub fn append_history(&self) -> Option<Histories> {
+        match (&self.histories.clone(), &self.app_state.clone()) {
+            (Some(histories), AppState::ExecuteTarget(Some(target))) => {
+                histories.append(&self.makefile.path, target)
+            }
+            _ => None,
+        }
     }
 
     pub fn narrow_down_targets(&self) -> Vec<String> {
@@ -130,26 +141,19 @@ impl Model<'_> {
             .collect()
     }
 
-    fn get_histories() -> Option<Histories> {
-        let path = match home_dir() {
-            None => return None,
-            Some(mut h) => {
-                let base_path: &'static str = ".config/fzf-make/history.toml";
-                h.push(PathBuf::from(base_path));
-                h.clone()
-            }
-        };
+    fn get_histories(makefile_path: PathBuf) -> Option<Histories> {
+        history_file_path().map(|history_file_path| {
+            let content = match path_to_content::path_to_content(history_file_path.clone()) {
+                Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
+                Ok(c) => c,
+            };
+            let histories = match toml::read_history(content.to_string()) {
+                Err(_) => vec![], // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
+                Ok(h) => h,
+            };
 
-        let content = match path_to_content::path_to_content(path.clone()) {
-            Err(_) => return Some(Histories::new(path, vec![])), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
-            Ok(c) => c,
-        };
-        let histories = match toml::parse_history(content.to_string()) {
-            Err(_) => vec![], // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
-            Ok(h) => h,
-        };
-
-        Some(Histories::new(path, histories))
+            Histories::new(makefile_path, histories)
+        })
     }
 
     fn next_target(&mut self) {
@@ -415,14 +419,22 @@ fn update(model: &mut Model, message: Option<Message>) {
         Some(Message::PreviousTarget) => model.previous_target(),
         Some(Message::NextHistory) => model.next_history(),
         Some(Message::PreviousHistory) => model.previous_history(),
-        Some(Message::ExecuteTarget) => match model.current_pane {
-            CurrentPane::Main => {
-                model.app_state = AppState::ExecuteTarget(model.selected_target());
+        Some(Message::ExecuteTarget) => {
+            let target = match model.current_pane {
+                CurrentPane::Main => model.selected_target(),
+                CurrentPane::History => model.selected_history(),
+            };
+            model.app_state = AppState::ExecuteTarget(target);
+            if let Some(h) = model.append_history() {
+                model.histories = Some(h)
+            };
+
+            if let (Some(p), Some(h)) = (history_file_path(), &model.histories) {
+                // TODO: handle error
+                let _ = toml::write_history(p, h.to_tuple());
             }
-            CurrentPane::History => {
-                model.app_state = AppState::ExecuteTarget(model.selected_history());
-            }
-        },
+        }
+
         Some(Message::SearchTextAreaKeyInput(key_event)) => {
             if let KeyCode::Char(_) = key_event.code {
                 model.reset_selection();
@@ -457,26 +469,19 @@ mod test {
     use std::{env, path::Path};
     use tui_textarea::TextArea;
 
+    fn init_histories(history_targets: Vec<String>) -> Option<Histories> {
+        let path = env::current_dir().unwrap().join(Path::new("Makefile"));
+        Some(Histories::new(path.clone(), vec![(path, history_targets)]))
+    }
+
     fn init_model<'a>() -> Model<'a> {
-        let histories = {
-            match env::current_dir() {
-                Err(_) => None,
-                Ok(current_dir) => {
-                    let path = current_dir.join(Path::new("Makefile"));
-                    Some(Histories::new(
-                        path.clone(),
-                        vec![(path, vec!["history0".to_string(), "history1".to_string()])],
-                    ))
-                }
-            }
-        };
         Model {
             app_state: AppState::SelectingTarget,
             current_pane: CurrentPane::Main,
             makefile: Makefile::new_for_test(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             search_text_area: TextArea_(TextArea::default()),
-            histories,
+            histories: init_histories(vec!["history0".to_string(), "history1".to_string()]),
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         }
     }
@@ -586,6 +591,7 @@ mod test {
                 message: Some(Message::ExecuteTarget),
                 expect_model: Model {
                     app_state: AppState::ExecuteTarget(Some("target0".to_string())),
+                    histories: init_histories(vec!["target0".to_string(), "history0".to_string(), "history1".to_string()]),
                     ..init_model()
                 },
             },
@@ -593,12 +599,15 @@ mod test {
                 title: "ExecuteTarget(History)",
                 model: Model {
                     current_pane: CurrentPane::History,
+                    histories_list_state: ListState::with_selected(ListState::default(), Some(1)),
                     ..init_model()
                 },
                 message: Some(Message::ExecuteTarget),
                 expect_model: Model {
                     current_pane: CurrentPane::History,
-                    app_state: AppState::ExecuteTarget(Some("history0".to_string())),
+                    app_state: AppState::ExecuteTarget(Some("history1".to_string())),
+                    histories: init_histories(vec![ "history1".to_string(), "history0".to_string()]),
+                    histories_list_state: ListState::with_selected(ListState::default(), Some(1)),
                     ..init_model()
                 },
             },

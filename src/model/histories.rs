@@ -1,3 +1,4 @@
+use simple_home_dir::home_dir;
 use std::path::PathBuf;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -14,12 +15,37 @@ impl Histories {
     }
 
     pub fn get_history(&self, path: &PathBuf) -> Option<Vec<String>> {
-        println!("👀self.histories: {:?}", self.histories);
-        println!("👀path: {:?}", path);
         self.histories
             .iter()
             .find(|h| h.path == *path)
             .map(|h| h.executed_targets.clone())
+    }
+
+    pub fn append(&self, path: &PathBuf, executed_target: &str) -> Option<Self> {
+        let mut new_histories = self.histories.clone();
+
+        new_histories
+            .iter()
+            .position(|h| h.path == *path)
+            .map(|index| {
+                let new_history = new_histories[index].append(executed_target.to_string());
+                new_histories[index] = new_history;
+
+                Self {
+                    histories: new_histories,
+                }
+            })
+    }
+
+    pub fn to_tuple(&self) -> Vec<(PathBuf, Vec<String>)> {
+        let mut result = Vec::new();
+
+        println!("self.histories: {:?}", self.histories);
+        for history in &self.histories {
+            result.push((history.path.clone(), history.executed_targets.clone()));
+        }
+        println!("result: {:?}", result);
+        result
     }
 
     fn default(path: PathBuf) -> Self {
@@ -37,6 +63,14 @@ impl Histories {
         }
         result
     }
+}
+
+pub fn history_file_path() -> Option<PathBuf> {
+    home_dir().map(|mut h| {
+        let base_path: &'static str = ".config/fzf-make/history.toml";
+        h.push(PathBuf::from(base_path));
+        h.clone()
+    })
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -57,6 +91,21 @@ impl History {
         Self {
             path: histories.0,
             executed_targets: histories.1,
+        }
+    }
+
+    fn append(&self, executed_target: String) -> Self {
+        let mut executed_targets = self.executed_targets.clone();
+        executed_targets.retain(|t| *t != executed_target);
+        executed_targets.insert(0, executed_target.clone());
+        const MAX_LENGTH: usize = 10;
+        if executed_targets.len() > MAX_LENGTH {
+            executed_targets.truncate(MAX_LENGTH);
+        }
+
+        Self {
+            path: self.path.clone(),
+            executed_targets,
         }
     }
 }
@@ -117,6 +166,157 @@ mod test {
             assert_eq!(
                 case.expect,
                 Histories::new(case.path, case.histories),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            )
+        }
+    }
+
+    #[test]
+    fn histories_append_test() {
+        struct Case {
+            title: &'static str,
+            path: PathBuf,
+            appending_target: &'static str,
+            histories: Histories,
+            expect: Option<Histories>,
+        }
+        let cases = vec![
+            Case {
+                title: "Success",
+                path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                appending_target: "history1",
+                histories: Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
+                            executed_targets: vec!["history0".to_string(), "history1".to_string()],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                            executed_targets: vec![
+                                "history0".to_string(),
+                                "history1".to_string(),
+                                "history2".to_string(),
+                            ],
+                        },
+                    ],
+                },
+                expect: Some(Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
+                            executed_targets: vec!["history0".to_string(), "history1".to_string()],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                            executed_targets: vec![
+                                "history1".to_string(),
+                                "history0".to_string(),
+                                "history2".to_string(),
+                            ],
+                        },
+                    ],
+                }),
+            },
+            Case {
+                title: "Returns None when path is not found",
+                path: PathBuf::from("/Users/user/code/non-existent-dir".to_string()),
+                appending_target: "history1",
+                histories: Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
+                            executed_targets: vec!["history0".to_string(), "history1".to_string()],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                            executed_targets: vec![
+                                "history0".to_string(),
+                                "history1".to_string(),
+                                "history2".to_string(),
+                            ],
+                        },
+                    ],
+                },
+                expect: None,
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                case.histories.append(&case.path, case.appending_target),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            )
+        }
+    }
+
+    #[test]
+    fn history_append_test() {
+        struct Case {
+            title: &'static str,
+            appending_target: &'static str,
+            history: History,
+            expect: History,
+        }
+        let path = PathBuf::from("/Users/user/code/fzf-make".to_string());
+        let cases = vec![
+            Case {
+                title: "Append to head",
+                appending_target: "history2",
+                history: History {
+                    path: path.clone(),
+                    executed_targets: vec!["history0".to_string(), "history1".to_string()],
+                },
+                expect: History {
+                    path: path.clone(),
+                    executed_targets: vec![
+                        "history2".to_string(),
+                        "history0".to_string(),
+                        "history1".to_string(),
+                    ],
+                },
+            },
+            Case {
+                title: "Append to head(Append to empty)",
+                appending_target: "history0",
+                history: History {
+                    path: path.clone(),
+                    executed_targets: vec![],
+                },
+                expect: History {
+                    path: path.clone(),
+                    executed_targets: vec!["history0".to_string()],
+                },
+            },
+            Case {
+                title: "Append to head(Remove duplicated)",
+                appending_target: "history1",
+                history: History {
+                    path: path.clone(),
+                    executed_targets: vec![
+                        "history0".to_string(),
+                        "history1".to_string(),
+                        "history2".to_string(),
+                    ],
+                },
+                expect: History {
+                    path: path.clone(),
+                    executed_targets: vec![
+                        "history1".to_string(),
+                        "history0".to_string(),
+                        "history2".to_string(),
+                    ],
+                },
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                case.history.append(case.appending_target.to_string()),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             )

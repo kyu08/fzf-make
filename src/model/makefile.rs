@@ -16,7 +16,9 @@ pub struct Makefile {
 
 impl Makefile {
     pub fn create_makefile() -> Result<Makefile> {
-        let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else { return Err(anyhow!("makefile not found.\n")) };
+        let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else {
+            return Err(anyhow!("makefile not found.\n"));
+        };
         Makefile::new(Path::new(&makefile_name).to_path_buf())
     }
 
@@ -137,7 +139,9 @@ impl Makefile {
 pub fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     for line in file_content.lines() {
-        let Some(include_files) = line_to_including_file_paths(line.to_string()) else { continue };
+        let Some(include_files) = line_to_including_file_paths(line.to_string()) else {
+            continue;
+        };
 
         result = [result, include_files].concat();
     }
