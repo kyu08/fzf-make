@@ -16,6 +16,7 @@ struct History {
 
 pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
     let histories: Histories = toml::from_str(&content)?;
+
     let mut result: Vec<(PathBuf, Vec<String>)> = Vec::new();
 
     for history in histories.history {

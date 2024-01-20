@@ -13,6 +13,13 @@ impl Histories {
         }
     }
 
+    pub fn get_history(&self, path: &PathBuf) -> Option<Vec<String>> {
+        self.histories
+            .iter()
+            .find(|h| h.path == *path)
+            .map(|h| h.executed_targets.clone())
+    }
+
     fn default(path: PathBuf) -> Self {
         let histories = vec![History::default(path)];
         Self { histories }

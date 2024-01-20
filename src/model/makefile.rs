@@ -1,7 +1,10 @@
 use super::{file_util, target::*};
 use anyhow::{anyhow, Result};
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 /// Makefile represents a Makefile.
 #[derive(Clone, Debug, PartialEq)]
@@ -46,16 +49,23 @@ impl Makefile {
         })
     }
 
-    fn specify_makefile_name(target_path: String) -> Option<String> {
+    fn specify_makefile_name(target_path: String) -> Option<PathBuf> {
         //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
         //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
         // It needs to enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
-        let makefile_name_options = vec!["GNUmakefile", "makefile", "Makefile"];
+        let makefile_name_options = ["GNUmakefile", "makefile", "Makefile"];
 
-        for file_name in makefile_name_options {
-            let exists = Path::new(&target_path).join(file_name).is_file();
-            if exists {
-                return Some(file_name.to_string());
+        let elements = fs::read_dir(target_path.clone()).unwrap();
+        for e in elements {
+            let file_name = e.unwrap().file_name();
+            let file_name_string = file_name.to_str().unwrap();
+            if makefile_name_options.contains(&file_name_string) {
+                let current_dir = match env::current_dir() {
+                    Err(_) => return None,
+                    Ok(d) => d,
+                };
+
+                return Some(current_dir.join(file_name));
             }
         }
 
@@ -179,14 +189,11 @@ mod test {
                 files: vec!["makefile", "Makefile", "README.md"],
                 expect: Some("makefile".to_string()),
             },
-            // NOTE: not use this test case because there is a difference in handling case sensitivity between macOS and linux.
-            // to use this test case, you need to determine whether the file system is
-            // case-sensitive or not when test execute.
-            // Case {
-            // title: "Makefile",
-            // files: vec!["Makefile", "README.md"],
-            // expect: Some("makefile".to_string()),
-            // },
+            Case {
+                title: "Makefile",
+                files: vec!["Makefile", "README.md"],
+                expect: Some("Makefile".to_string()),
+            },
         ];
 
         for case in cases {
@@ -202,8 +209,13 @@ mod test {
                 }
             }
 
+            let expect = match (env::current_dir(), case.expect) {
+                (Ok(c), Some(e)) => Some(c.join(e)),
+                _ => None,
+            };
+
             assert_eq!(
-                case.expect,
+                expect,
                 Makefile::specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,

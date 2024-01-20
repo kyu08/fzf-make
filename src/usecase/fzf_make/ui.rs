@@ -44,21 +44,6 @@ fn fg_color_not_selected() -> Color {
     Color::DarkGray
 }
 
-fn rounded_border_block(title: &str, is_current: bool) -> Block {
-    let fg_color = if is_current {
-        fg_color_selected()
-    } else {
-        fg_color_not_selected()
-    };
-
-    Block::default()
-        .title(title)
-        .borders(Borders::ALL)
-        .border_type(ratatui::widgets::BorderType::Rounded)
-        .border_style(Style::default().fg(fg_color))
-        .style(Style::default())
-}
-
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
 fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let narrow_down_targets = model.narrow_down_targets();
@@ -190,12 +175,25 @@ fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::
     f.render_widget(model.search_text_area.0.widget(), chunk);
 }
 
+// fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+//     let history_block = Paragraph::new(Line::from("Coming soon...")).block(
+//         rounded_border_block(" History ", model.current_pane.is_history())
+//             .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
+//     );
+//     f.render_widget(history_block, chunk);
+// }
 fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let history_block = Paragraph::new(Line::from("Coming soon...")).block(
-        rounded_border_block(" History ", model.current_pane.is_history())
-            .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
+    let h = match model.get_history() {
+        Some(h) => h,
+        None => vec![],
+    };
+
+    f.render_stateful_widget(
+        targets_block(" History ", h, model.current_pane.is_history()),
+        chunk,
+        // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
+        &mut model.histories_list_state,
     );
-    f.render_widget(history_block, chunk);
 }
 
 fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
@@ -221,6 +219,8 @@ fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::l
 
     f.render_widget(key_notes_footer, chunk);
 }
+
+// TODO: rename
 fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bool) -> List<'_> {
     let fg_color = if is_current {
         fg_color_selected()
