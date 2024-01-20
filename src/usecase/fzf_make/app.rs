@@ -1,4 +1,7 @@
-use crate::model::{histories::Histories, makefile::Makefile};
+use crate::{
+    file::{path_to_content, toml},
+    model::{histories::Histories, makefile::Makefile},
+};
 
 use super::ui::ui;
 use anyhow::{anyhow, Result};
@@ -15,6 +18,7 @@ use ratatui::{
     widgets::ListState,
     Terminal,
 };
+use simple_home_dir::home_dir;
 use std::{
     io::{self, Stderr},
     panic,
@@ -62,7 +66,7 @@ pub struct Model<'a> {
     pub makefile: Makefile,
     pub targets_list_state: ListState,
     pub search_text_area: TextArea_<'a>,
-    pub histories: Histories,
+    pub histories: Option<Histories>, // When home dir could not be found, this is None.
 }
 
 #[derive(Clone, Debug)]
@@ -82,15 +86,13 @@ impl Model<'_> {
             Ok(f) => f,
         };
 
-        let path = PathBuf::from(".fzf-make.toml");
-        let histories = vec![];
         Ok(Model {
             app_state: AppState::SelectingTarget,
             current_pane: CurrentPane::Main,
             makefile: makefile.clone(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             search_text_area: TextArea_(TextArea::default()),
-            histories: Histories::new(path, histories),
+            histories: Model::get_histories(),
         })
     }
 
@@ -122,6 +124,28 @@ impl Model<'_> {
             .into_iter()
             .map(|(_, target)| target)
             .collect()
+    }
+
+    fn get_histories() -> Option<Histories> {
+        let path = match home_dir() {
+            None => return None,
+            Some(mut h) => {
+                let base_path: &'static str = ".config/fzf-make/history.toml";
+                h.push(PathBuf::from(base_path));
+                h.clone()
+            }
+        };
+
+        let content = match path_to_content::path_to_content(path.clone()) {
+            Err(_) => return Some(Histories::new(path, vec![])), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
+            Ok(c) => c,
+        };
+        let histories = match toml::parse_history(content.to_string()) {
+            Err(_) => vec![], // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
+            Ok(h) => h,
+        };
+
+        Some(Histories::new(path, histories))
     }
 
     fn next(&mut self) {
@@ -343,16 +367,13 @@ mod test {
     use tui_textarea::TextArea;
 
     fn init_model<'a>() -> Model<'a> {
-        let path = PathBuf::from(".fzf-make.toml");
-        let histories = vec![];
-
         Model {
             app_state: AppState::SelectingTarget,
             current_pane: CurrentPane::Main,
             makefile: Makefile::new_for_test(),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             search_text_area: TextArea_(TextArea::default()),
-            histories: Histories::new(path, histories),
+            histories: None,
         }
     }
 
