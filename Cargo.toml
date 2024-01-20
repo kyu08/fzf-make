@@ -20,3 +20,5 @@ tui-term = "0.1.6"
 ratatui = "0.25.0"
 anyhow = "1.0.78"
 tui-textarea = "0.4.0"
+toml = "0.8.8"
+serde = {version = "1.0.195", features = ["derive"]}
