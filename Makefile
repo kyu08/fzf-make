@@ -3,7 +3,7 @@ RUST_BACKTRACE=full
 
 .PHONY: ci
 ci: # Checks same as CI
-	RUST_BACKTRACE=full make test; \
+	@RUST_BACKTRACE=full make test; \
 	make check; \
 	make spell-check
 

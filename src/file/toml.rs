@@ -37,9 +37,10 @@ mod test {
             content: String,
             expect: Result<Vec<(PathBuf, Vec<String>)>>,
         }
-        let cases = vec![Case {
-            title: "Success",
-            content: r#"
+        let cases = vec![
+            Case {
+                title: "Success",
+                content: r#"
 [[history]]
 path = "/Users/user/code/fzf-make"
 executed-targets = ["test", "check", "spell-check"]
@@ -48,22 +49,30 @@ executed-targets = ["test", "check", "spell-check"]
 path = "/Users/user/code/golang/go-playground"
 executed-targets = ["run", "echo1"]
                 "#
-            .to_string(),
-            expect: Ok(vec![
-                (
-                    PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                    vec![
-                        "test".to_string(),
-                        "check".to_string(),
-                        "spell-check".to_string(),
-                    ],
-                ),
-                (
-                    PathBuf::from("/Users/user/code/golang/go-playground".to_string()),
-                    vec!["run".to_string(), "echo1".to_string()],
-                ),
-            ]),
-        }];
+                .to_string(),
+                expect: Ok(vec![
+                    (
+                        PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                        vec![
+                            "test".to_string(),
+                            "check".to_string(),
+                            "spell-check".to_string(),
+                        ],
+                    ),
+                    (
+                        PathBuf::from("/Users/user/code/golang/go-playground".to_string()),
+                        vec!["run".to_string(), "echo1".to_string()],
+                    ),
+                ]),
+            },
+            Case {
+                title: "Error",
+                content: r#"
+                "#
+                .to_string(),
+                expect: Err(anyhow::anyhow!("TOML parse error at line 1, column 1\n  |\n1 | \n  | ^\nmissing field `history`\n")),
+            },
+        ];
 
         for case in cases {
             match case.expect {
