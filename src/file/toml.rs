@@ -44,6 +44,7 @@ pub fn write_history(
 ) -> Result<()> {
     let histories = Histories::from(histories_tuple);
 
+    // TODO: ${pwd}/Test.mkの履歴が存在すると${pwd}/Makefileの履歴が保存されないの直す
     let mut history_file = File::create(history_file_path)?;
     history_file.write_all(toml::to_string(&histories).unwrap().as_bytes())?;
     history_file.flush()?;

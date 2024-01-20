@@ -122,7 +122,8 @@ impl Makefile {
     #[cfg(test)]
     pub fn new_for_test() -> Makefile {
         Makefile {
-            path: env::current_dir().unwrap().join(Path::new("Makefile")),
+            // path: env::current_dir().unwrap().join(Path::new("Makefile")),
+            path: env::current_dir().unwrap().join(Path::new("Test.mk")),
             include_files: vec![],
             targets: Targets(vec![
                 "target0".to_string(),

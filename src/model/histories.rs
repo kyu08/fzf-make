@@ -7,10 +7,10 @@ pub struct Histories {
 }
 
 impl Histories {
-    pub fn new(path: PathBuf, histories: Vec<(PathBuf, Vec<String>)>) -> Self {
+    pub fn new(makefile_path: PathBuf, histories: Vec<(PathBuf, Vec<String>)>) -> Self {
         match histories.len() {
-            0 => Self::default(path),
-            _ => Self::from(histories),
+            0 => Self::default(makefile_path),
+            _ => Self::from(makefile_path, histories),
         }
     }
 
@@ -40,11 +40,9 @@ impl Histories {
     pub fn to_tuple(&self) -> Vec<(PathBuf, Vec<String>)> {
         let mut result = Vec::new();
 
-        println!("self.histories: {:?}", self.histories);
         for history in &self.histories {
             result.push((history.path.clone(), history.executed_targets.clone()));
         }
-        println!("result: {:?}", result);
         result
     }
 
@@ -53,14 +51,19 @@ impl Histories {
         Self { histories }
     }
 
-    fn from(histories: Vec<(PathBuf, Vec<String>)>) -> Self {
+    fn from(makefile_path: PathBuf, histories: Vec<(PathBuf, Vec<String>)>) -> Self {
         let mut result = Histories {
             histories: Vec::new(),
         };
 
-        for history in histories {
+        for history in histories.clone() {
             result.histories.push(History::from(history));
         }
+
+        if !histories.iter().any(|h| h.0 == makefile_path) {
+            result.histories.push(History::default(makefile_path));
+        }
+
         result
     }
 }
@@ -98,10 +101,10 @@ impl History {
         let mut executed_targets = self.executed_targets.clone();
         executed_targets.retain(|t| *t != executed_target);
         executed_targets.insert(0, executed_target.clone());
-        const MAX_LENGTH: usize = 10;
-        if executed_targets.len() > MAX_LENGTH {
-            executed_targets.truncate(MAX_LENGTH);
-        }
+        // const MAX_LENGTH: usize = 10;
+        // if executed_targets.len() > MAX_LENGTH {
+        //     executed_targets.truncate(MAX_LENGTH);
+        // }
 
         Self {
             path: self.path.clone(),
@@ -118,14 +121,14 @@ mod test {
     fn histories_new_test() {
         struct Case {
             title: &'static str,
-            path: PathBuf,
+            makefile_path: PathBuf,
             histories: Vec<(PathBuf, Vec<String>)>,
             expect: Histories,
         }
         let cases = vec![
             Case {
                 title: "histories.len() == 0",
-                path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                makefile_path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
                 histories: vec![],
                 expect: Histories {
                     histories: vec![History {
@@ -135,8 +138,8 @@ mod test {
                 },
             },
             Case {
-                title: "histories.len() != 0",
-                path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                title: "histories.len() != 0(Including makefile_path)",
+                makefile_path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
                 histories: vec![
                     (
                         PathBuf::from("/Users/user/code/fzf-make".to_string()),
@@ -160,12 +163,42 @@ mod test {
                     ],
                 },
             },
+            Case {
+                title: "histories.len() != 0(Not including makefile_path)",
+                makefile_path: PathBuf::from("/Users/user/code/cargo".to_string()),
+                histories: vec![
+                    (
+                        PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                        vec!["target1".to_string(), "target2".to_string()],
+                    ),
+                    (
+                        PathBuf::from("/Users/user/code/rustc".to_string()),
+                        vec!["target-a".to_string(), "target-b".to_string()],
+                    ),
+                ],
+                expect: Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
+                            executed_targets: vec!["target1".to_string(), "target2".to_string()],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
+                            executed_targets: vec!["target-a".to_string(), "target-b".to_string()],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/cargo".to_string()),
+                            executed_targets: vec![],
+                        },
+                    ],
+                },
+            },
         ];
 
         for case in cases {
             assert_eq!(
                 case.expect,
-                Histories::new(case.path, case.histories),
+                Histories::new(case.makefile_path, case.histories),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             )
