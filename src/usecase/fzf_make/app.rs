@@ -96,7 +96,6 @@ impl Model<'_> {
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: Model::get_histories(),
-            // TODO: historyがないときはselectしない
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         })
     }
@@ -267,6 +266,19 @@ impl Model<'_> {
         }
     }
 
+    fn selected_history(&self) -> Option<String> {
+        match self.get_history() {
+            None => None,
+            Some(h) => match h.len() {
+                0 => None,
+                _ => match self.histories_list_state.selected() {
+                    Some(i) => h.get(i).map(|s| s.to_string()),
+                    None => None,
+                },
+            },
+        }
+    }
+
     pub fn should_quit(&self) -> bool {
         self.app_state == AppState::ShouldQuite
     }
@@ -375,6 +387,7 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                             KeyCode::Char('q') => Some(Message::Quit),
                             KeyCode::Down => Some(Message::NextHistory),
                             KeyCode::Up => Some(Message::PreviousHistory),
+                            KeyCode::Enter => Some(Message::ExecuteTarget),
                             _ => None,
                         },
                     },
@@ -403,9 +416,15 @@ fn update(model: &mut Model, message: Option<Message>) {
         Some(Message::NextHistory) => model.next_history(),
         // TODO: add UT
         Some(Message::PreviousHistory) => model.previous_history(),
-        Some(Message::ExecuteTarget) => {
-            model.app_state = AppState::ExecuteTarget(model.selected_target());
-        }
+        // TODO: add UT
+        Some(Message::ExecuteTarget) => match model.current_pane {
+            CurrentPane::Main => {
+                model.app_state = AppState::ExecuteTarget(model.selected_target());
+            }
+            CurrentPane::History => {
+                model.app_state = AppState::ExecuteTarget(model.selected_history());
+            }
+        },
         Some(Message::SearchTextAreaKeyInput(key_event)) => {
             if let KeyCode::Char(_) = key_event.code {
                 model.reset_selection();

@@ -175,13 +175,6 @@ fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::
     f.render_widget(model.search_text_area.0.widget(), chunk);
 }
 
-// fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
-//     let history_block = Paragraph::new(Line::from("Coming soon...")).block(
-//         rounded_border_block(" History ", model.current_pane.is_history())
-//             .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
-//     );
-//     f.render_widget(history_block, chunk);
-// }
 fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let h = match model.get_history() {
         Some(h) => h,
