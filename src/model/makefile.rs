@@ -1,4 +1,4 @@
-use super::{target::*, util};
+use super::{file_util, target::*};
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::path::{Path, PathBuf};
@@ -32,7 +32,7 @@ impl Makefile {
     fn new(path: PathBuf) -> Result<Makefile> {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
-        let file_content = util::path_to_content(path.clone())?;
+        let file_content = file_util::path_to_content(path.clone())?;
         let include_files = content_to_include_file_paths(file_content.clone())
             .iter()
             .map(|included_file_path| Makefile::new(included_file_path.clone()))
