@@ -55,6 +55,7 @@ impl Makefile {
         // It needs to enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
         let makefile_name_options = ["GNUmakefile", "makefile", "Makefile"];
 
+        let mut temp_result = Vec::<PathBuf>::new();
         let elements = fs::read_dir(target_path.clone()).unwrap();
         for e in elements {
             let file_name = e.unwrap().file_name();
@@ -65,7 +66,16 @@ impl Makefile {
                     Ok(d) => d,
                 };
 
-                return Some(current_dir.join(file_name));
+                temp_result.push(current_dir.join(file_name));
+            }
+        }
+
+        // It needs to return "GNUmakefile", "makefile", "Makefile" in order of priority
+        for makefile_name_option in makefile_name_options {
+            for result in &temp_result {
+                if result.to_str().unwrap().contains(makefile_name_option) {
+                    return Some(result.clone());
+                }
             }
         }
 
