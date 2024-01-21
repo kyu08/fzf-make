@@ -76,8 +76,8 @@ cargo install --locked fzf-make
 ## Run target using fuzzy finder
 1. Führe `fzf-make` in dem Verzeichnis aus, das makefile enthält (der Dateiname sollte einer von `GNUmakefile`, `makefile`, `Makefile` sein)
 1. Make-Command auswählen, welches ausgeführt werden soll. If you type some characters, the list will be filtered.
-    <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-type-characters.png"> 
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-main.png"> 
+    <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-type-characters.png"> 
 
 ## Run target from history
 1. Execute `fzf-make` in the directory include makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile`)
