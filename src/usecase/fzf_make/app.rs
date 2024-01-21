@@ -217,7 +217,6 @@ impl Model<'_> {
 
         let i = match self.histories_list_state.selected() {
             Some(i) => {
-                println!("i: {}, len: {}", i, history_list.len());
                 if history_list.len() - 1 <= i {
                     0
                 } else {
