@@ -34,6 +34,7 @@ test-ci:
 
 .PHONY: test
 test: tool-test
+	rm -rf ./test_dir
 	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo nextest run
 
 .PHONY: bump-fzf-make-version

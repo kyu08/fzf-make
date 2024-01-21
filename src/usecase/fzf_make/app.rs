@@ -765,6 +765,9 @@ mod test {
             },
         ];
 
+        // When running tests from the editor, you need to set FZF_MAKE_IS_TESTING=true. Otherwise, the developer's history file will be overwritten.
+        env::set_var("FZF_MAKE_IS_TESTING", "true");
+
         for mut case in cases {
             update(&mut case.model, case.message);
             assert_eq!(
