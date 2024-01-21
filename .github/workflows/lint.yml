@@ -21,4 +21,4 @@ jobs:
     - name: Lint
       run: |
         cargo fmt
-        cargo clippy -- -D warnings
+        make check

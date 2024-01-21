@@ -3,13 +3,17 @@ RUST_BACKTRACE=full
 
 .PHONY: ci
 ci: # Checks same as CI
-	@RUST_BACKTRACE=full make test; \
+	@make test; \
 	make check; \
 	make spell-check
 
+.PHONY: test-ci # for CI
+test-ci:
+	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo test
+
 .PHONY: test
-test : # Run unit tests
-	RUST_BACKTRACE=full cargo nextest run
+test: tools
+	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo nextest run
 
 # Install tools if not installed.
 .PHONY: tools

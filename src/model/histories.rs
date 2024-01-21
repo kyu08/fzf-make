@@ -1,5 +1,5 @@
 use simple_home_dir::home_dir;
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Histories {
@@ -69,11 +69,16 @@ impl Histories {
 }
 
 pub fn history_file_path() -> Option<PathBuf> {
-    home_dir().map(|mut h| {
-        let base_path: &'static str = ".config/fzf-make/history.toml";
-        h.push(PathBuf::from(base_path));
-        h.clone()
-    })
+    match env::var("FZF_MAKE_IS_TESTING") {
+        Ok(_) => {
+            // When testing
+            let cwd = std::env::current_dir().unwrap();
+            Some(cwd.join(PathBuf::from("test_dir/history.toml")))
+        }
+        _ => {
+            home_dir().map(|home_dir| home_dir.join(PathBuf::from(".config/fzf-make/history.toml")))
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]

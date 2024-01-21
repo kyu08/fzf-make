@@ -470,7 +470,6 @@ mod test {
     use tui_textarea::TextArea;
 
     fn init_histories(history_targets: Vec<String>) -> Option<Histories> {
-        // let path = env::current_dir().unwrap().join(Path::new("Makefile"));
         let makefile_path = env::current_dir().unwrap().join(Path::new("Test.mk"));
         Some(Histories::new(
             makefile_path.clone(),
