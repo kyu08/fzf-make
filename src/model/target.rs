@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
-use super::util;
+use super::file_util;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Targets(pub Vec<String>);
@@ -21,7 +21,7 @@ impl Targets {
 }
 
 pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32> {
-    let content = match util::path_to_content(path) {
+    let content = match file_util::path_to_content(path) {
         Ok(c) => c,
         Err(_) => return None,
     };

@@ -1,32 +1,56 @@
 export
 RUST_BACKTRACE=full
 
-.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2
-toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
-	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
-
 .PHONY: ci
 ci: # Checks same as CI
-	RUST_BACKTRACE=full make test; \
+	@make test-ci; \
 	make check; \
 	make spell-check
 
-.PHONY: test
-test : # Run unit tests
-	RUST_BACKTRACE=full cargo nextest run
-
-# Install tools if not installed.
 .PHONY: tools
-tools:
+tools: tool-test tool-bump-version tool-spell-check
+
+.PHONY: tool-test
+tool-test:
 	@if ! which cargo-nextest > /dev/null; then \
 		cargo install cargo-nextest; \
 	fi
+
+.PHONY: tool-bump-version
+tool-bump-version:
 	@if ! which cargo-set-version > /dev/null; then \
 		cargo install cargo-edit; \
 	fi
+
+.PHONY: tool-spell-check
+tool-spell-check:
 	@if ! which typos > /dev/null; then \
 		cargo install typos-cli; \
 	fi
+
+.PHONY: test-ci # for CI
+test-ci:
+	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo test
+
+.PHONY: test
+test: tool-test
+	rm -rf ./test_dir
+	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo nextest run
+
+.PHONY: bump-fzf-make-version
+bump-fzf-make-version: tool-bump-version
+	@git checkout main; \
+	git pull; \
+	cargo set-version --bump minor; \
+	export CURRENT_VERSION=$$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version'); \
+	git add .; \
+	git commit -m "Bump fzf-make's version to v$${CURRENT_VERSION}"; \
+	git push origin HEAD; \
+	gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | sed 's@releases/tag@releases/edit@' | xargs open
+
+.PHONY: spell-check
+spell-check: tool-spell-check
+	typos
 
 .PHONY: run
 run:
@@ -44,19 +68,13 @@ build:
 build-release:
 	@cargo build --verbose --release
 
-.PHONY: bump-fzf-make-version
-bump-fzf-make-version: tools
-	@git checkout main; \
-	git pull; \
-	cargo set-version --bump minor; \
-	export CURRENT_VERSION=$$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version'); \
-	git add .; \
-	git commit -m "Bump fzf-make's version to v$${CURRENT_VERSION}"; \
-	git push origin HEAD; \
-	gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | sed 's@releases/tag@releases/edit@' | xargs open
-
 # Targets for test
 include ./makefiles/test.mk
+
+.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2
+toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
+	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
+
 
 .PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target
 toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target:
@@ -72,7 +90,3 @@ cmd:
 	if [ "$$ans" = y ]; then  \
 		echo "Doing something..."; \
 	fi
-
-.PHONY: spell-check
-spell-check:
-	typos

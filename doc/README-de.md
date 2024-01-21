@@ -19,10 +19,10 @@
 </div>
 
 # 🛠️ Eigenschaften
-- Auswählen und Ausführen eines Make-Targets mit fzf
+- Auswählen und Ausführen eines Make-Targets mit fuzzy-finder
 - Unterstützt `include` directive
+- Command-Verlauf / History
 - **(In Entwicklung)** Unterstützt Konfigurations-Dateien
-- **(In Entwicklung)** Command-Verlauf / History
 
 # 👓 Voraussetzungen
 - [bat](https://github.com/sharkdp/bat) (Für die Zukunft ist geplant, dass es auch mit `cat` funktioniert, aber derzeit funktioniert es nur mit `bat`.)
@@ -73,24 +73,31 @@ cargo install --locked fzf-make
 ```
 
 # 💡 Nutzung
-## Run `fzf-make`
+## Run target using fuzzy finder
 1. Führe `fzf-make` in dem Verzeichnis aus, das makefile enthält (der Dateiname sollte einer von `GNUmakefile`, `makefile`, `Makefile` sein)
-2. Make-Command auswählen, welches ausgeführt werden soll
+1. Make-Command auswählen, welches ausgeführt werden soll. If you type some characters, the list will be filtered.
+    <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-type-characters.png"> 
+    <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-main.png"> 
 
-## Sonstiges
+## Run target from history
+1. Execute `fzf-make` in the directory include makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile`)
+1. Press `Tab` to move to the history list
+1. Select make command you want to execute.
+    <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-history.png"> 
+
+## Commands Supported
 | Command | Output |
 |--------|--------|
-| `fzf-make` |  <img width="752" alt="help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.png">|
-| `fzf-make --help` / `fzf-make -h` / `fzf-make help` |  <img width="752" alt="help.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/help.png">|
-| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | <img width="752" alt="version.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/version.png"> |
-| `fzf-make ${some_invalid_command}` | <img width="752" alt="invalid-arg.png" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/invalid-arg.png"> |
+| `fzf-make` |  <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.png">|
+| `fzf-make --help` / `fzf-make -h` / `fzf-make help` |  <img width="752" alt="help" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/help.png">|
+| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | <img width="752" alt="version" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/version.png"> |
 
 # 💻 Entwicklung
 1. Dieses repository klonen
 2. Codes ändern
 3. `make run` ausführen
 
-Um den Test auszuführen, führe `make test` (benötigt `nextest`) aus. Oder führe einfach `cargo test` aus.
+Um den Test auszuführen, führe `make test` (benötigt `nextest`) aus.
 
 ## nix
 Oder man kann `nix` verwenden, um eine Entwicklungsshell mit den Dependencies zu erstellen.
