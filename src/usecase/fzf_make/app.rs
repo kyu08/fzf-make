@@ -142,11 +142,12 @@ impl Model<'_> {
     }
 
     fn get_histories(makefile_path: PathBuf) -> Option<Histories> {
-        history_file_path().map(|history_file_path| {
-            let content = match path_to_content::path_to_content(history_file_path.clone()) {
-                Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
-                Ok(c) => c,
-            };
+        history_file_path().map(|(history_file_dir, history_file_name)| {
+            let content =
+                match path_to_content::path_to_content(history_file_dir.join(history_file_name)) {
+                    Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
+                    Ok(c) => c,
+                };
             let histories = match toml::read_history(content.to_string()) {
                 Err(_) => vec![], // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
                 Ok(h) => h,
@@ -428,9 +429,9 @@ fn update(model: &mut Model, message: Option<Message>) {
                 model.histories = Some(h)
             };
 
-            if let (Some(p), Some(h)) = (history_file_path(), &model.histories) {
+            if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &model.histories) {
                 // TODO: handle error
-                let _ = toml::write_history(p, h.to_tuple());
+                let _ = toml::write_history(dir, file_name, h.to_tuple());
             }
         }
 

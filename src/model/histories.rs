@@ -68,16 +68,24 @@ impl Histories {
     }
 }
 
-pub fn history_file_path() -> Option<PathBuf> {
+pub fn history_file_path() -> Option<(PathBuf, String)> {
+    const HISTORY_FILE_NAME: &str = "history.toml";
+
     match env::var("FZF_MAKE_IS_TESTING") {
         Ok(_) => {
             // When testing
             let cwd = std::env::current_dir().unwrap();
-            Some(cwd.join(PathBuf::from("test_dir/history.toml")))
+            Some((
+                cwd.join(PathBuf::from("test_dir")),
+                HISTORY_FILE_NAME.to_string(),
+            ))
         }
-        _ => {
-            home_dir().map(|home_dir| home_dir.join(PathBuf::from(".config/fzf-make/history.toml")))
-        }
+        _ => home_dir().map(|home_dir| {
+            (
+                home_dir.join(PathBuf::from(".config/fzf-make")),
+                HISTORY_FILE_NAME.to_string(),
+            )
+        }),
     }
 }
 

@@ -1,6 +1,10 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{
+    fs::{self, File},
+    io::Write,
+    path::PathBuf,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Histories {
@@ -39,13 +43,17 @@ pub fn read_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
 }
 
 pub fn write_history(
-    history_file_path: PathBuf,
+    history_directory_path: PathBuf,
+    history_file_name: String,
     histories_tuple: Vec<(PathBuf, Vec<String>)>,
 ) -> Result<()> {
     let histories = Histories::from(histories_tuple);
 
-    // TODO: ${pwd}/Test.mkの履歴が存在すると${pwd}/Makefileの履歴が保存されないの直す
-    let mut history_file = File::create(history_file_path)?;
+    if !history_directory_path.is_dir() {
+        fs::create_dir_all(history_directory_path.clone())?;
+    }
+
+    let mut history_file = File::create(history_directory_path.join(history_file_name))?;
     history_file.write_all(toml::to_string(&histories).unwrap().as_bytes())?;
     history_file.flush()?;
 
