@@ -148,7 +148,7 @@ impl Model<'_> {
                     Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
                     Ok(c) => c,
                 };
-            let histories = match toml::read_history(content.to_string()) {
+            let histories = match toml::parse_history(content.to_string()) {
                 Err(_) => vec![], // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
                 Ok(h) => h,
             };
@@ -431,7 +431,7 @@ fn update(model: &mut Model, message: Option<Message>) {
 
             if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &model.histories) {
                 // TODO: handle error
-                let _ = toml::write_history(dir, file_name, h.to_tuple());
+                let _ = toml::store_history(dir, file_name, h.to_tuple());
             }
         }
 
