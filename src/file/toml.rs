@@ -31,7 +31,7 @@ struct History {
     executed_targets: Vec<String>,
 }
 
-pub fn read_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
+pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
     let histories: Histories = toml::from_str(&content)?;
 
     let mut result: Vec<(PathBuf, Vec<String>)> = Vec::new();
@@ -42,7 +42,7 @@ pub fn read_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
     Ok(result)
 }
 
-pub fn write_history(
+pub fn store_history(
     history_directory_path: PathBuf,
     history_file_name: String,
     histories_tuple: Vec<(PathBuf, Vec<String>)>,
@@ -113,13 +113,13 @@ executed-targets = ["run", "echo1"]
             match case.expect {
                 Ok(v) => assert_eq!(
                     v,
-                    read_history(case.content).unwrap(),
+                    parse_history(case.content).unwrap(),
                     "\nFailed: 🚨{:?}🚨\n",
                     case.title,
                 ),
                 Err(e) => assert_eq!(
                     e.to_string(),
-                    read_history(case.content).unwrap_err().to_string(),
+                    parse_history(case.content).unwrap_err().to_string(),
                     "\nFailed: 🚨{:?}🚨\n",
                     case.title,
                 ),
