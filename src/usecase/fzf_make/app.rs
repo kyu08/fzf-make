@@ -392,7 +392,7 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                             KeyCode::Char('q') => Some(Message::Quit),
                             KeyCode::Down => Some(Message::NextHistory),
                             KeyCode::Up => Some(Message::PreviousHistory),
-                            KeyCode::Enter => Some(Message::ExecuteTarget),
+                            KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteTarget),
                             _ => None,
                         },
                     },
