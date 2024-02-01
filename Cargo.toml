@@ -9,7 +9,7 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-regex = "1.10.2"
+regex = "1.10.3"
 uuid = { version = "1.7.0", features = ["serde", "v4"] }
 colored = "2"
 crossterm = "0.27.0"
