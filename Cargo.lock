@@ -203,7 +203,7 @@ dependencies = [
  "crossterm",
  "fuzzy-matcher",
  "portable-pty",
- "ratatui 0.25.0",
+ "ratatui 0.26.0",
  "regex",
  "serde",
  "simple-home-dir",
