@@ -7,19 +7,18 @@
   };
 
   outputs = { nixpkgs, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-      cargoTOML = builtins.fromTOML (builtins.readFile (./. + "/Cargo.toml"));
-        in
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+      in
+      rec
       {
-        devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            bat
-            cargo
-            gnumake
-          ];
+        devShell = pkgs.mkShell {
+          inputsFrom = [ packages.fzf-make ];
         };
 
+        formatter = pkgs.nixpkgs-fmt;
         packages = rec {
           fzf-make = pkgs.rustPlatform.buildRustPackage {
             pname = "fzf-make";
@@ -27,10 +26,19 @@
 
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
-          
-            buildInputs = [ pkgs.bat ];
+
+            nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+            postInstall =
+              let
+                runtimeDeps = with pkgs; [ bat gnugrep gnumake ];
+              in
+              ''
+                wrapProgram $out/bin/fzf-make \
+                  --set SHELL ${pkgs.runtimeShell} \
+                  --suffix PATH : ${pkgs.lib.makeBinPath runtimeDeps}
+              '';
           };
           default = fzf-make;
         };
-    });
+      });
 }
