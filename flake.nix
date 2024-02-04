@@ -7,10 +7,11 @@
   };
 
   outputs = { nixpkgs, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-      cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-        in
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+      in
       rec
       {
         devShell = pkgs.mkShell {
@@ -39,5 +40,5 @@
           };
           default = fzf-make;
         };
-    });
+      });
 }
