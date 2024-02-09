@@ -14,7 +14,7 @@
       in
       rec
       {
-        devShell = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           inputsFrom = [ packages.fzf-make ];
         };
 
