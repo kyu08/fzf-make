@@ -29,6 +29,8 @@ USAGE:
     Run `fzf-make` in the directory where Makefile exists or `fzf-make [SUBCOMMAND]`.
 
 SUBCOMMANDS:
+    repeat, --repeat, -r
+        Execute the last executed make target.
     help, --help, -h
         Prints help message.
     version, --version, -v
