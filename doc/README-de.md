@@ -20,8 +20,9 @@
 
 # 🛠️ Eigenschaften
 - Auswählen und Ausführen eines Make-Targets mit fuzzy-finder
-- Unterstützt `include` directive
+- Execute last executed target(By running `fzf-make --repeat` without any arguments.)
 - Command-Verlauf / History
+- Unterstützt `include` directive
 - **(In Entwicklung)** Unterstützt Konfigurations-Dateien
 
 # 👓 Voraussetzungen
@@ -31,6 +32,7 @@
 ## macOS
 ### Homebrew
 Man braucht `bat` nicht zu installieren, da `fzf-make` es automatisch über Homebrew installiert.
+
 ```sh
 # install
 brew tap kyu08/tap
@@ -86,11 +88,12 @@ cargo install --locked fzf-make
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-history.png"> 
 
 ## Commands Supported
-| Command | Output |
+| Command | Description |
 |--------|--------|
-| `fzf-make` |  <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.png">|
-| `fzf-make --help` / `fzf-make -h` / `fzf-make help` |  <img width="752" alt="help" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/help.png">|
-| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | <img width="752" alt="version" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/version.png"> |
+| `fzf-make` | Launch fzf-make |
+| `fzf-make --repeat` / `fzf-make -r` / `fzf-make repeat` |  Execute last executed target |
+| `fzf-make --help` / `fzf-make -h` / `fzf-make help` | Show help |
+| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | Show version |
 
 # 💻 Entwicklung
 1. Dieses repository klonen
