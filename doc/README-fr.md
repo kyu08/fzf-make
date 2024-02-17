@@ -20,8 +20,9 @@
 
 # 🛠️ Fonctionnalitées
 - Selectionner et éxecuter une cible make avec fuzzy-finder
-- Supporte les instructions `include`
+- Execute last executed target(By running `fzf-make --repeat` without any arguments.)
 - Historique des commandes
+- Supporte les instructions `include`
 - **(dévelopement planifié)** Supporte un fichier de configuration
 
 # 👓 Pré-requis
@@ -87,11 +88,12 @@ cargo install --locked fzf-make
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-history.png"> 
 
 ## Commands Supported
-| Commande | Sortie |
+| Command | Description |
 |--------|--------|
-| `fzf-make` |  <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.png">|
-| `fzf-make --help` / `fzf-make -h` / `fzf-make help` |  <img width="752" alt="help" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/help.png">|
-| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | <img width="752" alt="version" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/version.png"> |
+| `fzf-make` | Launch fzf-make |
+| `fzf-make --repeat` / `fzf-make -r` / `fzf-make repeat` |  Execute last executed target |
+| `fzf-make --help` / `fzf-make -h` / `fzf-make help` | Show help |
+| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | Show version |
 
 # 💻 Dévelopment
 1. Clonez ce dépôt
