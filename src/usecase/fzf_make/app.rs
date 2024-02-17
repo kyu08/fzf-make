@@ -4,11 +4,11 @@ use crate::{
         histories::{history_file_path, Histories},
         makefile::Makefile,
     },
+    usecase::execute_make_command::execute_make_target,
 };
 
 use super::ui::ui;
 use anyhow::{anyhow, Result};
-use colored::Colorize;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
     execute,
@@ -329,16 +329,7 @@ pub fn main() -> Result<()> {
 
         match target {
             Some(t) => {
-                // Make output color configurable via config file https://github.com/kyu08/fzf-make/issues/67
-                println!("{}", ("make ".to_string() + &t).blue());
-                process::Command::new("make")
-                    .stdin(process::Stdio::inherit())
-                    .arg(t)
-                    .spawn()
-                    .expect("Failed to execute process")
-                    .wait()
-                    .expect("Failed to execute process");
-
+                execute_make_target(&t);
                 Ok(())
             }
             None => Ok(()),

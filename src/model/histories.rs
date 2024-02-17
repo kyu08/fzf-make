@@ -46,6 +46,13 @@ impl Histories {
         result
     }
 
+    pub fn get_latest_target(&self, path: &PathBuf) -> Option<&String> {
+        self.histories
+            .iter()
+            .find(|h| h.path == *path)
+            .map(|h| h.executed_targets.first())?
+    }
+
     fn default(path: PathBuf) -> Self {
         let histories = vec![History::default(path)];
         Self { histories }
