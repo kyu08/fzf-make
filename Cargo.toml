@@ -18,7 +18,7 @@ vt100 = "0.15.2"
 portable-pty = "0.8.1"
 tui-term = "0.1.7"
 anyhow = "1.0.80"
-ratatui = "0.26.0"
+ratatui = "0.26.1"
 tui-textarea = "0.4.0"
 toml = "0.8.9"
 serde = {version = "1.0.196", features = ["derive"]}
