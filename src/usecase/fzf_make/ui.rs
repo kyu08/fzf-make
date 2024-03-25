@@ -11,30 +11,30 @@ use std::sync::{Arc, RwLock};
 use tui_term::widget::PseudoTerminal;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
-    let main_chunks = Layout::default()
+    let main_and_key_bindings = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(5)])
         .split(f.size());
-    render_key_bindings_block(model, f, main_chunks[1]);
+    render_key_bindings_block(model, f, main_and_key_bindings[1]);
 
-    let fzf_preview_and_history_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Min(3), Constraint::Max(40)])
-        .split(main_chunks[0]);
-    render_history_block(model, f, fzf_preview_and_history_chunks[1]);
-
-    let fzf_make_chunks = Layout::default()
+    let main = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(3)])
-        .split(fzf_preview_and_history_chunks[0]);
-    render_input_block(model, f, fzf_make_chunks[1]);
+        .split(main_and_key_bindings[0]);
+    render_input_block(model, f, main[1]);
 
-    let fzf_make_preview_chunks = Layout::default()
+    let preview_and_targets = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-        .split(fzf_make_chunks[0]);
-    render_preview_block(model, f, fzf_make_preview_chunks[0]);
-    render_targets_block(model, f, fzf_make_preview_chunks[1]);
+        .split(main[0]);
+    render_preview_block(model, f, preview_and_targets[0]);
+
+    let targets = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+        .split(preview_and_targets[1]);
+    render_targets_block(model, f, targets[0]);
+    render_history_block(model, f, targets[1]);
 }
 
 fn fg_color_selected() -> Color {
