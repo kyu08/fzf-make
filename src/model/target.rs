@@ -10,7 +10,21 @@ pub struct Targets(pub Vec<String>);
 impl Targets {
     pub fn new(content: String) -> Targets {
         let mut result: Vec<String> = Vec::new();
+        let mut in_define_block = false;
+
         for line in content.lines() {
+            if in_define_block {
+                if line.trim().starts_with("endef") {
+                    in_define_block = false;
+                }
+                continue;
+            }
+
+            if line.trim().starts_with("define") {
+                in_define_block = true;
+                continue;
+            }
+
             if let Some(t) = line_to_target(line.to_string()) {
                 result.push(t);
             }
@@ -25,6 +39,7 @@ pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32
         Ok(c) => c,
         Err(_) => return None,
     };
+
     for (index, line) in content.lines().enumerate() {
         if let Some(t) = line_to_target(line.to_string()) {
             if t == target_to_search {
