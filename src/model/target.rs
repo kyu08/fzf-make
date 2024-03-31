@@ -4,8 +4,27 @@ use regex::Regex;
 
 use super::file_util;
 
-const START_OF_DEFINE_BLOCK: &str = "define";
-const END_OF_DEFINE_BLOCK: &str = "endef";
+const DEFINE_BLOCK_START: &str = "define";
+const DEFINE_BLOCK_END: &str = "endef";
+const OVERRIDE: &str = "override";
+
+enum LineType { Normal, DefineStart, DefineEnd }
+
+fn get_line_type(line: &str) -> LineType {
+    let words: Vec<&str> = line.split_whitespace().collect();
+
+    if words.len() >= 2
+        && words[0] == OVERRIDE
+        && words[1] == DEFINE_BLOCK_START {
+        return LineType::DefineStart;
+    }
+
+    match line.trim() {
+        DEFINE_BLOCK_START => LineType::DefineStart,
+        DEFINE_BLOCK_END => LineType::DefineEnd,
+        _ => LineType::Normal,
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Targets(pub Vec<String>);
@@ -13,23 +32,19 @@ pub struct Targets(pub Vec<String>);
 impl Targets {
     pub fn new(content: String) -> Targets {
         let mut result: Vec<String> = Vec::new();
-        let mut ignored_block_count = 0;
+        let mut define_block_depth = 0;
 
         for line in content.lines() {
-            if line.trim() == START_OF_DEFINE_BLOCK {
-                ignored_block_count += 1;
-                continue;
-            }
-            if line.trim() == END_OF_DEFINE_BLOCK {
-                ignored_block_count -= 1;
-            }
-
-            if 0 < ignored_block_count {
-                continue;
-            }
-
-            if let Some(t) = line_to_target(line.to_string()) {
-                result.push(t);
+            match get_line_type(line) {
+                LineType::DefineStart => { define_block_depth += 1; }
+                LineType::DefineEnd => { define_block_depth -= 1; }
+                LineType::Normal => {
+                    if define_block_depth == 0 {
+                        if let Some(t) = line_to_target(line.to_string()) {
+                            result.push(t);
+                        }
+                    }
+                }
             }
         }
 
