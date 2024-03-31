@@ -13,13 +13,17 @@ enum LineType { Normal, DefineStart, DefineEnd }
 fn get_line_type(line: &str) -> LineType {
     let words: Vec<&str> = line.split_whitespace().collect();
 
+    if words.is_empty() {
+        return LineType::Normal;
+    }
+
     if words.len() >= 2
         && words[0] == OVERRIDE
         && words[1] == DEFINE_BLOCK_START {
         return LineType::DefineStart;
     }
 
-    match line.trim() {
+    match words[0] {
         DEFINE_BLOCK_START => LineType::DefineStart,
         DEFINE_BLOCK_END => LineType::DefineEnd,
         _ => LineType::Normal,
@@ -140,6 +144,45 @@ build:
                 contents: "echo hello",
                 expect: Targets(vec![]),
             },
+            Case {
+                title: "trap script as a define block",
+                contents: "\
+FUNNY := myscript
+
+define funny-block
+#!/bin/bash
+
+echo \"this is a trap: not good\"
+endef
+
+$(FUNNY):
+	$(file >$(FUNNY),$(funny-block))\n",
+                expect: Targets(vec!["$(FUNNY)".to_string()]),
+            },
+            Case {
+                title: "nested define",
+                contents: "\
+define lvl-1
+a:
+    define lvl2
+a:
+
+    endef
+a:
+endef
+                ",
+                expect: Targets(vec![]),
+            },
+            Case {
+                title: "override define",
+                contents: "\
+override define foo
+not-good:
+
+endef
+                ",
+                expect: Targets(vec![]),
+            }
         ];
 
         for case in cases {
