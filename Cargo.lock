@@ -821,9 +821,9 @@ dependencies = [
 
 [[package]]
 name = "tui-term"
-version = "0.1.7"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3d5f9037dc88b4fc3aeb0e005bc799bf1195eea47b5381fc31bbffa40880fb2"
+checksum = "4612d4537b4c9f69192596f5b48516b2faf5442fafab885e999e6195cd19463f"
 dependencies = [
  "ratatui",
  "vt100",
