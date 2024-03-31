@@ -4,24 +4,27 @@ use regex::Regex;
 
 use super::file_util;
 
+const START_OF_DEFINE_BLOCK: &str = "define";
+const END_OF_DEFINE_BLOCK: &str = "endef";
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Targets(pub Vec<String>);
 
 impl Targets {
     pub fn new(content: String) -> Targets {
         let mut result: Vec<String> = Vec::new();
-        let mut in_define_block = false;
+        let mut ignored_block_count = 0;
 
         for line in content.lines() {
-            if in_define_block {
-                if line.trim().starts_with("endef") {
-                    in_define_block = false;
-                }
+            if line.trim() == START_OF_DEFINE_BLOCK {
+                ignored_block_count += 1;
                 continue;
             }
+            if line.trim() == END_OF_DEFINE_BLOCK {
+                ignored_block_count -= 1;
+            }
 
-            if line.trim().starts_with("define") {
-                in_define_block = true;
+            if 0 < ignored_block_count {
                 continue;
             }
 
