@@ -21,6 +21,6 @@ tui-term = "0.1.9"
 anyhow = "1.0.80"
 ratatui = "0.26.1"
 tui-textarea = "0.4.0"
-toml = "0.8.9"
+toml = "0.8.12"
 serde = {version = "1.0.197", features = ["derive"]}
 simple-home-dir = "0.3.2"
