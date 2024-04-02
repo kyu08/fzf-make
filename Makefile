@@ -5,6 +5,7 @@ RUST_BACKTRACE=full
 ci: # Checks same as CI
 	@make test-ci; \
 	make check; \
+	make fmt; \
 	make spell-check
 
 .PHONY: tools
@@ -59,6 +60,10 @@ run:
 .PHONY: build
 build:
 	@cargo build
+
+.PHONY: fmt
+ fmt:
+	@cargo fmt -- --check
 
 .PHONY: check
  check:

@@ -1,4 +1,4 @@
-name: Lint
+name: Format check
 
 on:
   push:
@@ -13,11 +13,12 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  Lint:
+  fmt:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    - name: Lint
+    - name: Check formatting
       run: |
-        make check
+        make fmt
