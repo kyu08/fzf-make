@@ -7,7 +7,7 @@ use crate::controller::controller_main;
 use std::panic;
 
 fn main() {
-    let result = panic::catch_unwind(|| {
+      let result = panic::catch_unwind(|| {
         controller_main::run();
     });
     match result {
