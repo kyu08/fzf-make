@@ -4,32 +4,6 @@ use regex::Regex;
 
 use super::file_util;
 
-const DEFINE_BLOCK_START: &str = "define";
-const DEFINE_BLOCK_END: &str = "endef";
-const OVERRIDE: &str = "override";
-
-enum LineType { Normal, DefineStart, DefineEnd }
-
-fn get_line_type(line: &str) -> LineType {
-    let words: Vec<&str> = line.split_whitespace().collect();
-
-    if words.is_empty() {
-        return LineType::Normal;
-    }
-
-    if words.len() >= 2
-        && words[0] == OVERRIDE
-        && words[1] == DEFINE_BLOCK_START {
-        return LineType::DefineStart;
-    }
-
-    match words[0] {
-        DEFINE_BLOCK_START => LineType::DefineStart,
-        DEFINE_BLOCK_END => LineType::DefineEnd,
-        _ => LineType::Normal,
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Targets(pub Vec<String>);
 
@@ -53,6 +27,32 @@ impl Targets {
         }
 
         Targets(result)
+    }
+}
+
+const DEFINE_BLOCK_START: &str = "define";
+const DEFINE_BLOCK_END: &str = "endef";
+const OVERRIDE: &str = "override";
+
+enum LineType { Normal, DefineStart, DefineEnd }
+
+fn get_line_type(line: &str) -> LineType {
+    let words: Vec<&str> = line.split_whitespace().collect();
+
+    if words.is_empty() {
+        return LineType::Normal;
+    }
+
+    if words.len() >= 2
+        && words[0] == OVERRIDE
+        && words[1] == DEFINE_BLOCK_START {
+        return LineType::DefineStart;
+    }
+
+    match words[0] {
+        DEFINE_BLOCK_START => LineType::DefineStart,
+        DEFINE_BLOCK_END => LineType::DefineEnd,
+        _ => LineType::Normal,
     }
 }
 
