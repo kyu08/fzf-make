@@ -38,6 +38,7 @@ const DEFINE_BLOCK_START: &str = "define";
 const DEFINE_BLOCK_END: &str = "endef";
 const OVERRIDE: &str = "override";
 
+#[derive(Debug, PartialEq)]
 enum LineType {
     Normal,
     DefineStart,
@@ -156,17 +157,17 @@ build:
             Case {
                 title: "trap script as a define block",
                 contents: "\
-FUNNY := myscript
+.PHONY: all
 
-define funny-block
+all: my_script
+define script-block
 #!/bin/bash
 
 echo \"this is a trap: not good\"
 endef
-
-$(FUNNY):
-	$(file >$(FUNNY),$(funny-block))\n",
-                expect: Targets(vec!["$(FUNNY)".to_string()]),
+my_script:
+	$(file >my_script,$(script-block))\n",
+                expect: Targets(vec!["all".to_string(), "my_script".to_string()]),
             },
             Case {
                 title: "nested define",
@@ -198,6 +199,57 @@ endef
             assert_eq!(
                 case.expect,
                 Targets::new(case.contents.to_string()),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            );
+        }
+    }
+
+    #[test]
+    fn get_line_type_test() {
+        struct Case {
+            title: &'static str,
+            line: &'static str,
+            expect: LineType,
+        }
+
+        let cases = vec![
+            Case {
+                title: "empty line",
+                line: "",
+                expect: LineType::Normal,
+            },
+            Case {
+                title: "override define",
+                line: "override define",
+                expect: LineType::DefineStart,
+            },
+            Case {
+                title: "define",
+                line: "define",
+                expect: LineType::DefineStart,
+            },
+            Case {
+                title: "endef",
+                line: "endef",
+                expect: LineType::DefineEnd,
+            },
+            Case {
+                title: "define whitespace",
+                line: "  define   foo",
+                expect: LineType::DefineStart,
+            },
+            Case {
+                title: "endef whitespace",
+                line: "  endef  ",
+                expect: LineType::DefineEnd,
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                get_line_type(case.line),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
