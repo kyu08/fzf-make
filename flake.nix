@@ -16,7 +16,7 @@
       {
         devShells.default = pkgs.mkShell {
           inputsFrom = [ packages.fzf-make ];
-          packages = with pkgs; [ clippy typos ];
+          packages = with pkgs; [ rustfmt clippy typos ];
         };
 
         formatter = pkgs.nixpkgs-fmt;

@@ -10,13 +10,59 @@ pub struct Targets(pub Vec<String>);
 impl Targets {
     pub fn new(content: String) -> Targets {
         let mut result: Vec<String> = Vec::new();
+        let mut define_block_depth = 0;
+
         for line in content.lines() {
-            if let Some(t) = line_to_target(line.to_string()) {
-                result.push(t);
+            match get_line_type(line) {
+                LineType::DefineStart => {
+                    define_block_depth += 1;
+                }
+                LineType::DefineEnd => {
+                    define_block_depth -= 1;
+                }
+                LineType::Normal => {
+                    if define_block_depth == 0 {
+                        if let Some(t) = line_to_target(line.to_string()) {
+                            result.push(t);
+                        }
+                    }
+                }
             }
         }
 
         Targets(result)
+    }
+}
+
+const DEFINE_BLOCK_START: &str = "define";
+const DEFINE_BLOCK_END: &str = "endef";
+const OVERRIDE: &str = "override";
+
+#[derive(Debug, PartialEq)]
+enum LineType {
+    Normal,
+    DefineStart,
+    DefineEnd,
+}
+
+fn get_line_type(line: &str) -> LineType {
+    let words: Vec<&str> = line.split_whitespace().collect();
+
+    if words.is_empty() {
+        return LineType::Normal;
+    }
+
+    if words.len() >= 2 && words[0] == OVERRIDE && words[1] == DEFINE_BLOCK_START {
+        return LineType::DefineStart;
+    }
+
+    match words.first() {
+        Some(&w) => match w {
+            DEFINE_BLOCK_START => LineType::DefineStart,
+            DEFINE_BLOCK_END => LineType::DefineEnd,
+            _ => LineType::Normal,
+        },
+        None => LineType::Normal,
     }
 }
 
@@ -25,6 +71,7 @@ pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32
         Ok(c) => c,
         Err(_) => return None,
     };
+
     for (index, line) in content.lines().enumerate() {
         if let Some(t) = line_to_target(line.to_string()) {
             if t == target_to_search {
@@ -107,12 +154,102 @@ build:
                 contents: "echo hello",
                 expect: Targets(vec![]),
             },
+            Case {
+                title: "trap script as a define block",
+                contents: "\
+.PHONY: all
+
+all: my_script
+define script-block
+#!/bin/bash
+
+echo \"this is a trap: not good\"
+endef
+my_script:
+	$(file >my_script,$(script-block))\n",
+                expect: Targets(vec!["all".to_string(), "my_script".to_string()]),
+            },
+            Case {
+                title: "nested define",
+                contents: "\
+define lvl-1
+a:
+    define lvl2
+a:
+
+    endef
+a:
+endef
+                ",
+                expect: Targets(vec![]),
+            },
+            Case {
+                title: "override define",
+                contents: "\
+override define foo
+not-good:
+
+endef
+                ",
+                expect: Targets(vec![]),
+            },
         ];
 
         for case in cases {
             assert_eq!(
                 case.expect,
                 Targets::new(case.contents.to_string()),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            );
+        }
+    }
+
+    #[test]
+    fn get_line_type_test() {
+        struct Case {
+            title: &'static str,
+            line: &'static str,
+            expect: LineType,
+        }
+
+        let cases = vec![
+            Case {
+                title: "empty line",
+                line: "",
+                expect: LineType::Normal,
+            },
+            Case {
+                title: "override define",
+                line: "override define",
+                expect: LineType::DefineStart,
+            },
+            Case {
+                title: "define",
+                line: "define",
+                expect: LineType::DefineStart,
+            },
+            Case {
+                title: "endef",
+                line: "endef",
+                expect: LineType::DefineEnd,
+            },
+            Case {
+                title: "define whitespace",
+                line: "  define   foo",
+                expect: LineType::DefineStart,
+            },
+            Case {
+                title: "endef whitespace",
+                line: "  endef  ",
+                expect: LineType::DefineEnd,
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                get_line_type(case.line),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
