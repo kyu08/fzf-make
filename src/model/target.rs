@@ -49,10 +49,13 @@ fn get_line_type(line: &str) -> LineType {
         return LineType::DefineStart;
     }
 
-    match words[0] {
-        DEFINE_BLOCK_START => LineType::DefineStart,
-        DEFINE_BLOCK_END => LineType::DefineEnd,
-        _ => LineType::Normal,
+    match words.first() {
+        Some(&w) => match w {
+            DEFINE_BLOCK_START => LineType::DefineStart,
+            DEFINE_BLOCK_END => LineType::DefineEnd,
+            _ => LineType::Normal,
+        },
+        None => LineType::Normal,
     }
 }
 
