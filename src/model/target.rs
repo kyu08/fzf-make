@@ -14,8 +14,12 @@ impl Targets {
 
         for line in content.lines() {
             match get_line_type(line) {
-                LineType::DefineStart => { define_block_depth += 1; }
-                LineType::DefineEnd => { define_block_depth -= 1; }
+                LineType::DefineStart => {
+                    define_block_depth += 1;
+                }
+                LineType::DefineEnd => {
+                    define_block_depth -= 1;
+                }
                 LineType::Normal => {
                     if define_block_depth == 0 {
                         if let Some(t) = line_to_target(line.to_string()) {
@@ -34,7 +38,11 @@ const DEFINE_BLOCK_START: &str = "define";
 const DEFINE_BLOCK_END: &str = "endef";
 const OVERRIDE: &str = "override";
 
-enum LineType { Normal, DefineStart, DefineEnd }
+enum LineType {
+    Normal,
+    DefineStart,
+    DefineEnd,
+}
 
 fn get_line_type(line: &str) -> LineType {
     let words: Vec<&str> = line.split_whitespace().collect();
@@ -43,9 +51,7 @@ fn get_line_type(line: &str) -> LineType {
         return LineType::Normal;
     }
 
-    if words.len() >= 2
-        && words[0] == OVERRIDE
-        && words[1] == DEFINE_BLOCK_START {
+    if words.len() >= 2 && words[0] == OVERRIDE && words[1] == DEFINE_BLOCK_START {
         return LineType::DefineStart;
     }
 
@@ -185,7 +191,7 @@ not-good:
 endef
                 ",
                 expect: Targets(vec![]),
-            }
+            },
         ];
 
         for case in cases {
