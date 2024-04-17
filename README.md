@@ -35,7 +35,6 @@ You don't need to install `bat` because `fzf-make` will install it automatically
 
 ```sh
 # install
-brew tap kyu08/tap
 brew install kyu08/tap/fzf-make
 ```
 
