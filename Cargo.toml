@@ -22,5 +22,5 @@ anyhow = "1.0.82"
 ratatui = "0.26.1"
 tui-textarea = "0.4.0"
 toml = "0.8.12"
-serde = {version = "1.0.197", features = ["derive"]}
+serde = {version = "1.0.200", features = ["derive"]}
 simple-home-dir = "0.3.3"
