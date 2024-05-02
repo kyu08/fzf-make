@@ -198,7 +198,7 @@ fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::l
     };
     let current_keys_hint = Span::styled(hint_text, Style::default().fg(fg_color_selected()));
 
-    let title = " Key bindings ";
+    let title = " 💬 Key bindings ";
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
