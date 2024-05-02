@@ -58,7 +58,7 @@ fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Re
     } else {
         fg_color_not_selected()
     };
-    let title = Line::from(" Preview ");
+    let title = Line::from(" ✨ Preview ");
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(ratatui::widgets::BorderType::Rounded)
@@ -146,7 +146,7 @@ fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
 fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
         targets_block(
-            " Targets ",
+            " 🛠️  Targets ",
             model.narrow_down_targets(),
             model.current_pane.is_main(),
         ),
@@ -164,7 +164,7 @@ fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::
     };
 
     let block = Block::default()
-        .title(" Input ")
+        .title(" 🔍 Search ")
         .borders(Borders::ALL)
         .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(fg_color))
@@ -182,7 +182,7 @@ fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
     };
 
     f.render_stateful_widget(
-        targets_block(" History ", h, model.current_pane.is_history()),
+        targets_block(" 📚 History ", h, model.current_pane.is_history()),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
         &mut model.histories_list_state,
