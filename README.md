@@ -19,8 +19,8 @@
 </div>
 
 # 🛠️ Features
-- Select and execute a make target using fuzzy-finder
-- Execute last executed target(By running `fzf-make --repeat`.)
+- Select and execute a make target using fuzzy-finder with a preview window by running `fzf-make`!
+- Execute the last executed target(By running `fzf-make --repeat`.)
 - Command history
 - Support `include` directive
 - **(Scheduled to be developed)** Support config file
