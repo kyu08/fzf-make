@@ -2,7 +2,7 @@ use super::app::Model;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
@@ -37,11 +37,22 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
     render_history_block(model, f, targets[1]);
 }
 
-fn fg_color_selected() -> Color {
-    Color::LightBlue
-}
-fn fg_color_not_selected() -> Color {
-    Color::DarkGray
+const FG_COLOR_SELECTED: ratatui::style::Color = Color::Rgb(161, 220, 156);
+const FG_COLOR_NOT_SELECTED: ratatui::style::Color = Color::DarkGray;
+const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType =
+    ratatui::widgets::BorderType::Thick;
+const BORDER_STYLE_NOT_SELECTED: ratatui::widgets::block::BorderType =
+    ratatui::widgets::BorderType::Plain;
+const TITLE_STYLE: ratatui::style::Style = Style::new().add_modifier(Modifier::BOLD);
+
+fn color_and_border_style_for_selectable(
+    is_selected: bool,
+) -> (Color, ratatui::widgets::block::BorderType) {
+    if is_selected {
+        (FG_COLOR_SELECTED, BORDER_STYLE_SELECTED)
+    } else {
+        (FG_COLOR_NOT_SELECTED, BORDER_STYLE_NOT_SELECTED)
+    }
 }
 
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
@@ -53,18 +64,16 @@ fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Re
         .makefile
         .target_to_file_and_line_number(selecting_target);
 
-    let fg_color_ = if model.current_pane.is_main() {
-        fg_color_selected()
-    } else {
-        fg_color_not_selected()
-    };
+    let (fg_color_, border_style) =
+        color_and_border_style_for_selectable(model.current_pane.is_main());
+
     let title = Line::from(" ✨ Preview ");
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_type(border_style)
         .border_style(Style::default().fg(fg_color_))
         .title(title)
-        .style(Style::default());
+        .title_style(TITLE_STYLE);
 
     if !model.get_search_area_text().is_empty() && narrow_down_targets.is_empty() {
         f.render_widget(block, chunk);
@@ -157,16 +166,14 @@ fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
 }
 
 fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let fg_color = if model.current_pane.is_main() {
-        fg_color_selected()
-    } else {
-        fg_color_not_selected()
-    };
+    let (fg_color, border_style) =
+        color_and_border_style_for_selectable(model.current_pane.is_main());
 
     let block = Block::default()
         .title(" 🔍 Search ")
+        .title_style(TITLE_STYLE)
         .borders(Borders::ALL)
-        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_type(border_style)
         .border_style(Style::default().fg(fg_color))
         .style(Style::default())
         .padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
@@ -196,13 +203,14 @@ fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::l
         }
         super::app::CurrentPane::History => "q/<esc>: Quit, <tab> Move to next tab",
     };
-    let current_keys_hint = Span::styled(hint_text, Style::default().fg(fg_color_selected()));
+    let current_keys_hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 
     let title = " 💬 Key bindings ";
     let block = Block::default()
         .title(title)
+        .title_style(TITLE_STYLE)
         .borders(Borders::ALL)
-        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_type(BORDER_STYLE_NOT_SELECTED)
         .border_style(Style::default().fg(Color::default()))
         .style(Style::default())
         .padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
@@ -213,13 +221,8 @@ fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::l
     f.render_widget(key_notes_footer, chunk);
 }
 
-// TODO: rename
 fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bool) -> List<'_> {
-    let fg_color = if is_current {
-        fg_color_selected()
-    } else {
-        fg_color_not_selected()
-    };
+    let (fg_color, border_style) = color_and_border_style_for_selectable(is_current);
 
     let list: Vec<ListItem> = narrowed_down_targets
         .into_iter()
@@ -231,12 +234,13 @@ fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bo
         .block(
             Block::default()
                 .title(title)
+                .title_style(TITLE_STYLE)
                 .borders(Borders::ALL)
-                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_type(border_style)
                 .border_style(Style::default().fg(fg_color))
                 .style(Style::default())
                 .padding(ratatui::widgets::Padding::new(2, 0, 0, 0)),
         )
-        .highlight_style(Style::default().fg(Color::White).bg(Color::DarkGray))
+        .highlight_style(Style::default().fg(FG_COLOR_SELECTED))
         .highlight_symbol("> ")
 }
