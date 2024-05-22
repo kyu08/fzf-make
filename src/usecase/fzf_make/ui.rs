@@ -155,7 +155,7 @@ fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
 fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
         targets_block(
-            " 🛠️  Targets ",
+            " 📢 Targets ",
             model.narrow_down_targets(),
             model.current_pane.is_main(),
         ),
