@@ -26,7 +26,8 @@
 - **(In Entwicklung)** Unterstützt Konfigurations-Dateien
 
 # 👓 Voraussetzungen
-- [bat](https://github.com/sharkdp/bat) (Für die Zukunft ist geplant, dass es auch mit `cat` funktioniert, aber derzeit funktioniert es nur mit `bat`.)
+- **(If you install fzf-make via a package manager other than Homebrew)** [bat](https://github.com/sharkdp/bat)
+    - Für die Zukunft ist geplant, dass es auch mit `cat` funktioniert, aber derzeit funktioniert es nur mit `bat`.
 
 # 📦 Installation
 ## macOS
