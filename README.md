@@ -26,7 +26,8 @@
 - **(Scheduled to be developed)** Support config file
 
 # 👓 Prerequisites
-- [bat](https://github.com/sharkdp/bat) (In the future, we intend to make it work with `cat` as well, but currently it only works with `bat`.)
+- **(If you install fzf-make via a package manager other than Homebrew)** [bat](https://github.com/sharkdp/bat)
+    - In the future, we intend to make it work with `cat` as well, but currently it only works with `bat`.
 
 # 📦 Installation
 ## macOS
