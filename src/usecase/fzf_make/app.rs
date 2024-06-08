@@ -45,14 +45,14 @@ impl CurrentPane {
 }
 
 enum Message {
-    MoveToNextPane,
-    Quit,
     SearchTextAreaKeyInput(KeyEvent),
+    ExecuteTarget,
     NextTarget,
     PreviousTarget,
+    MoveToNextPane,
     NextHistory,
     PreviousHistory,
-    ExecuteTarget,
+    Quit,
 }
 
 // TODO: 別ファイルに切り出す？enumごとまるっと別ファイルにするのがいいかも
@@ -254,6 +254,13 @@ impl SelectTargetState<'_> {
             None => 0,
         };
         self.histories_list_state.select(Some(i));
+    }
+
+    fn handle_key_input(&mut self, key_event: KeyEvent) {
+        if let KeyCode::Char(_) = key_event.code {
+            self.reset_selection();
+        };
+        self.search_text_area.0.input(key_event);
     }
 
     fn update_history(&mut self) -> Option<String> {
@@ -481,28 +488,20 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     Ok(message)
 }
 
-// TODO:
-// ここで具体的な処理が書いてあるのは微妙かもしれない。Modelのメソッドとして閉じ込めた方が凝集性が高くてよさそう
 // TODO: この関数がResultを返すようにする or Model.errorのようなフィールドにエラーを保持する
 fn update(model: &mut Model, message: Option<Message>) {
     if let AppState::SelectTarget(ref mut s) = model.app_state {
         match message {
-            Some(Message::MoveToNextPane) => s.move_to_next_pane(),
-            Some(Message::NextTarget) => s.next_target(),
-            Some(Message::PreviousTarget) => s.previous_target(),
-            Some(Message::NextHistory) => s.next_history(),
-            Some(Message::PreviousHistory) => s.previous_history(),
+            Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
             Some(Message::ExecuteTarget) => {
                 let target = s.update_history();
                 model.transition_to_execute_target_state(target);
             }
-            // TODO: Extract as a method
-            Some(Message::SearchTextAreaKeyInput(key_event)) => {
-                if let KeyCode::Char(_) = key_event.code {
-                    s.reset_selection();
-                };
-                s.search_text_area.0.input(key_event);
-            }
+            Some(Message::NextTarget) => s.next_target(),
+            Some(Message::PreviousTarget) => s.previous_target(),
+            Some(Message::MoveToNextPane) => s.move_to_next_pane(),
+            Some(Message::NextHistory) => s.next_history(),
+            Some(Message::PreviousHistory) => s.previous_history(),
             Some(Message::Quit) => model.app_state = AppState::ShouldQuite,
             _ => {}
         }
