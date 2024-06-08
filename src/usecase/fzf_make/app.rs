@@ -256,6 +256,23 @@ impl SelectTargetState<'_> {
         self.histories_list_state.select(Some(i));
     }
 
+    fn update_history(&mut self) -> Option<String> {
+        // NOTE: self.get_selected_target should be called before self.append_history.
+        // Because self.histories_list_state.selected keeps the selected index of the history list
+        // before update.
+        let target = self.get_selected_target();
+
+        if let Some(h) = self.append_history() {
+            self.histories = Some(h)
+        };
+        if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &self.histories) {
+            // TODO: handle error
+            let _ = toml::store_history(dir, file_name, h.to_tuple());
+        }
+
+        target
+    }
+
     fn reset_selection(&mut self) {
         if self.narrow_down_targets().is_empty() {
             self.targets_list_state.select(None);
@@ -346,6 +363,10 @@ impl Model<'_> {
 
             Histories::new(makefile_path, histories)
         })
+    }
+
+    fn transition_to_execute_target_state(&mut self, target: Option<String>) {
+        self.app_state = AppState::ExecuteTarget(target);
     }
 
     pub fn should_quit(&self) -> bool {
@@ -471,19 +492,10 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::PreviousTarget) => s.previous_target(),
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
-            // TODO: Extract as a method
             Some(Message::ExecuteTarget) => {
-                if let Some(h) = s.append_history() {
-                    s.histories = Some(h)
-                };
-
-                if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &s.histories) {
-                    // TODO: handle error
-                    let _ = toml::store_history(dir, file_name, h.to_tuple());
-                }
-                model.app_state = AppState::ExecuteTarget(s.selected_target());
+                let target = s.update_history();
+                model.transition_to_execute_target_state(target);
             }
-
             // TODO: Extract as a method
             Some(Message::SearchTextAreaKeyInput(key_event)) => {
                 if let KeyCode::Char(_) = key_event.code {
@@ -688,7 +700,7 @@ mod test {
                 },
             },
             Case {
-                title: "Selecting position should be reset if some kind of char 
+                title: "Selecting position should be reset if some kind of char
                     was inputted when the target located not in top of the targets",
                 model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
