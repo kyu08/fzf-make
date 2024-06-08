@@ -1,4 +1,4 @@
-use super::app::Model;
+use super::app::{AppState, CurrentPane, Model, SelectTargetState};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -11,30 +11,32 @@ use std::sync::{Arc, RwLock};
 use tui_term::widget::PseudoTerminal;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
-    let main_and_key_bindings = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(3), Constraint::Length(5)])
-        .split(f.size());
-    render_key_bindings_block(model, f, main_and_key_bindings[1]);
+    if let AppState::SelectTarget(model) = &mut model.app_state {
+        let main_and_key_bindings = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(3), Constraint::Length(5)])
+            .split(f.size());
+        render_key_bindings_block(model, f, main_and_key_bindings[1]);
 
-    let main = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(3), Constraint::Length(3)])
-        .split(main_and_key_bindings[0]);
-    render_input_block(model, f, main[1]);
+        let main = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(3), Constraint::Length(3)])
+            .split(main_and_key_bindings[0]);
+        render_input_block(model, f, main[1]);
 
-    let preview_and_targets = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-        .split(main[0]);
-    render_preview_block(model, f, preview_and_targets[0]);
+        let preview_and_targets = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+            .split(main[0]);
+        render_preview_block(model, f, preview_and_targets[0]);
 
-    let targets = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-        .split(preview_and_targets[1]);
-    render_targets_block(model, f, targets[0]);
-    render_history_block(model, f, targets[1]);
+        let targets = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+            .split(preview_and_targets[1]);
+        render_targets_block(model, f, targets[0]);
+        render_history_block(model, f, targets[1]);
+    }
 }
 
 const FG_COLOR_SELECTED: ratatui::style::Color = Color::Rgb(161, 220, 156);
@@ -56,7 +58,7 @@ fn color_and_border_style_for_selectable(
 }
 
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
-fn render_preview_block(model: &Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let narrow_down_targets = model.narrow_down_targets();
     let selecting_target =
         &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
@@ -152,7 +154,11 @@ fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
     cmd
 }
 
-fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_targets_block(
+    model: &mut SelectTargetState,
+    f: &mut Frame,
+    chunk: ratatui::layout::Rect,
+) {
     f.render_stateful_widget(
         targets_block(
             " 📢 Targets ",
@@ -165,7 +171,7 @@ fn render_targets_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
     );
 }
 
-fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_input_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let (fg_color, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
 
@@ -182,7 +188,11 @@ fn render_input_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::
     f.render_widget(model.search_text_area.0.widget(), chunk);
 }
 
-fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_history_block(
+    model: &mut SelectTargetState,
+    f: &mut Frame,
+    chunk: ratatui::layout::Rect,
+) {
     let h = match model.get_history() {
         Some(h) => h,
         None => vec![],
@@ -196,12 +206,16 @@ fn render_history_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout
     );
 }
 
-fn render_key_bindings_block(model: &mut Model, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_key_bindings_block(
+    model: &mut SelectTargetState,
+    f: &mut Frame,
+    chunk: ratatui::layout::Rect,
+) {
     let hint_text = match model.current_pane {
-        super::app::CurrentPane::Main => {
+       CurrentPane::Main => {
             "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character, <c-w>: Delete all key input"
         }
-        super::app::CurrentPane::History => "q/<esc>: Quit, <tab> Move to next tab",
+        CurrentPane::History => "q/<esc>: Quit, <tab> Move to next tab",
     };
     let current_keys_hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 

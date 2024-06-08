@@ -38,6 +38,11 @@ test: tool-test
 	rm -rf ./test_dir
 	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo nextest run
 
+.PHONY: test-watch
+test-watch: tool-test
+	rm -rf ./test_dir
+	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo watch -x "nextest run"
+
 .PHONY: bump-fzf-make-version
 bump-fzf-make-version: tool-bump-version
 	@git checkout main; \
