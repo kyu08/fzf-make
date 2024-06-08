@@ -7,7 +7,7 @@ use crate::{
     usecase::execute_make_command::execute_make_target,
 };
 
-use super::{current_pane::CurrentPane, ui::ui};
+use super::ui::ui;
 use anyhow::{anyhow, Result};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
@@ -28,6 +28,147 @@ use std::{
 };
 use tui_textarea::TextArea;
 
+// AppState represents the state of the application.
+// "Making impossible states impossible"
+// The type of `AppState` is defined according to the concept of 'Making Impossible States Impossible'.
+// See: https://www.youtube.com/watch?v=IcgmSRJHu_8
+#[derive(Clone, PartialEq, Debug)]
+pub enum AppState<'a> {
+    SelectTarget(SelectTargetState<'a>),
+    ExecuteTarget(Option<String>),
+    ShouldQuite,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Model<'a> {
+    pub app_state: AppState<'a>,
+}
+
+impl Model<'_> {
+    pub fn new() -> Result<Self> {
+        match SelectTargetState::new() {
+            Ok(s) => Ok(Model {
+                app_state: AppState::SelectTarget(s),
+            }),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn get_histories(makefile_path: PathBuf) -> Option<Histories> {
+        history_file_path().map(|(history_file_dir, history_file_name)| {
+            let content =
+                match path_to_content::path_to_content(history_file_dir.join(history_file_name)) {
+                    Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
+                    Ok(c) => c,
+                };
+            let histories = match toml::parse_history(content.to_string()) {
+                Err(_) => vec![], // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
+                Ok(h) => h,
+            };
+
+            Histories::new(makefile_path, histories)
+        })
+    }
+
+    fn transition_to_execute_target_state(&mut self, target: Option<String>) {
+        self.app_state = AppState::ExecuteTarget(target);
+    }
+
+    pub fn should_quit(&self) -> bool {
+        self.app_state == AppState::ShouldQuite
+    }
+
+    pub fn is_target_selected(&self) -> bool {
+        matches!(self.app_state, AppState::ExecuteTarget(_))
+    }
+
+    pub fn target_to_execute(&self) -> Option<String> {
+        match self.app_state.clone() {
+            AppState::ExecuteTarget(Some(target)) => Some(target.clone()),
+            _ => None,
+        }
+    }
+}
+
+pub fn main() -> Result<()> {
+    let result = panic::catch_unwind(|| {
+        enable_raw_mode()?;
+        let mut stderr = io::stderr();
+        execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
+        let backend = CrosstermBackend::new(stderr);
+        let mut terminal = Terminal::new(backend)?;
+
+        let target: Result<Option<String>> = match Model::new() {
+            Err(e) => Err(e),
+            Ok(model) => run(&mut terminal, model),
+        };
+
+        let target = match target {
+            Ok(t) => t,
+            Err(e) => {
+                shutdown_terminal(&mut terminal)?;
+                return Err(e);
+            }
+        };
+
+        shutdown_terminal(&mut terminal)?;
+
+        match target {
+            Some(t) => {
+                execute_make_target(&t);
+                Ok(())
+            }
+            None => Ok(()),
+        }
+    });
+
+    match result {
+        Ok(usecase_result) => usecase_result,
+        Err(e) => {
+            disable_raw_mode()?;
+            execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+            println!("panic: {:?}", e);
+            process::exit(1);
+        }
+    }
+}
+
+fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Option<String>> {
+    loop {
+        if let Err(e) = terminal.draw(|f| ui(f, &mut model.clone())) {
+            return Err(anyhow!(e));
+        }
+        match handle_event(&model) {
+            Ok(message) => {
+                update(&mut model, message);
+                if model.should_quit() || model.is_target_selected() {
+                    break;
+                }
+            }
+            Err(_) => break,
+        }
+    }
+    Ok(model.target_to_execute())
+}
+
+fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Result<()> {
+    if let Err(e) = disable_raw_mode() {
+        return Err(anyhow!(e));
+    }
+
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+
+    if let Err(e) = terminal.show_cursor() {
+        return Err(anyhow!(e));
+    }
+
+    Ok(())
+}
+
 enum Message {
     SearchTextAreaKeyInput(KeyEvent),
     ExecuteTarget,
@@ -39,10 +180,61 @@ enum Message {
     Quit,
 }
 
-// TODO: 別ファイルに切り出す？enumごとまるっと別ファイルにするのがいいかも
+fn handle_event(model: &Model) -> io::Result<Option<Message>> {
+    let message = match crossterm::event::poll(std::time::Duration::from_millis(2000))? {
+        true => match crossterm::event::read()? {
+            // TODO: Extract as a Model's method
+            crossterm::event::Event::Key(key) => match &model.app_state {
+                AppState::SelectTarget(s) => match key.code {
+                    KeyCode::Tab => Some(Message::MoveToNextPane),
+                    KeyCode::Esc => Some(Message::Quit),
+                    _ => match s.current_pane {
+                        CurrentPane::Main => match key.code {
+                            KeyCode::Down => Some(Message::NextTarget),
+                            KeyCode::Up => Some(Message::PreviousTarget),
+                            KeyCode::Enter => Some(Message::ExecuteTarget),
+                            _ => Some(Message::SearchTextAreaKeyInput(key)),
+                        },
+                        CurrentPane::History => match key.code {
+                            KeyCode::Char('q') => Some(Message::Quit),
+                            KeyCode::Down => Some(Message::NextHistory),
+                            KeyCode::Up => Some(Message::PreviousHistory),
+                            KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteTarget),
+                            _ => None,
+                        },
+                    },
+                },
+                _ => None,
+            },
+            _ => return Ok(None),
+        },
+        false => return Ok(None),
+    };
+    Ok(message)
+}
+
+// TODO: Make this function returns `Result` or have a field like Model.error to hold errors
+fn update(model: &mut Model, message: Option<Message>) {
+    if let AppState::SelectTarget(ref mut s) = model.app_state {
+        match message {
+            Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
+            Some(Message::ExecuteTarget) => {
+                let target = s.store_history();
+                model.transition_to_execute_target_state(target);
+            }
+            Some(Message::NextTarget) => s.next_target(),
+            Some(Message::PreviousTarget) => s.previous_target(),
+            Some(Message::MoveToNextPane) => s.move_to_next_pane(),
+            Some(Message::NextHistory) => s.next_history(),
+            Some(Message::PreviousHistory) => s.previous_history(),
+            Some(Message::Quit) => model.app_state = AppState::ShouldQuite,
+            _ => {}
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct SelectTargetState<'a> {
-    // TODO: privateフィールドにする
     pub current_pane: CurrentPane,
     pub makefile: Makefile,
     pub search_text_area: TextArea_<'a>,
@@ -82,7 +274,7 @@ impl SelectTargetState<'_> {
         }
     }
 
-    // TODO: 失敗したときはResultを返すべきかも
+    // TODO: This method should return Result when it fails.
     pub fn append_history(&self) -> Option<Histories> {
         match (&self.histories, self.get_selected_target()) {
             (Some(histories), Some(target)) => histories.append(&self.makefile.path, &target),
@@ -247,7 +439,7 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn update_history(&mut self) -> Option<String> {
+    fn store_history(&mut self) -> Option<String> {
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
@@ -304,20 +496,20 @@ impl SelectTargetState<'_> {
     }
 }
 
-// AppState represents the state of the application.
-// "Making impossible states impossible"
-// The type of `AppState` is defined according to the concept of 'Making Impossible States Impossible'.
-// See: https://www.youtube.com/watch?v=IcgmSRJHu_8
 #[derive(Clone, PartialEq, Debug)]
-pub enum AppState<'a> {
-    SelectTarget(SelectTargetState<'a>),
-    ExecuteTarget(Option<String>),
-    ShouldQuite,
+pub enum CurrentPane {
+    Main,
+    History,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub struct Model<'a> {
-    pub app_state: AppState<'a>,
+impl CurrentPane {
+    pub fn is_main(&self) -> bool {
+        matches!(self, CurrentPane::Main)
+    }
+
+    pub fn is_history(&self) -> bool {
+        matches!(self, CurrentPane::History)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -328,184 +520,6 @@ impl<'a> PartialEq for TextArea_<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.0.lines().join("") == other.0.lines().join("")
     }
-}
-
-impl Model<'_> {
-    pub fn new() -> Result<Self> {
-        match SelectTargetState::new() {
-            Ok(s) => Ok(Model {
-                app_state: AppState::SelectTarget(s),
-            }),
-            Err(e) => Err(e),
-        }
-    }
-
-    fn get_histories(makefile_path: PathBuf) -> Option<Histories> {
-        history_file_path().map(|(history_file_dir, history_file_name)| {
-            let content =
-                match path_to_content::path_to_content(history_file_dir.join(history_file_name)) {
-                    Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
-                    Ok(c) => c,
-                };
-            let histories = match toml::parse_history(content.to_string()) {
-                Err(_) => vec![], // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
-                Ok(h) => h,
-            };
-
-            Histories::new(makefile_path, histories)
-        })
-    }
-
-    fn transition_to_execute_target_state(&mut self, target: Option<String>) {
-        self.app_state = AppState::ExecuteTarget(target);
-    }
-
-    pub fn should_quit(&self) -> bool {
-        self.app_state == AppState::ShouldQuite
-    }
-
-    pub fn is_target_selected(&self) -> bool {
-        matches!(self.app_state, AppState::ExecuteTarget(_))
-    }
-
-    pub fn target_to_execute(&self) -> Option<String> {
-        match self.app_state.clone() {
-            AppState::ExecuteTarget(Some(target)) => Some(target.clone()),
-            _ => None,
-        }
-    }
-}
-
-pub fn main() -> Result<()> {
-    let result = panic::catch_unwind(|| {
-        enable_raw_mode()?;
-        let mut stderr = io::stderr();
-        execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-        let backend = CrosstermBackend::new(stderr);
-        let mut terminal = Terminal::new(backend)?;
-
-        let target: Result<Option<String>> = match Model::new() {
-            Err(e) => Err(e),
-            Ok(model) => run(&mut terminal, model),
-        };
-
-        let target = match target {
-            Ok(t) => t,
-            Err(e) => {
-                shutdown_terminal(&mut terminal)?;
-                return Err(e);
-            }
-        };
-
-        shutdown_terminal(&mut terminal)?;
-
-        match target {
-            Some(t) => {
-                execute_make_target(&t);
-                Ok(())
-            }
-            None => Ok(()),
-        }
-    });
-
-    match result {
-        Ok(usecase_result) => usecase_result,
-        Err(e) => {
-            disable_raw_mode()?;
-            execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
-            println!("panic: {:?}", e);
-            process::exit(1);
-        }
-    }
-}
-
-fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Option<String>> {
-    loop {
-        if let Err(e) = terminal.draw(|f| ui(f, &mut model.clone())) {
-            return Err(anyhow!(e));
-        }
-        match handle_event(&model) {
-            Ok(message) => {
-                update(&mut model, message);
-                if model.should_quit() || model.is_target_selected() {
-                    break;
-                }
-            }
-            Err(_) => break,
-        }
-    }
-    Ok(model.target_to_execute())
-}
-
-fn handle_event(model: &Model) -> io::Result<Option<Message>> {
-    let message = match crossterm::event::poll(std::time::Duration::from_millis(2000))? {
-        true => match crossterm::event::read()? {
-            // TODO: Extract as a Model's method
-            crossterm::event::Event::Key(key) => match &model.app_state {
-                AppState::SelectTarget(s) => match key.code {
-                    KeyCode::Tab => Some(Message::MoveToNextPane),
-                    KeyCode::Esc => Some(Message::Quit),
-                    _ => match s.current_pane {
-                        CurrentPane::Main => match key.code {
-                            KeyCode::Down => Some(Message::NextTarget),
-                            KeyCode::Up => Some(Message::PreviousTarget),
-                            KeyCode::Enter => Some(Message::ExecuteTarget),
-                            _ => Some(Message::SearchTextAreaKeyInput(key)),
-                        },
-                        CurrentPane::History => match key.code {
-                            KeyCode::Char('q') => Some(Message::Quit),
-                            KeyCode::Down => Some(Message::NextHistory),
-                            KeyCode::Up => Some(Message::PreviousHistory),
-                            KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteTarget),
-                            _ => None,
-                        },
-                    },
-                },
-                _ => None,
-            },
-            _ => return Ok(None),
-        },
-        false => return Ok(None),
-    };
-    Ok(message)
-}
-
-// TODO: この関数がResultを返すようにする or Model.errorのようなフィールドにエラーを保持する
-fn update(model: &mut Model, message: Option<Message>) {
-    if let AppState::SelectTarget(ref mut s) = model.app_state {
-        match message {
-            Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
-            Some(Message::ExecuteTarget) => {
-                let target = s.update_history();
-                model.transition_to_execute_target_state(target);
-            }
-            Some(Message::NextTarget) => s.next_target(),
-            Some(Message::PreviousTarget) => s.previous_target(),
-            Some(Message::MoveToNextPane) => s.move_to_next_pane(),
-            Some(Message::NextHistory) => s.next_history(),
-            Some(Message::PreviousHistory) => s.previous_history(),
-            Some(Message::Quit) => model.app_state = AppState::ShouldQuite,
-            _ => {}
-        }
-    }
-}
-
-fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Result<()> {
-    if let Err(e) = disable_raw_mode() {
-        return Err(anyhow!(e));
-    }
-
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-
-    if let Err(e) = terminal.show_cursor() {
-        return Err(anyhow!(e));
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -650,7 +664,6 @@ mod test {
                     }),
                 },
             },
-            // TODO: historiesへ保存できていることのテストができていないので追加する
             Case {
                 title: "ExecuteTarget(Main)",
                 model: Model {

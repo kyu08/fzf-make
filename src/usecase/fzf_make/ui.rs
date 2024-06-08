@@ -1,7 +1,4 @@
-use super::{
-    app::{AppState, Model, SelectTargetState},
-    current_pane::CurrentPane,
-};
+use super::app::{AppState, CurrentPane, Model, SelectTargetState};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
