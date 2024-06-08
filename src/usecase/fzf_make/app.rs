@@ -54,6 +54,31 @@ impl Model<'_> {
         }
     }
 
+    fn handle_key_input(&self, key: KeyEvent) -> Option<Message> {
+        match &self.app_state {
+            AppState::SelectTarget(s) => match key.code {
+                KeyCode::Tab => Some(Message::MoveToNextPane),
+                KeyCode::Esc => Some(Message::Quit),
+                _ => match s.current_pane {
+                    CurrentPane::Main => match key.code {
+                        KeyCode::Down => Some(Message::NextTarget),
+                        KeyCode::Up => Some(Message::PreviousTarget),
+                        KeyCode::Enter => Some(Message::ExecuteTarget),
+                        _ => Some(Message::SearchTextAreaKeyInput(key)),
+                    },
+                    CurrentPane::History => match key.code {
+                        KeyCode::Char('q') => Some(Message::Quit),
+                        KeyCode::Down => Some(Message::NextHistory),
+                        KeyCode::Up => Some(Message::PreviousHistory),
+                        KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteTarget),
+                        _ => None,
+                    },
+                },
+            },
+            _ => None,
+        }
+    }
+
     fn get_histories(makefile_path: PathBuf) -> Option<Histories> {
         history_file_path().map(|(history_file_dir, history_file_name)| {
             let content =
@@ -183,29 +208,7 @@ enum Message {
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     let message = match crossterm::event::poll(std::time::Duration::from_millis(2000))? {
         true => match crossterm::event::read()? {
-            // TODO: Extract as a Model's method
-            crossterm::event::Event::Key(key) => match &model.app_state {
-                AppState::SelectTarget(s) => match key.code {
-                    KeyCode::Tab => Some(Message::MoveToNextPane),
-                    KeyCode::Esc => Some(Message::Quit),
-                    _ => match s.current_pane {
-                        CurrentPane::Main => match key.code {
-                            KeyCode::Down => Some(Message::NextTarget),
-                            KeyCode::Up => Some(Message::PreviousTarget),
-                            KeyCode::Enter => Some(Message::ExecuteTarget),
-                            _ => Some(Message::SearchTextAreaKeyInput(key)),
-                        },
-                        CurrentPane::History => match key.code {
-                            KeyCode::Char('q') => Some(Message::Quit),
-                            KeyCode::Down => Some(Message::NextHistory),
-                            KeyCode::Up => Some(Message::PreviousHistory),
-                            KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteTarget),
-                            _ => None,
-                        },
-                    },
-                },
-                _ => None,
-            },
+            crossterm::event::Event::Key(key) => model.handle_key_input(key),
             _ => return Ok(None),
         },
         false => return Ok(None),
