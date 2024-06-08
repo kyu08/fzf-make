@@ -7,7 +7,7 @@ use crate::{
     usecase::execute_make_command::execute_make_target,
 };
 
-use super::ui::ui;
+use super::{current_pane::CurrentPane, ui::ui};
 use anyhow::{anyhow, Result};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
@@ -27,22 +27,6 @@ use std::{
     process,
 };
 use tui_textarea::TextArea;
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum CurrentPane {
-    Main,
-    History,
-}
-
-impl CurrentPane {
-    pub fn is_main(&self) -> bool {
-        matches!(self, CurrentPane::Main)
-    }
-
-    pub fn is_history(&self) -> bool {
-        matches!(self, CurrentPane::History)
-    }
-}
 
 enum Message {
     SearchTextAreaKeyInput(KeyEvent),
@@ -454,10 +438,10 @@ fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Optio
 }
 
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
-    // TODO: if letじゃない方が可読性高そう
-    let message = if crossterm::event::poll(std::time::Duration::from_millis(2000))? {
-        if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
-            match &model.app_state {
+    let message = match crossterm::event::poll(std::time::Duration::from_millis(2000))? {
+        true => match crossterm::event::read()? {
+            // TODO: Extract as a Model's method
+            crossterm::event::Event::Key(key) => match &model.app_state {
                 AppState::SelectTarget(s) => match key.code {
                     KeyCode::Tab => Some(Message::MoveToNextPane),
                     KeyCode::Esc => Some(Message::Quit),
@@ -478,12 +462,10 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
                     },
                 },
                 _ => None,
-            }
-        } else {
-            return Ok(None);
-        }
-    } else {
-        return Ok(None);
+            },
+            _ => return Ok(None),
+        },
+        false => return Ok(None),
     };
     Ok(message)
 }

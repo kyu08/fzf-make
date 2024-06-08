@@ -1,4 +1,7 @@
-use super::app::{AppState, Model, SelectTargetState};
+use super::{
+    app::{AppState, Model, SelectTargetState},
+    current_pane::CurrentPane,
+};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -212,10 +215,10 @@ fn render_key_bindings_block(
     chunk: ratatui::layout::Rect,
 ) {
     let hint_text = match model.current_pane {
-        super::app::CurrentPane::Main => {
+       CurrentPane::Main => {
             "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character, <c-w>: Delete all key input"
         }
-        super::app::CurrentPane::History => "q/<esc>: Quit, <tab> Move to next tab",
+        CurrentPane::History => "q/<esc>: Quit, <tab> Move to next tab",
     };
     let current_keys_hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 
