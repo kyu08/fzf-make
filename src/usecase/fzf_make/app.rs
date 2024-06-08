@@ -84,15 +84,23 @@ impl SelectTargetState<'_> {
         })
     }
 
-    // WARN: 失敗したときはResultを返すべきかも
-    pub fn append_history(&self) -> Option<Histories> {
-        // TODO: Extract as a method
-        let selected_target = match self.current_pane {
+    fn get_selected_target(&self) -> Option<String> {
+        match self.current_pane {
             CurrentPane::Main => self.selected_target(),
             CurrentPane::History => self.selected_history(),
-        };
+        }
+    }
 
-        match (&self.histories, selected_target) {
+    fn move_to_next_pane(&mut self) {
+        match self.current_pane {
+            CurrentPane::Main => self.current_pane = CurrentPane::History,
+            CurrentPane::History => self.current_pane = CurrentPane::Main,
+        }
+    }
+
+    // TODO: 失敗したときはResultを返すべきかも
+    pub fn append_history(&self) -> Option<Histories> {
+        match (&self.histories, self.get_selected_target()) {
             (Some(histories), Some(target)) => histories.append(&self.makefile.path, &target),
             _ => None,
         }
@@ -458,22 +466,13 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
 fn update(model: &mut Model, message: Option<Message>) {
     if let AppState::SelectTarget(ref mut s) = model.app_state {
         match message {
-            Some(Message::MoveToNextPane) => match s.current_pane {
-                // TODO: Extract as a method
-                CurrentPane::Main => s.current_pane = CurrentPane::History,
-                CurrentPane::History => s.current_pane = CurrentPane::Main,
-            },
+            Some(Message::MoveToNextPane) => s.move_to_next_pane(),
             Some(Message::NextTarget) => s.next_target(),
             Some(Message::PreviousTarget) => s.previous_target(),
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
             // TODO: Extract as a method
             Some(Message::ExecuteTarget) => {
-                let target = match s.current_pane {
-                    CurrentPane::Main => s.selected_target(),
-                    CurrentPane::History => s.selected_history(),
-                };
-
                 if let Some(h) = s.append_history() {
                     s.histories = Some(h)
                 };
@@ -482,7 +481,7 @@ fn update(model: &mut Model, message: Option<Message>) {
                     // TODO: handle error
                     let _ = toml::store_history(dir, file_name, h.to_tuple());
                 }
-                model.app_state = AppState::ExecuteTarget(target);
+                model.app_state = AppState::ExecuteTarget(s.selected_target());
             }
 
             // TODO: Extract as a method
