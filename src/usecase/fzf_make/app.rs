@@ -36,7 +36,7 @@ use tui_textarea::TextArea;
 pub enum AppState<'a> {
     SelectTarget(SelectTargetState<'a>),
     ExecuteTarget(Option<String>),
-    ShouldQuite,
+    ShouldQuit,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -99,8 +99,12 @@ impl Model<'_> {
         self.app_state = AppState::ExecuteTarget(target);
     }
 
+    fn transition_to_should_quit_state(&mut self) {
+        self.app_state = AppState::ShouldQuit;
+    }
+
     pub fn should_quit(&self) -> bool {
-        self.app_state == AppState::ShouldQuite
+        self.app_state == AppState::ShouldQuit
     }
 
     pub fn is_target_selected(&self) -> bool {
@@ -229,7 +233,7 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::MoveToNextPane) => s.move_to_next_pane(),
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
-            Some(Message::Quit) => model.app_state = AppState::ShouldQuite,
+            Some(Message::Quit) => model.transition_to_should_quit_state(),
             _ => {}
         }
     }
@@ -579,7 +583,7 @@ mod test {
                 },
                 message: Some(Message::Quit),
                 expect_model: Model {
-                    app_state: AppState::ShouldQuite,
+                    app_state: AppState::ShouldQuit,
                 },
             },
             Case {
