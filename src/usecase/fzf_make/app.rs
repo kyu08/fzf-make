@@ -206,14 +206,13 @@ enum Message {
 }
 
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
-    let message = match crossterm::event::poll(std::time::Duration::from_millis(2000))? {
-        true => match crossterm::event::read()? {
-            crossterm::event::Event::Key(key) => model.handle_key_input(key),
-            _ => return Ok(None),
-        },
-        false => return Ok(None),
-    };
-    Ok(message)
+    match (
+        crossterm::event::poll(std::time::Duration::from_millis(2000))?,
+        crossterm::event::read()?,
+    ) {
+        (true, crossterm::event::Event::Key(key)) => Ok(model.handle_key_input(key)),
+        _ => Ok(None),
+    }
 }
 
 // TODO: Make this function returns `Result` or have a field like Model.error to hold errors
