@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  run:
+  spell-check:
     name: Spell Check with Typos
     runs-on: ubuntu-latest
     steps:
