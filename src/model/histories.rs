@@ -121,10 +121,11 @@ impl History {
         let mut executed_targets = self.executed_targets.clone();
         executed_targets.retain(|t| *t != executed_target);
         executed_targets.insert(0, executed_target.clone());
-        // const MAX_LENGTH: usize = 10;
-        // if executed_targets.len() > MAX_LENGTH {
-        //     executed_targets.truncate(MAX_LENGTH);
-        // }
+
+        const MAX_LENGTH: usize = 10;
+        if MAX_LENGTH < executed_targets.len() {
+            executed_targets.truncate(MAX_LENGTH);
+        }
 
         Self {
             path: self.path.clone(),
@@ -361,6 +362,40 @@ mod test {
                         "history1".to_string(),
                         "history0".to_string(),
                         "history2".to_string(),
+                    ],
+                },
+            },
+            Case {
+                title: "Truncate when length exceeds 10",
+                appending_target: "history11",
+                history: History {
+                    path: path.clone(),
+                    executed_targets: vec![
+                        "history0".to_string(),
+                        "history1".to_string(),
+                        "history2".to_string(),
+                        "history3".to_string(),
+                        "history4".to_string(),
+                        "history5".to_string(),
+                        "history6".to_string(),
+                        "history7".to_string(),
+                        "history8".to_string(),
+                        "history9".to_string(),
+                    ],
+                },
+                expect: History {
+                    path: path.clone(),
+                    executed_targets: vec![
+                        "history11".to_string(),
+                        "history0".to_string(),
+                        "history1".to_string(),
+                        "history2".to_string(),
+                        "history3".to_string(),
+                        "history4".to_string(),
+                        "history5".to_string(),
+                        "history6".to_string(),
+                        "history7".to_string(),
+                        "history8".to_string(),
                     ],
                 },
             },
