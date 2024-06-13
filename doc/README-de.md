@@ -92,6 +92,7 @@ cargo install --locked fzf-make
 |--------|--------|
 | `fzf-make` | Launch fzf-make |
 | `fzf-make --repeat` / `fzf-make -r` / `fzf-make repeat` |  Execute last executed target |
+| `fzf-make --history` / `fzf-make -h` / `fzf-make history` |  Launch fzf-make with the history pane focused |
 | `fzf-make --help` / `fzf-make -h` / `fzf-make help` | Show help |
 | `fzf-make --version` / `fzf-make -v` / `fzf-make version` | Show version |
 

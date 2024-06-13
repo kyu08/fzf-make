@@ -7,7 +7,7 @@ use crate::{
     usecase::execute_make_command::execute_make_target,
 };
 
-use super::ui::ui;
+use super::{config, ui::ui};
 use anyhow::{anyhow, Result};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
@@ -45,8 +45,8 @@ pub struct Model<'a> {
 }
 
 impl Model<'_> {
-    pub fn new() -> Result<Self> {
-        match SelectTargetState::new() {
+    pub fn new(config: config::Config) -> Result<Self> {
+        match SelectTargetState::new(config) {
             Ok(s) => Ok(Model {
                 app_state: AppState::SelectTarget(s),
             }),
@@ -119,7 +119,7 @@ impl Model<'_> {
     }
 }
 
-pub fn main() -> Result<()> {
+pub fn main(config: config::Config) -> Result<()> {
     let result = panic::catch_unwind(|| {
         enable_raw_mode()?;
         let mut stderr = io::stderr();
@@ -127,7 +127,7 @@ pub fn main() -> Result<()> {
         let backend = CrosstermBackend::new(stderr);
         let mut terminal = Terminal::new(backend)?;
 
-        let target: Result<Option<String>> = match Model::new() {
+        let target: Result<Option<String>> = match Model::new(config) {
             Err(e) => Err(e),
             Ok(model) => run(&mut terminal, model),
         };
@@ -250,14 +250,20 @@ pub struct SelectTargetState<'a> {
 }
 
 impl SelectTargetState<'_> {
-    pub fn new() -> Result<Self> {
+    pub fn new(config: config::Config) -> Result<Self> {
         let makefile = match Makefile::create_makefile() {
             Err(e) => return Err(e),
             Ok(f) => f,
         };
 
+        let current_pane = if config.get_forcus_history() {
+            CurrentPane::History
+        } else {
+            CurrentPane::Main
+        };
+
         Ok(SelectTargetState {
-            current_pane: CurrentPane::Main,
+            current_pane,
             makefile: makefile.clone(),
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),

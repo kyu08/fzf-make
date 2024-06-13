@@ -3,7 +3,10 @@ use anyhow::{anyhow, Result};
 
 use super::{
     execute_make_command::execute_make_target,
-    fzf_make::app::{AppState, Model},
+    fzf_make::{
+        app::{AppState, Model},
+        config,
+    },
 };
 
 pub struct Repeat;
@@ -20,7 +23,7 @@ impl Usecase for Repeat {
     }
 
     fn run(&self) -> Result<()> {
-        match Model::new() {
+        match Model::new(config::Config::default()) {
             Err(e) => Err(e),
             Ok(model) => match model.app_state {
                 AppState::SelectTarget(model) => {

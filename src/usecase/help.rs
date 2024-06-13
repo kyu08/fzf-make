@@ -31,6 +31,8 @@ USAGE:
 SUBCOMMANDS:
     repeat, --repeat, -r
         Execute the last executed make target.
+    history, --history, -h
+        Launch fzf-make with the history pane focused.
     help, --help, -h
         Prints help message.
     version, --version, -v
