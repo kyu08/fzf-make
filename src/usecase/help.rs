@@ -11,7 +11,7 @@ impl Help {
 
 impl Usecase for Help {
     fn command_str(&self) -> Vec<&'static str> {
-        vec!["--help", "-h", "help"]
+        vec!["--help", "help"]
     }
 
     fn run(&self) -> Result<()> {
