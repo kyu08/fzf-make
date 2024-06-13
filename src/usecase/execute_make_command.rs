@@ -1,9 +1,8 @@
+use colored::Colorize;
 use std::process;
 
-use colored::Colorize;
-
 pub fn execute_make_target(t: &String) {
-    println!("{}", ("make ".to_string() + t).blue());
+    println!("{}", ("make ".to_string() + t).truecolor(161, 220, 156));
     process::Command::new("make")
         .stdin(process::Stdio::inherit())
         .arg(t)
