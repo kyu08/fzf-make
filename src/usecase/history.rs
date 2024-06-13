@@ -1,22 +1,21 @@
-use super::fzf_make::config;
-use crate::usecase::fzf_make::app;
+use super::fzf_make::{app, config};
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
 
-pub struct FzfMake;
+pub struct History;
 
-impl FzfMake {
+impl History {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl Usecase for FzfMake {
+impl Usecase for History {
     fn command_str(&self) -> Vec<&'static str> {
-        vec![]
+        vec!["--history", "-h", "history"]
     }
 
     fn run(&self) -> Result<()> {
-        app::main(config::Config::default())
+        app::main(config::Config::new(true))
     }
 }
