@@ -14,9 +14,9 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectTarget(model) = &mut model.app_state {
         let main_and_key_bindings = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(3), Constraint::Length(5)])
+            .constraints([Constraint::Min(3), Constraint::Length(1)])
             .split(f.size());
-        render_key_bindings_block(model, f, main_and_key_bindings[1]);
+        render_hint_block(model, f, main_and_key_bindings[1]);
 
         let main = Layout::default()
             .direction(Direction::Vertical)
@@ -206,31 +206,19 @@ fn render_history_block(
     );
 }
 
-fn render_key_bindings_block(
-    model: &mut SelectTargetState,
-    f: &mut Frame,
-    chunk: ratatui::layout::Rect,
-) {
+fn render_hint_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let hint_text = match model.current_pane {
-       CurrentPane::Main => {
-            "(Any key except the following): Narrow down targets, <UP>/<DOWN>/<c-n>/<c-p>: Move cursor, <Enter>: Execute target, <esc>: Quit, <tab> Move to next tab, <BACKSPACE>/<c-h>: Delete last character, <c-w>: Delete all key input"
+        CurrentPane::Main => {
+            "Execute the selected target: <enter> | Select target: ↑/↓  | Narrow down target: (type any character) | Move to next tab: <tab> | Quit: <esc>"
         }
-        CurrentPane::History => "q/<esc>: Quit, <tab> Move to next tab",
+        CurrentPane::History => {
+            "Execute the selected target: <enter> | Select target: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
+        }
     };
-    let current_keys_hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
+    let hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 
-    let title = " 💬 Key bindings ";
-    let block = Block::default()
-        .title(title)
-        .title_style(TITLE_STYLE)
-        .borders(Borders::ALL)
-        .border_type(BORDER_STYLE_NOT_SELECTED)
-        .border_style(Style::default().fg(Color::default()))
-        .style(Style::default())
-        .padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
-    let key_notes_footer = Paragraph::new(current_keys_hint)
-        .wrap(Wrap { trim: true })
-        .block(block);
+    let block = Block::default().padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
+    let key_notes_footer = Paragraph::new(hint).wrap(Wrap { trim: true }).block(block);
 
     f.render_widget(key_notes_footer, chunk);
 }
