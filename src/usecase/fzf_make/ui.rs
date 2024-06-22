@@ -193,13 +193,12 @@ fn render_history_block(
     f: &mut Frame,
     chunk: ratatui::layout::Rect,
 ) {
-    let h = match model.get_history() {
-        Some(h) => h,
-        None => vec![],
-    };
-
     f.render_stateful_widget(
-        targets_block(" 📚 History ", h, model.current_pane.is_history()),
+        targets_block(
+            " 📚 History ",
+            model.get_history().unwrap_or_default(),
+            model.current_pane.is_history(),
+        ),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
         &mut model.histories_list_state,
