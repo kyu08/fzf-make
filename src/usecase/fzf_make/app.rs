@@ -256,7 +256,7 @@ impl SelectTargetState<'_> {
             Ok(f) => f,
         };
 
-        let current_pane = if config.get_forcus_history() {
+        let current_pane = if config.get_focus_history() {
             CurrentPane::History
         } else {
             CurrentPane::Main
