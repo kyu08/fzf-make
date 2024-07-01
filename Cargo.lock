@@ -667,9 +667,9 @@ dependencies = [
 
 [[package]]
 name = "simple-home-dir"
-version = "0.3.3"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "605181fc0510515abff9d461829ec3999ec1649d6e777bf45196083cd086f54d"
+checksum = "c221cbc8c1ff6bdf949b12cc011456c510ec6840654b444c7374c78e928ce344"
 dependencies = [
  "windows-sys 0.52.0",
 ]
