@@ -895,7 +895,7 @@ mod test {
             },
         ];
 
-        // NOTEL When running tests from the editor, you need to set FZF_MAKE_IS_TESTING=true. Otherwise, the developer's history file will be overwritten.
+        // NOTE: When running tests, you need to set FZF_MAKE_IS_TESTING=true. Otherwise, the developer's history file will be overwritten.
         env::set_var("FZF_MAKE_IS_TESTING", "true");
 
         for mut case in cases {
