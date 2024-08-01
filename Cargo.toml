@@ -23,4 +23,4 @@ ratatui = "0.26.2"
 tui-textarea = "0.4.0"
 toml = "0.8.12"
 serde = {version = "1.0.200", features = ["derive"]}
-simple-home-dir = "0.3.3"
+simple-home-dir = "0.4.0"
