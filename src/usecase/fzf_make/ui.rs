@@ -185,6 +185,11 @@ fn render_input_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratat
         .padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
 
     model.search_text_area.0.set_block(block);
+    model
+        .search_text_area
+        .0
+        .set_placeholder_text("Type text to search target");
+
     f.render_widget(model.search_text_area.0.widget(), chunk);
 }
 
