@@ -15,7 +15,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         let main_and_key_bindings = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(3), Constraint::Length(1)])
-            .split(f.size());
+            .split(f.area());
         render_hint_block(model, f, main_and_key_bindings[1]);
 
         let main = Layout::default()
@@ -190,7 +190,7 @@ fn render_input_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratat
         .0
         .set_placeholder_text("Type text to search target");
 
-    f.render_widget(model.search_text_area.0.widget(), chunk);
+    f.render_widget(&model.search_text_area.0, chunk);
 }
 
 fn render_history_block(
