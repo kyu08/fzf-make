@@ -86,11 +86,8 @@ impl Model<'_> {
                     Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
                     Ok(c) => c,
                 };
-            let histories = toml::parse_history(content.to_string()).unwrap_or_else(|err| {
-                // Show error message on message pane
-                eprintln!("Error parsing history: {}", err); // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
-                vec![]
-            });
+            // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
+            let histories = toml::parse_history(content.to_string()).unwrap_or_default();
 
             Histories::new(makefile_path, histories)
         })
