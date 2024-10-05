@@ -1,4 +1,4 @@
-use super::fzf_make::{app, config};
+use super::tui::{app, config};
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
 

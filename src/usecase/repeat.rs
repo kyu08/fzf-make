@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 
 use super::{
     execute_make_command::execute_make_target,
-    fzf_make::{
+    tui::{
         app::{AppState, Model},
         config,
     },

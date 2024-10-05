@@ -1,5 +1,5 @@
-use super::fzf_make::config;
-use crate::usecase::fzf_make::app;
+use super::tui::config;
+use crate::usecase::tui::app;
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
 

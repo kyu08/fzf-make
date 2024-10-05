@@ -2,8 +2,8 @@ use colored::Colorize;
 use std::sync::Arc;
 use std::{collections::HashMap, env};
 
-use crate::usecase::fzf_make_main::FzfMake;
-use crate::usecase::{fzf_make_main, help, history, invalid_arg, repeat, usecase_main, version};
+use crate::usecase::fzf_make::FzfMake;
+use crate::usecase::{fzf_make, help, history, invalid_arg, repeat, usecase_main, version};
 
 pub fn run() {
     let command_line_args = env::args().collect();
@@ -40,7 +40,7 @@ fn usecases() -> HashMap<&'static str, Arc<dyn usecase_main::Usecase>> {
         Arc::new(help::Help::new()),
         Arc::new(invalid_arg::InvalidArg::new()),
         Arc::new(version::Version::new()),
-        Arc::new(fzf_make_main::FzfMake::new()),
+        Arc::new(fzf_make::FzfMake::new()),
         Arc::new(repeat::Repeat::new()),
         Arc::new(history::History::new()),
     ];
