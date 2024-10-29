@@ -6,8 +6,7 @@ authors = ["kyu08"]
 description = "A command line tool that executes make target using fuzzy finder with preview window."
 license = "MIT"
 repository = "https://github.com/kyu08/fzf-make"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+exclude = ["/.git", "/.github", ".gitignore", "Makefile", "/static", "/makefiles", "/doc", "_typos.toml", "renovate.json"]
 
 [dependencies]
 regex = "1.10.4"
