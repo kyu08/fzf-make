@@ -1,4 +1,8 @@
-use super::{file_util, target::*};
+use super::{
+    file_util,
+    runner::{Executor, Selector},
+    target::*,
+};
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::{
@@ -130,6 +134,20 @@ impl Makefile {
                 "target2".to_string(),
             ]),
         }
+    }
+}
+
+pub struct Make {}
+
+impl Selector for Make {
+    fn list_commands(&self) -> Vec<String> {
+        vec![]
+    }
+}
+
+impl Executor for Make {
+    fn execute(&self) -> Result<()> {
+        Ok(())
     }
 }
 
