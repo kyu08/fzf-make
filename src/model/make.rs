@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// Makefile represents a Makefile.
+/// Make represents a Makefile.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Make {
     pub path: PathBuf,
@@ -137,14 +137,25 @@ impl Make {
     }
 }
 
-// pub struct Make {}
-//
-// impl Selector for Make {
-//     fn list_commands(&self) -> Vec<String> {
-//         vec![]
-//     }
-// }
-//
+impl Selector for Make {
+    // TODO: define directly here
+    fn list_commands(&self) -> Vec<String> {
+        self.to_targets_string()
+    }
+
+    fn path(&self) -> &PathBuf {
+        &self.path
+    }
+
+    // TODO: define directly here
+    fn command_to_file_and_line_number(
+        &self,
+        command: &Option<&String>,
+    ) -> (Option<String>, Option<u32>) {
+        self.target_to_file_and_line_number(command)
+    }
+}
+
 // impl Executor for Make {
 //     fn execute(&self) -> Result<()> {
 //         Ok(())
