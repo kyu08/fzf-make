@@ -2,7 +2,7 @@ use crate::{
     file::{path_to_content, toml},
     model::{
         histories::{history_file_path, Histories},
-        makefile::Makefile,
+        make::Make,
     },
     usecase::execute_make_command::execute_make_target,
 };
@@ -240,7 +240,7 @@ fn update(model: &mut Model, message: Option<Message>) {
 #[derive(Clone, PartialEq, Debug)]
 pub struct SelectTargetState<'a> {
     pub current_pane: CurrentPane,
-    pub makefile: Makefile,
+    pub makefile: Make,
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
     pub histories: Option<Histories>,
@@ -249,7 +249,7 @@ pub struct SelectTargetState<'a> {
 
 impl SelectTargetState<'_> {
     pub fn new(config: config::Config) -> Result<Self> {
-        let makefile = match Makefile::create_makefile() {
+        let makefile = match Make::create_makefile() {
             Err(e) => return Err(e),
             Ok(f) => f,
         };
@@ -490,7 +490,7 @@ impl SelectTargetState<'_> {
 
     #[cfg(test)]
     fn new_for_test() -> Self {
-        let makefile = Makefile::new_for_test();
+        let makefile = Make::new_for_test();
         SelectTargetState {
             current_pane: CurrentPane::Main,
             makefile: makefile.clone(),

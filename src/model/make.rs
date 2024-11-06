@@ -12,18 +12,18 @@ use std::{
 
 /// Makefile represents a Makefile.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Makefile {
+pub struct Make {
     pub path: PathBuf,
-    include_files: Vec<Makefile>,
+    include_files: Vec<Make>,
     targets: Targets,
 }
 
-impl Makefile {
-    pub fn create_makefile() -> Result<Makefile> {
-        let Some(makefile_name) = Makefile::specify_makefile_name(".".to_string()) else {
+impl Make {
+    pub fn create_makefile() -> Result<Make> {
+        let Some(makefile_name) = Make::specify_makefile_name(".".to_string()) else {
             return Err(anyhow!("makefile not found.\n"));
         };
-        Makefile::new(Path::new(&makefile_name).to_path_buf())
+        Make::new(Path::new(&makefile_name).to_path_buf())
     }
 
     pub fn to_targets_string(&self) -> Vec<String> {
@@ -38,17 +38,17 @@ impl Makefile {
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
     // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
-    fn new(path: PathBuf) -> Result<Makefile> {
+    fn new(path: PathBuf) -> Result<Make> {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
         let file_content = file_util::path_to_content(path.clone())?;
         let include_files = content_to_include_file_paths(file_content.clone())
             .iter()
-            .map(|included_file_path| Makefile::new(included_file_path.clone()))
+            .map(|included_file_path| Make::new(included_file_path.clone()))
             .filter_map(Result::ok)
             .collect();
 
-        Ok(Makefile {
+        Ok(Make {
             path,
             include_files,
             targets: Targets::new(file_content),
@@ -124,8 +124,8 @@ impl Makefile {
     }
 
     #[cfg(test)]
-    pub fn new_for_test() -> Makefile {
-        Makefile {
+    pub fn new_for_test() -> Make {
+        Make {
             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
             include_files: vec![],
             targets: Targets(vec![
@@ -137,19 +137,19 @@ impl Makefile {
     }
 }
 
-pub struct Make {}
-
-impl Selector for Make {
-    fn list_commands(&self) -> Vec<String> {
-        vec![]
-    }
-}
-
-impl Executor for Make {
-    fn execute(&self) -> Result<()> {
-        Ok(())
-    }
-}
+// pub struct Make {}
+//
+// impl Selector for Make {
+//     fn list_commands(&self) -> Vec<String> {
+//         vec![]
+//     }
+// }
+//
+// impl Executor for Make {
+//     fn execute(&self) -> Result<()> {
+//         Ok(())
+//     }
+// }
 
 /// The path should be relative path from current directory where make command is executed.
 /// So the path can be treated as it is.
@@ -248,7 +248,7 @@ mod test {
 
             assert_eq!(
                 expect,
-                Makefile::specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
+                Make::specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
@@ -259,14 +259,14 @@ mod test {
     fn makefile_to_targets_string_test() {
         struct Case {
             title: &'static str,
-            makefile: Makefile,
+            makefile: Make,
             expect: Vec<&'static str>,
         }
 
         let cases = vec![
             Case {
                 title: "makefile with no target",
-                makefile: Makefile {
+                makefile: Make {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
                     targets: Targets(vec![]),
@@ -275,7 +275,7 @@ mod test {
             },
             Case {
                 title: "makefile with no include directive",
-                makefile: Makefile {
+                makefile: Make {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
                     targets: Targets(vec!["test".to_string(), "run".to_string()]),
@@ -284,19 +284,19 @@ mod test {
             },
             Case {
                 title: "makefile with nested include directive",
-                makefile: Makefile {
+                makefile: Make {
                     path: Path::new("path1").to_path_buf(),
                     include_files: vec![
-                        Makefile {
+                        Make {
                             path: Path::new("path2").to_path_buf(),
-                            include_files: vec![Makefile {
+                            include_files: vec![Make {
                                 path: Path::new("path2-1").to_path_buf(),
                                 include_files: vec![],
                                 targets: Targets(vec!["test2-1".to_string(), "run2-1".to_string()]),
                             }],
                             targets: Targets(vec!["test2".to_string(), "run2".to_string()]),
                         },
-                        Makefile {
+                        Make {
                             path: Path::new("path3").to_path_buf(),
                             include_files: vec![],
                             targets: Targets(vec!["test3".to_string(), "run3".to_string()]),
