@@ -3,6 +3,7 @@ use crate::{
     model::{
         histories::{history_file_path, Histories},
         make::Make,
+        runner,
     },
     usecase::execute_make_command::execute_make_target,
 };
@@ -32,14 +33,14 @@ use tui_textarea::TextArea;
 // "Making impossible states impossible"
 // The type of `AppState` is defined according to the concept of 'Making Impossible States Impossible'.
 // See: https://www.youtube.com/watch?v=IcgmSRJHu_8
-#[derive(Clone, PartialEq, Debug)]
+#[derive(PartialEq, Debug)]
 pub enum AppState<'a> {
     SelectTarget(SelectTargetState<'a>),
     ExecuteTarget(Option<String>),
     ShouldQuit,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(PartialEq, Debug)]
 pub struct Model<'a> {
     pub app_state: AppState<'a>,
 }
@@ -94,10 +95,12 @@ impl Model<'_> {
     }
 
     fn transition_to_execute_target_state(&mut self, target: Option<String>) {
+        // TODO: remove mut
         self.app_state = AppState::ExecuteTarget(target);
     }
 
     fn transition_to_should_quit_state(&mut self) {
+        // TODO: remove mut
         self.app_state = AppState::ShouldQuit;
     }
 
@@ -110,7 +113,7 @@ impl Model<'_> {
     }
 
     pub fn target_to_execute(&self) -> Option<String> {
-        match self.app_state.clone() {
+        match &self.app_state {
             AppState::ExecuteTarget(Some(target)) => Some(target.clone()),
             _ => None,
         }
@@ -162,7 +165,7 @@ pub fn main(config: config::Config) -> Result<()> {
 
 fn run<B: Backend>(terminal: &mut Terminal<B>, mut model: Model) -> Result<Option<String>> {
     loop {
-        if let Err(e) = terminal.draw(|f| ui(f, &mut model.clone())) {
+        if let Err(e) = terminal.draw(|f| ui(f, &mut model)) {
             return Err(anyhow!(e));
         }
         match handle_event(&model) {
@@ -237,21 +240,34 @@ fn update(model: &mut Model, message: Option<Message>) {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Debug)]
 pub struct SelectTargetState<'a> {
     pub current_pane: CurrentPane,
-    pub makefile: Make,
+    pub makefile: Box<dyn runner::Selector>, // TODO: ここをVecにする
+    // TODO: history系どうまとめるか考える
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
     pub histories: Option<Histories>,
     pub histories_list_state: ListState,
 }
 
+impl PartialEq for SelectTargetState<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.current_pane == other.current_pane
+            && self.makefile.path() == other.makefile.path()
+            && self.makefile.list_commands() == other.makefile.list_commands()
+            && self.search_text_area == other.search_text_area
+            && self.targets_list_state == other.targets_list_state
+            && self.histories == other.histories
+            && self.histories_list_state == other.histories_list_state
+    }
+}
+
 impl SelectTargetState<'_> {
     pub fn new(config: config::Config) -> Result<Self> {
-        let makefile = match Make::create_makefile() {
+        let makefile: Box<dyn runner::Selector> = match Make::create_makefile() {
             Err(e) => return Err(e),
-            Ok(f) => f,
+            Ok(f) => Box::new(f),
         };
 
         let current_pane = if config.get_focus_history() {
@@ -260,12 +276,13 @@ impl SelectTargetState<'_> {
             CurrentPane::Main
         };
 
+        let path = makefile.path();
         Ok(SelectTargetState {
             current_pane,
-            makefile: makefile.clone(),
+            makefile,
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            histories: Model::get_histories(makefile.path),
+            histories: Model::get_histories(path),
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         })
     }
@@ -287,7 +304,7 @@ impl SelectTargetState<'_> {
     // TODO: This method should return Result when it fails.
     pub fn append_history(&self) -> Option<Histories> {
         match (&self.histories, self.get_selected_target()) {
-            (Some(histories), Some(target)) => histories.append(&self.makefile.path, &target),
+            (Some(histories), Some(target)) => histories.append(&self.makefile.path(), &target),
             _ => None,
         }
     }
@@ -314,13 +331,13 @@ impl SelectTargetState<'_> {
 
     pub fn narrow_down_targets(&self) -> Vec<String> {
         if self.search_text_area.0.is_empty() {
-            return self.makefile.to_targets_string();
+            return self.makefile.list_commands();
         }
 
         let matcher = SkimMatcherV2::default();
         let mut filtered_list: Vec<(Option<i64>, String)> = self
             .makefile
-            .to_targets_string()
+            .list_commands()
             .into_iter()
             .map(|target| {
                 let mut key_input = self.search_text_area.0.lines().join("");
@@ -345,7 +362,7 @@ impl SelectTargetState<'_> {
     pub fn get_history(&self) -> Option<Vec<String>> {
         self.histories
             .clone()
-            .and_then(|h| h.get_history(&self.makefile.path.clone()))
+            .and_then(|h| h.get_history(&self.makefile.path()))
     }
 
     fn next_target(&mut self) {
@@ -490,10 +507,9 @@ impl SelectTargetState<'_> {
 
     #[cfg(test)]
     fn new_for_test() -> Self {
-        let makefile = Make::new_for_test();
         SelectTargetState {
             current_pane: CurrentPane::Main,
-            makefile: makefile.clone(),
+            makefile: Box::new(Make::new_for_test()),
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: SelectTargetState::init_histories(vec![

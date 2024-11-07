@@ -143,8 +143,8 @@ impl Selector for Make {
         self.to_targets_string()
     }
 
-    fn path(&self) -> &PathBuf {
-        &self.path
+    fn path(&self) -> PathBuf {
+        self.path.clone()
     }
 
     // TODO: define directly here
@@ -155,6 +155,12 @@ impl Selector for Make {
         self.target_to_file_and_line_number(command)
     }
 }
+
+// impl Clone for Make {
+//     fn clone(&self) -> Self {
+//         self.clone()
+//     }
+// }
 
 // impl Executor for Make {
 //     fn execute(&self) -> Result<()> {

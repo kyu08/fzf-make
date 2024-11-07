@@ -28,7 +28,7 @@ impl Usecase for Repeat {
             Ok(model) => match model.app_state {
                 AppState::SelectTarget(model) => {
                     match model.histories.map(|h| {
-                        h.get_latest_target(&model.makefile.path)
+                        h.get_latest_target(&model.makefile.path())
                             .map(execute_make_target)
                     }) {
                         Some(Some(_)) => Ok(()),
