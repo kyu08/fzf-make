@@ -121,7 +121,7 @@ impl Make {
                     runner_type::RunnerType::Make,
                     "target0".to_string(),
                     PathBuf::from(""),
-                    4,
+                    1,
                 ),
                 command::Command::new(
                     runner_type::RunnerType::Make,
@@ -133,7 +133,7 @@ impl Make {
                     runner_type::RunnerType::Make,
                     "target2".to_string(),
                     PathBuf::from(""),
-                    4,
+                    7,
                 ),
             ]),
         }
