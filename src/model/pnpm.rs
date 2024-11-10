@@ -1,31 +1,25 @@
-use super::{command, file_util, target::*};
+use super::{file_util, target::*};
 use anyhow::{anyhow, Result};
-use colored::Colorize;
 use regex::Regex;
-use std::process;
 use std::{
     env, fs,
     path::{Path, PathBuf},
 };
 
-/// Make represents a Makefile.
+/// Pnpm represents a Pnpmfile.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Make {
+pub struct Pnpm {
     pub path: PathBuf,
-    include_files: Vec<Make>,
+    include_files: Vec<Pnpm>,
     targets: Targets,
 }
 
-impl Make {
-    pub fn runner_name() -> String {
-        "make".to_string()
-    }
-
-    pub fn create_makefile() -> Result<Make> {
-        let Some(makefile_name) = Make::specify_makefile_name(".".to_string()) else {
+impl Pnpm {
+    pub fn create_makefile() -> Result<Pnpm> {
+        let Some(makefile_name) = Pnpm::specify_makefile_name(".".to_string()) else {
             return Err(anyhow!("makefile not found.\n"));
         };
-        Make::new(Path::new(&makefile_name).to_path_buf())
+        Pnpm::new(Path::new(&makefile_name).to_path_buf())
     }
 
     pub fn to_targets_string(&self) -> Vec<String> {
@@ -40,17 +34,17 @@ impl Make {
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
     // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
-    fn new(path: PathBuf) -> Result<Make> {
+    fn new(path: PathBuf) -> Result<Pnpm> {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
         let file_content = file_util::path_to_content(path.clone())?;
         let include_files = content_to_include_file_paths(file_content.clone())
             .iter()
-            .map(|included_file_path| Make::new(included_file_path.clone()))
+            .map(|included_file_path| Pnpm::new(included_file_path.clone()))
             .filter_map(Result::ok)
             .collect();
 
-        Ok(Make {
+        Ok(Pnpm {
             path,
             include_files,
             targets: Targets::new(file_content),
@@ -58,10 +52,10 @@ impl Make {
     }
 
     fn specify_makefile_name(target_path: String) -> Option<PathBuf> {
-        //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
-        //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
-        // It needs to enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
-        let makefile_name_options = ["GNUmakefile", "makefile", "Makefile"];
+        //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Pnpmfile.
+        //  https://www.gnu.org/software/make/manual/make.html#Pnpmfile-Names
+        // It needs to enumerate `Pnpmfile` too not only `makefile` to make it work on case insensitive file system
+        let makefile_name_options = ["GNUmakefile", "makefile", "Pnpmfile"];
 
         let mut temp_result = Vec::<PathBuf>::new();
         let elements = fs::read_dir(target_path.clone()).unwrap();
@@ -78,7 +72,7 @@ impl Make {
             }
         }
 
-        // It needs to return "GNUmakefile", "makefile", "Makefile" in order of priority
+        // It needs to return "GNUmakefile", "makefile", "Pnpmfile" in order of priority
         for makefile_name_option in makefile_name_options {
             for result in &temp_result {
                 if result.to_str().unwrap().contains(makefile_name_option) {
@@ -125,28 +119,9 @@ impl Make {
         (None, None)
     }
 
-    pub fn execute(&self, command: command::Command) -> Result<()> {
-        println!(
-            "{}",
-            ("make ".to_string() + &command.name).truecolor(161, 220, 156)
-        );
-        process::Command::new("make")
-            .stdin(process::Stdio::inherit())
-            .arg(command.name)
-            .spawn()
-            .expect("Failed to execute process")
-            .wait()
-            .expect("Failed to execute process");
-        Ok(())
-    }
-
-    pub fn print(&self, command: String) -> String {
-        format!("(make) {}", command)
-    }
-
     #[cfg(test)]
-    pub fn new_for_test() -> Make {
-        Make {
+    pub fn new_for_test() -> Pnpm {
+        Pnpm {
             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
             include_files: vec![],
             targets: Targets(vec![
@@ -220,18 +195,18 @@ mod test {
             },
             Case {
                 title: "GNUmakefile",
-                files: vec!["makefile", "GNUmakefile", "README.md", "Makefile"],
+                files: vec!["makefile", "GNUmakefile", "README.md", "Pnpmfile"],
                 expect: Some("GNUmakefile".to_string()),
             },
             Case {
                 title: "makefile",
-                files: vec!["makefile", "Makefile", "README.md"],
+                files: vec!["makefile", "Pnpmfile", "README.md"],
                 expect: Some("makefile".to_string()),
             },
             Case {
-                title: "Makefile",
-                files: vec!["Makefile", "README.md"],
-                expect: Some("Makefile".to_string()),
+                title: "Pnpmfile",
+                files: vec!["Pnpmfile", "README.md"],
+                expect: Some("Pnpmfile".to_string()),
             },
         ];
 
@@ -255,7 +230,7 @@ mod test {
 
             assert_eq!(
                 expect,
-                Make::specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
+                Pnpm::specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
@@ -266,14 +241,14 @@ mod test {
     fn makefile_to_targets_string_test() {
         struct Case {
             title: &'static str,
-            makefile: Make,
+            makefile: Pnpm,
             expect: Vec<&'static str>,
         }
 
         let cases = vec![
             Case {
                 title: "makefile with no target",
-                makefile: Make {
+                makefile: Pnpm {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
                     targets: Targets(vec![]),
@@ -282,7 +257,7 @@ mod test {
             },
             Case {
                 title: "makefile with no include directive",
-                makefile: Make {
+                makefile: Pnpm {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
                     targets: Targets(vec!["test".to_string(), "run".to_string()]),
@@ -291,19 +266,19 @@ mod test {
             },
             Case {
                 title: "makefile with nested include directive",
-                makefile: Make {
+                makefile: Pnpm {
                     path: Path::new("path1").to_path_buf(),
                     include_files: vec![
-                        Make {
+                        Pnpm {
                             path: Path::new("path2").to_path_buf(),
-                            include_files: vec![Make {
+                            include_files: vec![Pnpm {
                                 path: Path::new("path2-1").to_path_buf(),
                                 include_files: vec![],
                                 targets: Targets(vec!["test2-1".to_string(), "run2-1".to_string()]),
                             }],
                             targets: Targets(vec!["test2".to_string(), "run2".to_string()]),
                         },
-                        Make {
+                        Pnpm {
                             path: Path::new("path3").to_path_buf(),
                             include_files: vec![],
                             targets: Targets(vec!["test3".to_string(), "run3".to_string()]),
@@ -471,3 +446,4 @@ mod test {
         }
     }
 }
+

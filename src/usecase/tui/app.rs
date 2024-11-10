@@ -1,11 +1,11 @@
 use crate::{
     file::{path_to_content, toml},
     model::{
+        command,
         histories::{history_file_path, Histories},
         make::Make,
         runner,
     },
-    usecase::execute_make_command::execute_make_command,
 };
 
 use super::{config, ui::ui};
@@ -100,8 +100,12 @@ impl Model<'_> {
         })
     }
 
-    fn transition_to_execute_target_state(&mut self, runner: Box<dyn runner::Runner>) {
-        self.app_state = AppState::ExecuteTarget(ExecuteTargetState::new(runner));
+    fn transition_to_execute_target_state(
+        &mut self,
+        runner: runner::Runner,
+        command: command::Command,
+    ) {
+        self.app_state = AppState::ExecuteTarget(ExecuteTargetState::new(runner, command));
     }
 
     fn transition_to_should_quit_state(&mut self) {
@@ -117,9 +121,12 @@ impl Model<'_> {
         matches!(self.app_state, AppState::ExecuteTarget(_))
     }
 
-    pub fn command_to_execute(&self) -> Option<&Box<dyn runner::Runner>> {
+    pub fn command_to_execute(&self) -> Option<(runner::Runner, command::Command)> {
         match &self.app_state {
-            AppState::ExecuteTarget(command) => Some(&command.executor),
+            AppState::ExecuteTarget(command) => {
+                let command = command.clone();
+                Some((command.executor, command.command))
+            }
             _ => None,
         }
     }
@@ -139,9 +146,8 @@ pub fn main(config: config::Config) -> Result<()> {
             return Err(e);
         }
         let mut model = model.unwrap();
-        let target = run(&mut terminal, &mut model);
 
-        let target = match target {
+        let target = match run(&mut terminal, &mut model) {
             Ok(t) => t,
             Err(e) => {
                 shutdown_terminal(&mut terminal)?;
@@ -152,8 +158,9 @@ pub fn main(config: config::Config) -> Result<()> {
         shutdown_terminal(&mut terminal)?;
 
         match target {
-            Some(t) => {
-                execute_make_command(t);
+            Some((runner, command)) => {
+                runner.show_command(command.clone());
+                runner.execute(command);
                 Ok(())
             }
             None => Ok(()),
@@ -174,13 +181,12 @@ pub fn main(config: config::Config) -> Result<()> {
 fn run<'a, B: Backend>(
     terminal: &mut Terminal<B>,
     model: &'a mut Model<'a>,
-    // ) -> Option<Box<dyn runner::Executor>> {
-) -> Result<Option<&'a Box<dyn runner::Runner>>> {
+) -> Result<Option<(runner::Runner, command::Command)>> {
     loop {
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
             return Err(anyhow!(e));
         }
-        match handle_event(&model) {
+        match handle_event(model) {
             Ok(message) => {
                 update(model, message);
                 if model.should_quit() || model.is_target_selected() {
@@ -240,12 +246,12 @@ fn update(model: &mut Model, message: Option<Message>) {
         match message {
             Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
             Some(Message::ExecuteTarget) => {
-                if let Some(target) = s.get_selected_target() {
+                if let Some(command) = s.get_selected_target() {
                     // TODO: make this a method of SelectTargetState
-                    s.store_history(&target);
-                    let executor: Box<dyn runner::Runner> = s.runners[0];
+                    s.store_history(&command);
+                    let executor: runner::Runner = s.runners[0].clone();
 
-                    model.transition_to_execute_target_state(executor);
+                    model.transition_to_execute_target_state(executor, command);
                 };
             }
             Some(Message::NextTarget) => s.next_target(),
@@ -262,7 +268,7 @@ fn update(model: &mut Model, message: Option<Message>) {
 #[derive(Debug)]
 pub struct SelectTargetState<'a> {
     pub current_pane: CurrentPane,
-    pub runners: Vec<Box<dyn runner::Runner>>,
+    pub runners: Vec<runner::Runner>,
     // TODO: history系どうまとめるか考える
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
@@ -281,28 +287,25 @@ impl PartialEq for SelectTargetState<'_> {
             return false; // Early return for performance
         }
 
-        let runners = {
-            let mut eq = false;
-            for (i, r) in self.runners.iter().enumerate() {
-                let other = other.runners.get(i).unwrap();
-                if r.path() == other.path() && r.list_commands() == other.list_commands() {
-                    eq = true;
-                } else {
-                    eq = false;
-                    break;
-                }
+        let mut runner = false;
+        for (i, r) in self.runners.iter().enumerate() {
+            let other = other.runners.get(i).unwrap();
+            if r.path() == other.path() && r.list_commands() == other.list_commands() {
+                runner = true;
+            } else {
+                runner = false;
+                break;
             }
-            eq
-        };
-        runners
+        }
+        runner
     }
 }
 
 impl SelectTargetState<'_> {
     pub fn new(config: config::Config) -> Result<Self> {
-        let makefile: Box<dyn runner::Runner> = match Make::create_makefile() {
+        let makefile = match Make::create_makefile() {
             Err(e) => return Err(e),
-            Ok(f) => Box::new(f),
+            Ok(f) => f,
         };
 
         let current_pane = if config.get_focus_history() {
@@ -310,11 +313,12 @@ impl SelectTargetState<'_> {
         } else {
             CurrentPane::Main
         };
+        let runner2 = { runner::Runner::MakeCommand(makefile) };
 
-        let path = makefile.path();
+        let path = runner2.path();
         Ok(SelectTargetState {
             current_pane,
-            runners: vec![makefile],
+            runners: vec![runner2],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: Model::get_histories(path),
@@ -322,7 +326,7 @@ impl SelectTargetState<'_> {
         })
     }
 
-    fn get_selected_target(&self) -> Option<String> {
+    fn get_selected_target(&self) -> Option<command::Command> {
         match self.current_pane {
             CurrentPane::Main => self.selected_target(),
             CurrentPane::History => self.selected_history(),
@@ -337,11 +341,11 @@ impl SelectTargetState<'_> {
     }
 
     // TODO: This method should return Result when it fails.
-    pub fn append_history(&self, command: &String) -> Option<Histories> {
+    pub fn append_history(&self, command: &str) -> Option<Histories> {
         match &self.histories {
             Some(histories) => {
-                histories.append(&self.runners[0].path(), &command);
-                todo!("とりあえずコンパイルを通すために&self.runners[0]としているがrunner::Command::path()からとるべき");
+                histories.append(&self.runners[0].path(), command)
+                // todo!("とりあえずコンパイルを通すために&self.runners[0]としているがrunner::Command::path()からとるべき");
             }
             _ => None,
         }
@@ -484,7 +488,6 @@ impl SelectTargetState<'_> {
         match history_list_len {
             0 => {
                 self.histories_list_state.select(None);
-                return;
             }
             _ => {
                 let i = match self.histories_list_state.selected() {
@@ -509,7 +512,7 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn store_history(&mut self, command: &String) {
+    fn store_history(&mut self, command: &str) {
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
@@ -548,7 +551,7 @@ impl SelectTargetState<'_> {
     fn new_for_test() -> Self {
         SelectTargetState {
             current_pane: CurrentPane::Main,
-            runners: vec![Box::new(Make::new_for_test())],
+            runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: SelectTargetState::init_histories(vec![
@@ -561,11 +564,12 @@ impl SelectTargetState<'_> {
     }
 }
 
-#[derive(Debug)]
-struct ExecuteTargetState {
+#[derive(Clone, Debug)]
+pub struct ExecuteTargetState {
     /// It is possible to have one concrete type like Command struct here.
     /// But from the perspective of simpleness of code base, this field has trait object.
-    executor: Box<dyn runner::Runner>,
+    executor: runner::Runner,
+    command: command::Command,
 }
 
 impl PartialEq for ExecuteTargetState {
@@ -575,8 +579,8 @@ impl PartialEq for ExecuteTargetState {
 }
 
 impl ExecuteTargetState {
-    fn new(executor: Box<dyn runner::Runner>) -> Self {
-        ExecuteTargetState { executor }
+    fn new(executor: runner::Runner, command: command::Command) -> Self {
+        ExecuteTargetState { executor, command }
     }
 }
 

@@ -1,14 +1,12 @@
 use super::app::{AppState, CurrentPane, Model, SelectTargetState};
-use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
+use portable_pty::CommandBuilder;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::Span,
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
-use std::sync::{Arc, RwLock};
-use tui_term::widget::PseudoTerminal;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectTarget(model) = &mut model.app_state {
@@ -58,7 +56,7 @@ fn color_and_border_style_for_selectable(
 }
 
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
-fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_preview_block(_model: &SelectTargetState, _f: &mut Frame, _chunk: ratatui::layout::Rect) {
     // let narrow_down_targets = model.narrow_down_targets();
     // // TODO: 他のtargetになったままの箇所をcommandにrenameする(--helpの表示も含む)
     //
@@ -143,7 +141,7 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
     // );
 }
 
-fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
+fn _preview_command(file_name: String, line_number: u32) -> CommandBuilder {
     let cwd = std::env::current_dir().unwrap();
     let mut cmd = CommandBuilder::new("bat");
     cmd.cwd(cwd);

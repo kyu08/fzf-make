@@ -1,4 +1,3 @@
-mod execute_make_command;
 pub(super) mod fzf_make;
 pub(super) mod help;
 pub(super) mod history;
