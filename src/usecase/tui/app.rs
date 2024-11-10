@@ -354,14 +354,20 @@ impl SelectTargetState<'_> {
     }
 
     pub fn narrow_down_targets(&self) -> Vec<String> {
+        let commands = {
+            let mut commands: Vec<String> = Vec::new();
+            for runner in &self.runners {
+                commands = [commands, runner.list_commands()].concat();
+            }
+            commands
+        };
+
         if self.search_text_area.0.is_empty() {
-            return self.runners.list_commands();
+            return commands;
         }
 
         let matcher = SkimMatcherV2::default();
-        let mut filtered_list: Vec<(Option<i64>, String)> = self
-            .runners
-            .list_commands()
+        let mut filtered_list: Vec<(Option<i64>, String)> = commands
             .into_iter()
             .map(|target| {
                 let mut key_input = self.search_text_area.0.lines().join("");
