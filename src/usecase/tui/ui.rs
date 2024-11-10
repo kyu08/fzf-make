@@ -59,85 +59,88 @@ fn color_and_border_style_for_selectable(
 
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
 fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let narrow_down_targets = model.narrow_down_targets();
-    // TODO: 他のtargetになったままの箇所をcommandにrenameする(--helpの表示も含む)
-
-    let selecting_command =
-        &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
-    // modelにselecting_commandを渡すとfile_name, line_numberを返してくれる関数を用意する
-    let (file_name, line_number) = model
-        .runners
-        .command_to_file_and_line_number(selecting_command);
-
-    let (fg_color_, border_style) =
-        color_and_border_style_for_selectable(model.current_pane.is_main());
-
-    let title = Line::from(" ✨ Preview ");
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(border_style)
-        .border_style(Style::default().fg(fg_color_))
-        .title(title)
-        .title_style(TITLE_STYLE);
-
-    if !model.get_search_area_text().is_empty() && narrow_down_targets.is_empty() {
-        f.render_widget(block, chunk);
-        return;
-    }
-
-    let pty_system = NativePtySystem::default();
-
-    let file_name = file_name.unwrap_or(model.runners.path().to_string_lossy().to_string());
-    let line_number = line_number.unwrap_or(1);
-    let cmd = preview_command(file_name, line_number);
-
-    let pair = pty_system
-        .openpty(PtySize {
-            rows: 1000,
-            cols: 1000,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .unwrap();
-    let mut child = pair.slave.spawn_command(cmd).unwrap();
-
-    drop(pair.slave);
-
-    let mut reader = pair.master.try_clone_reader().unwrap();
-    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
-
-    {
-        let parser = parser.clone();
-        std::thread::spawn(move || {
-            // Consume the output from the child
-            let mut s = String::new();
-            reader.read_to_string(&mut s).unwrap();
-            if !s.is_empty() {
-                let mut parser = parser.write().unwrap();
-                parser.process(s.as_bytes());
-            }
-        });
-    }
-
-    {
-        // Drop writer on purpose
-        let _writer = pair.master.take_writer().unwrap();
-    }
-
-    // Wait for the child to complete
-    let _child_exit_status = child.wait().unwrap();
-
-    drop(pair.master);
-
-    let binding = parser.read().unwrap();
-    let screen = binding.screen();
-
-    f.render_widget(
-        PseudoTerminal::new(screen)
-            .cursor(tui_term::widget::Cursor::default().symbol(""))
-            .block(block),
-        chunk,
-    );
+    // let narrow_down_targets = model.narrow_down_targets();
+    // // TODO: 他のtargetになったままの箇所をcommandにrenameする(--helpの表示も含む)
+    //
+    // let selecting_command =
+    //     &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
+    // // modelにselecting_commandを渡すとfile_name, line_numberを返してくれる関数を用意する
+    // // TODO: そもそもlistのためにMakefileを一度parseしているハズなのでそのときにfile_nameとline_numberも一緒に持っておくべき
+    // todo!("Command対応したらここが不要になるはず");
+    // let (file_name, line_number) = model
+    //     .runners
+    //     .command_to_file_and_line_number(selecting_command);
+    //
+    // let (fg_color_, border_style) =
+    //     color_and_border_style_for_selectable(model.current_pane.is_main());
+    //
+    // let title = Line::from(" ✨ Preview ");
+    // let block = Block::default()
+    //     .borders(Borders::ALL)
+    //     .border_type(border_style)
+    //     .border_style(Style::default().fg(fg_color_))
+    //     .title(title)
+    //     .title_style(TITLE_STYLE);
+    //
+    // if !model.get_search_area_text().is_empty() && narrow_down_targets.is_empty() {
+    //     f.render_widget(block, chunk);
+    //     return;
+    // }
+    //
+    // let pty_system = NativePtySystem::default();
+    //
+    // let file_name = file_name.unwrap(); // 基本的にNoneにならないはず
+    //                                     // let file_name = file_name.unwrap_or(model.runners.path().to_string_lossy().to_string());
+    // let line_number = line_number.unwrap_or(1);
+    // let cmd = preview_command(file_name, line_number);
+    //
+    // let pair = pty_system
+    //     .openpty(PtySize {
+    //         rows: 1000,
+    //         cols: 1000,
+    //         pixel_width: 0,
+    //         pixel_height: 0,
+    //     })
+    //     .unwrap();
+    // let mut child = pair.slave.spawn_command(cmd).unwrap();
+    //
+    // drop(pair.slave);
+    //
+    // let mut reader = pair.master.try_clone_reader().unwrap();
+    // let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
+    //
+    // {
+    //     let parser = parser.clone();
+    //     std::thread::spawn(move || {
+    //         // Consume the output from the child
+    //         let mut s = String::new();
+    //         reader.read_to_string(&mut s).unwrap();
+    //         if !s.is_empty() {
+    //             let mut parser = parser.write().unwrap();
+    //             parser.process(s.as_bytes());
+    //         }
+    //     });
+    // }
+    //
+    // {
+    //     // Drop writer on purpose
+    //     let _writer = pair.master.take_writer().unwrap();
+    // }
+    //
+    // // Wait for the child to complete
+    // let _child_exit_status = child.wait().unwrap();
+    //
+    // drop(pair.master);
+    //
+    // let binding = parser.read().unwrap();
+    // let screen = binding.screen();
+    //
+    // f.render_widget(
+    //     PseudoTerminal::new(screen)
+    //         .cursor(tui_term::widget::Cursor::default().symbol(""))
+    //         .block(block),
+    //     chunk,
+    // );
 }
 
 fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
@@ -204,7 +207,7 @@ fn render_history_block(
     f.render_stateful_widget(
         targets_block(
             " 📚 History ",
-            model.get_histories().unwrap_or_default(),
+            model.get_history(),
             model.current_pane.is_history(),
         ),
         chunk,

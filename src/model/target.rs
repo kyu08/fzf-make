@@ -66,6 +66,7 @@ fn get_line_type(line: &str) -> LineType {
     }
 }
 
+// TODO: listのためにMakefileを一度parseしているハズなのでそのときにfile_nameとline_numberも一緒に持っておくべき
 pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32> {
     let content = match file_util::path_to_content(path) {
         Ok(c) => c,
