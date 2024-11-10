@@ -98,6 +98,7 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
 
 #[derive(Clone, PartialEq, Debug)]
 struct History {
+    // TODO: runner_typeを追加する
     path: PathBuf,
     executed_targets: Vec<String>,
 }

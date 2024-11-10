@@ -36,7 +36,7 @@ use tui_textarea::TextArea;
 #[derive(PartialEq, Debug)]
 pub enum AppState<'a> {
     SelectTarget(SelectTargetState<'a>),
-    ExecuteTarget(Option<String>),
+    ExecuteTarget(String),
     ShouldQuit,
 }
 
@@ -94,7 +94,7 @@ impl Model<'_> {
         })
     }
 
-    fn transition_to_execute_target_state(&mut self, target: Option<String>) {
+    fn transition_to_execute_target_state(&mut self, target: String) {
         // TODO: remove mut
         self.app_state = AppState::ExecuteTarget(target);
     }
@@ -114,7 +114,7 @@ impl Model<'_> {
 
     pub fn target_to_execute(&self) -> Option<String> {
         match &self.app_state {
-            AppState::ExecuteTarget(Some(target)) => Some(target.clone()),
+            AppState::ExecuteTarget(command) => Some(command.clone()),
             _ => None,
         }
     }
@@ -228,8 +228,11 @@ fn update(model: &mut Model, message: Option<Message>) {
         match message {
             Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
             Some(Message::ExecuteTarget) => {
-                let target = s.store_history();
-                model.transition_to_execute_target_state(target);
+                if let Some(target) = s.get_selected_target() {
+                    // TODO: make this a method of SelectTargetState
+                    s.store_history(&target);
+                    model.transition_to_execute_target_state(target);
+                };
             }
             Some(Message::NextTarget) => s.next_target(),
             Some(Message::PreviousTarget) => s.previous_target(),
@@ -245,7 +248,7 @@ fn update(model: &mut Model, message: Option<Message>) {
 #[derive(Debug)]
 pub struct SelectTargetState<'a> {
     pub current_pane: CurrentPane,
-    pub runners: Box<dyn runner::Selector>, // TODO: ここをVecにする
+    pub runners: Vec<Box<dyn runner::Selector>>,
     // TODO: history系どうまとめるか考える
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
@@ -255,13 +258,29 @@ pub struct SelectTargetState<'a> {
 
 impl PartialEq for SelectTargetState<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.current_pane == other.current_pane
-            && self.runners.path() == other.runners.path()
-            && self.runners.list_commands() == other.runners.list_commands()
+        let without_runners = self.current_pane == other.current_pane
             && self.search_text_area == other.search_text_area
             && self.targets_list_state == other.targets_list_state
             && self.histories == other.histories
-            && self.histories_list_state == other.histories_list_state
+            && self.histories_list_state == other.histories_list_state;
+        if !without_runners {
+            return false; // Early return for performance
+        }
+
+        let runners = {
+            let mut eq = false;
+            for (i, r) in self.runners.iter().enumerate() {
+                let other = other.runners.get(i).unwrap();
+                if r.path() == other.path() && r.list_commands() == other.list_commands() {
+                    eq = true;
+                } else {
+                    eq = false;
+                    break;
+                }
+            }
+            eq
+        };
+        runners
     }
 }
 
@@ -281,7 +300,7 @@ impl SelectTargetState<'_> {
         let path = makefile.path();
         Ok(SelectTargetState {
             current_pane,
-            runners: makefile,
+            runners: vec![makefile],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: Model::get_histories(path),
@@ -304,9 +323,12 @@ impl SelectTargetState<'_> {
     }
 
     // TODO: This method should return Result when it fails.
-    pub fn append_history(&self) -> Option<Histories> {
-        match (&self.histories, self.get_selected_target()) {
-            (Some(histories), Some(target)) => histories.append(&self.runners.path(), &target),
+    pub fn append_history(&self, command: &String) -> Option<Histories> {
+        match &self.histories {
+            Some(histories) => {
+                histories.append(&self.runners[0].path(), &command);
+                todo!("とりあえずコンパイルを通すために&self.runners[0]としているがrunner::Command::path()からとるべき");
+            }
             _ => None,
         }
     }
@@ -468,21 +490,17 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn store_history(&mut self) -> Option<String> {
+    fn store_history(&mut self, command: &String) {
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
-        let target = self.get_selected_target();
-
-        if let Some(h) = self.append_history() {
+        if let Some(h) = self.append_history(command) {
             self.histories = Some(h)
         };
         if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &self.histories) {
             // TODO: handle error
             let _ = toml::store_history(dir, file_name, h.to_tuple());
-        }
-
-        target
+        };
     }
 
     fn reset_selection(&mut self) {
@@ -701,7 +719,7 @@ mod test {
                 },
                 message: Some(Message::ExecuteTarget),
                 expect_model: Model {
-                    app_state: AppState::ExecuteTarget(Some("target0".to_string())),
+                    app_state: AppState::ExecuteTarget("target0".to_string()),
                 },
             },
             Case {
@@ -718,7 +736,7 @@ mod test {
                 },
                 message: Some(Message::ExecuteTarget),
                 expect_model: Model {
-                    app_state: AppState::ExecuteTarget(Some("history1".to_string())),
+                    app_state: AppState::ExecuteTarget("history1".to_string()),
                 },
             },
             Case {
