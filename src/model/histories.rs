@@ -14,6 +14,7 @@ impl Histories {
         }
     }
 
+    // TODO: Make this fn returns Vec<runner::Command>
     pub fn get_histories(&self, paths: Vec<PathBuf>) -> Vec<String> {
         let mut histories: Vec<String> = Vec::new();
 
@@ -27,7 +28,6 @@ impl Histories {
             histories = [histories, executed_targets].concat();
         }
 
-        todo!("ここの返り値をVec<runner::Command>にする必要がある");
         histories
     }
 
@@ -109,11 +109,8 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
 
 #[derive(Clone, PartialEq, Debug)]
 struct History {
-    // TODO: runner_typeを追加する
-    // TODO: writeができることをテスト
-    // TODO: readができることをテスト
-    path: PathBuf,
-    executed_targets: Vec<String>,
+    path: PathBuf,                 // TODO: rename to working_directory
+    executed_targets: Vec<String>, // TODO: make this to Vec<runner::Command>
 }
 
 impl History {
