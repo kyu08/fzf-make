@@ -210,6 +210,7 @@ enum Message {
     Quit,
 }
 
+// TODO: make this method Model's method
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     match (
         crossterm::event::poll(std::time::Duration::from_millis(2000))?,
@@ -220,6 +221,7 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     }
 }
 
+// TODO: make this method Model's method
 // TODO: Make this function returns `Result` or have a field like Model.error to hold errors
 fn update(model: &mut Model, message: Option<Message>) {
     if let AppState::SelectTarget(ref mut s) = model.app_state {
@@ -243,7 +245,7 @@ fn update(model: &mut Model, message: Option<Message>) {
 #[derive(Debug)]
 pub struct SelectTargetState<'a> {
     pub current_pane: CurrentPane,
-    pub makefile: Box<dyn runner::Selector>, // TODO: ここをVecにする
+    pub runners: Box<dyn runner::Selector>, // TODO: ここをVecにする
     // TODO: history系どうまとめるか考える
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
@@ -254,8 +256,8 @@ pub struct SelectTargetState<'a> {
 impl PartialEq for SelectTargetState<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.current_pane == other.current_pane
-            && self.makefile.path() == other.makefile.path()
-            && self.makefile.list_commands() == other.makefile.list_commands()
+            && self.runners.path() == other.runners.path()
+            && self.runners.list_commands() == other.runners.list_commands()
             && self.search_text_area == other.search_text_area
             && self.targets_list_state == other.targets_list_state
             && self.histories == other.histories
@@ -279,7 +281,7 @@ impl SelectTargetState<'_> {
         let path = makefile.path();
         Ok(SelectTargetState {
             current_pane,
-            makefile,
+            runners: makefile,
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: Model::get_histories(path),
@@ -304,7 +306,7 @@ impl SelectTargetState<'_> {
     // TODO: This method should return Result when it fails.
     pub fn append_history(&self) -> Option<Histories> {
         match (&self.histories, self.get_selected_target()) {
-            (Some(histories), Some(target)) => histories.append(&self.makefile.path(), &target),
+            (Some(histories), Some(target)) => histories.append(&self.runners.path(), &target),
             _ => None,
         }
     }
@@ -331,12 +333,12 @@ impl SelectTargetState<'_> {
 
     pub fn narrow_down_targets(&self) -> Vec<String> {
         if self.search_text_area.0.is_empty() {
-            return self.makefile.list_commands();
+            return self.runners.list_commands();
         }
 
         let matcher = SkimMatcherV2::default();
         let mut filtered_list: Vec<(Option<i64>, String)> = self
-            .makefile
+            .runners
             .list_commands()
             .into_iter()
             .map(|target| {
@@ -362,7 +364,7 @@ impl SelectTargetState<'_> {
     pub fn get_history(&self) -> Option<Vec<String>> {
         self.histories
             .clone()
-            .and_then(|h| h.get_history(&self.makefile.path()))
+            .and_then(|h| h.get_history(&self.runners.path()))
     }
 
     fn next_target(&mut self) {
@@ -509,7 +511,7 @@ impl SelectTargetState<'_> {
     fn new_for_test() -> Self {
         SelectTargetState {
             current_pane: CurrentPane::Main,
-            makefile: Box::new(Make::new_for_test()),
+            runners: Box::new(Make::new_for_test()),
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: SelectTargetState::init_histories(vec![

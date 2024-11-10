@@ -63,7 +63,7 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
     let selecting_target =
         &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
     let (file_name, line_number) = model
-        .makefile
+        .runners
         .command_to_file_and_line_number(selecting_target);
 
     let (fg_color_, border_style) =
@@ -84,7 +84,7 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
 
     let pty_system = NativePtySystem::default();
 
-    let file_name = file_name.unwrap_or(model.makefile.path().to_string_lossy().to_string());
+    let file_name = file_name.unwrap_or(model.runners.path().to_string_lossy().to_string());
     let line_number = line_number.unwrap_or(1);
     let cmd = preview_command(file_name, line_number);
 
