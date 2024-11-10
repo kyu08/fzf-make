@@ -105,10 +105,6 @@ impl Make {
         Ok(())
     }
 
-    pub fn print(&self, command: String) -> String {
-        format!("(make) {}", command)
-    }
-
     #[cfg(test)]
     pub fn new_for_test() -> Make {
         use super::runner_type;
