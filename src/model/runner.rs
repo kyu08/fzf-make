@@ -1,5 +1,6 @@
 use super::{command, make, pnpm};
 use anyhow::Result;
+use colored::Colorize;
 use std::path::PathBuf;
 
 #[allow(dead_code)]
@@ -26,15 +27,15 @@ impl Runner {
         }
     }
 
-    pub fn show_command(&self, command: command::Command) -> String {
-        let runner_name = match self {
-            Runner::MakeCommand(_) => make::Make::runner_name(),
+    pub fn show_command(&self, command: &command::Command) {
+        let command_to_run = match self {
+            Runner::MakeCommand(_) => make::Make::command_to_run(command),
             Runner::PnpmCommand(_) => todo!(),
         };
-        format!("({}) {}", runner_name, command.name)
+        println!("{}", (command_to_run).truecolor(161, 220, 156));
     }
 
-    pub fn execute(&self, command: command::Command) -> Result<()> {
+    pub fn execute(&self, command: &command::Command) -> Result<()> {
         match self {
             Runner::MakeCommand(make) => make.execute(command),
             Runner::PnpmCommand(_) => todo!(),

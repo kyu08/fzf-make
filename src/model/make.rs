@@ -1,6 +1,5 @@
 use super::{command, file_util, target::*};
 use anyhow::{anyhow, Result};
-use colored::Colorize;
 use regex::Regex;
 use std::process;
 use std::{
@@ -17,8 +16,8 @@ pub struct Make {
 }
 
 impl Make {
-    pub fn runner_name() -> String {
-        "make".to_string()
+    pub fn command_to_run(command: &command::Command) -> String {
+        format!("make {}", command.name)
     }
 
     pub fn create_makefile() -> Result<Make> {
@@ -90,14 +89,10 @@ impl Make {
         None
     }
 
-    pub fn execute(&self, command: command::Command) -> Result<()> {
-        println!(
-            "{}",
-            ("make ".to_string() + &command.name).truecolor(161, 220, 156)
-        );
+    pub fn execute(&self, command: &command::Command) -> Result<()> {
         process::Command::new("make")
             .stdin(process::Stdio::inherit())
-            .arg(command.name)
+            .arg(&command.name)
             .spawn()
             .expect("Failed to execute process")
             .wait()

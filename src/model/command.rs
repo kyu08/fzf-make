@@ -28,6 +28,6 @@ impl Command {
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({}){}", self.runner_type, self.name)
+        write!(f, "({}) {}", self.runner_type, self.name)
     }
 }

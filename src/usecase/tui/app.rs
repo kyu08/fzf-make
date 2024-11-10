@@ -154,8 +154,8 @@ pub fn main(config: config::Config) -> Result<()> {
 
         match target {
             Some((runner, command)) => {
-                runner.show_command(command.clone());
-                let _ = runner.execute(command); // TODO: handle error
+                runner.show_command(&command);
+                let _ = runner.execute(&command); // TODO: handle error
                 Ok(())
             }
             None => Ok(()),
