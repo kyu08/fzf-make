@@ -22,6 +22,7 @@ use ratatui::{
     Terminal,
 };
 use std::{
+    collections::HashMap,
     io::{self, Stderr},
     panic,
     path::PathBuf,
@@ -160,7 +161,7 @@ pub fn main(config: config::Config) -> Result<()> {
         match target {
             Some((runner, command)) => {
                 runner.show_command(command.clone());
-                runner.execute(command);
+                let _ = runner.execute(command); // TODO: handle error
                 Ok(())
             }
             None => Ok(()),
@@ -351,28 +352,28 @@ impl SelectTargetState<'_> {
         }
     }
 
-    fn selected_target(&self) -> Option<String> {
+    fn selected_target(&self) -> Option<command::Command> {
         match self.targets_list_state.selected() {
-            Some(i) => self.narrow_down_targets().get(i).map(|s| s.to_string()),
+            Some(i) => self.narrow_down_targets().get(i).cloned(),
             None => None,
         }
     }
 
-    fn selected_history(&self) -> Option<String> {
+    fn selected_history(&self) -> Option<command::Command> {
         let history = self.get_history();
         if history.is_empty() {
             return None;
         }
 
         match self.histories_list_state.selected() {
-            Some(i) => history.get(i).map(|s| s.to_string()),
+            Some(i) => history.get(i).cloned(),
             None => None,
         }
     }
 
-    pub fn narrow_down_targets(&self) -> Vec<String> {
+    pub fn narrow_down_targets(&self) -> Vec<command::Command> {
         let commands = {
-            let mut commands: Vec<String> = Vec::new();
+            let mut commands: Vec<command::Command> = Vec::new();
             for runner in &self.runners {
                 commands = [commands, runner.list_commands()].concat();
             }
@@ -382,46 +383,56 @@ impl SelectTargetState<'_> {
         if self.search_text_area.0.is_empty() {
             return commands;
         }
+        // Store the commands in a temporary map in the form of map[command.to_string()]Command
+        let mut temporary_command_map: HashMap<String, command::Command> = HashMap::new();
+        for command in &commands {
+            temporary_command_map.insert(command.to_string(), command.clone());
+        }
 
-        let matcher = SkimMatcherV2::default();
-        let mut filtered_list: Vec<(Option<i64>, String)> = commands
-            .into_iter()
-            .map(|target| {
-                let mut key_input = self.search_text_area.0.lines().join("");
-                key_input.retain(|c| !c.is_whitespace());
-                match matcher.fuzzy_indices(&target, key_input.as_str()) {
-                    Some((score, _)) => (Some(score), target),
-                    None => (None, String::new()),
-                }
-            })
-            .filter(|(score, _)| score.is_some())
-            .collect();
+        let filtered_list: Vec<String> = {
+            let matcher = SkimMatcherV2::default();
+            let mut list: Vec<(i64, String)> = commands
+                .into_iter()
+                .filter_map(|target| {
+                    let mut key_input = self.search_text_area.0.lines().join("");
+                    key_input.retain(|c| !c.is_whitespace());
+                    matcher
+                        .fuzzy_indices(&target.to_string(), key_input.as_str())
+                        .map(|(score, _)| (score, target.to_string()))
+                })
+                .collect();
 
-        filtered_list.sort_by(|(score1, _), (score2, _)| score1.cmp(score2));
-        filtered_list.reverse();
+            list.sort_by(|(score1, _), (score2, _)| score1.cmp(score2));
+            list.reverse();
 
-        filtered_list
-            .into_iter()
-            .map(|(_, target)| target)
-            .collect()
+            list.into_iter().map(|(_, target)| target).collect()
+        };
+
+        let mut result: Vec<command::Command> = Vec::new();
+        // Get the filtered values from the temporary map
+        for c in filtered_list {
+            if let Some(command) = temporary_command_map.get(&c) {
+                result.push(command.clone());
+            }
+        }
+
+        result
     }
 
-    pub fn get_history(&self) -> Vec<String> {
-        let paths = self
-            .runners
-            .iter()
-            .map(|r| r.path())
-            .collect::<Vec<PathBuf>>();
-
-        self.histories
-            .clone()
-            .map_or(Vec::new(), |h| h.get_histories(paths))
+    pub fn get_history(&self) -> Vec<command::Command> {
+        vec![]
+        // TODO: implement when history function is implemented
         // UIに表示するためのhistory一覧を取得する関数。
         // runnersを渡すと関連するhistory一覧を返すようにするのがよさそう。
+        // let paths = self
+        //     .runners
+        //     .iter()
+        //     .map(|r| r.path())
+        //     .collect::<Vec<PathBuf>>();
         //
-        // そのときにrunnerに必要なメソッドは以下か？
-        // - パスを取得するメソッド
-        // - runner_typeを取得するメソッド
+        // self.histories
+        //     .clone()
+        //     .map_or(Vec::new(), |h| h.get_histories(paths))
     }
 
     fn next_target(&mut self) {
@@ -512,17 +523,18 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn store_history(&mut self, command: &str) {
+    fn store_history(&mut self, _command: &command::Command) {
+        // TODO: implement when history function is implemented
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
-        if let Some(h) = self.append_history(command) {
-            self.histories = Some(h)
-        };
-        if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &self.histories) {
-            // TODO: handle error
-            let _ = toml::store_history(dir, file_name, h.to_tuple());
-        };
+        // if let Some(h) = self.append_history(command) {
+        //     self.histories = Some(h)
+        // };
+        // if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &self.histories) {
+        //     // TODO: handle error
+        //     let _ = toml::store_history(dir, file_name, h.to_tuple());
+        // };
     }
 
     fn reset_selection(&mut self) {

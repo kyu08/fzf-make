@@ -6,7 +6,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// Pnpm represents a Pnpmfile.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pnpm {
     pub path: PathBuf,
@@ -24,7 +23,14 @@ impl Pnpm {
 
     pub fn to_targets_string(&self) -> Vec<String> {
         let mut result: Vec<String> = vec![];
-        result.append(&mut self.targets.0.clone());
+        result.append(
+            &mut self
+                .targets
+                .0
+                .iter()
+                .map(|c| c.clone().to_string())
+                .collect(),
+        );
         for include_file in &self.include_files {
             Vec::append(&mut result, &mut include_file.to_targets_string());
         }
@@ -45,17 +51,14 @@ impl Pnpm {
             .collect();
 
         Ok(Pnpm {
-            path,
+            path: path.clone(),
             include_files,
-            targets: Targets::new(file_content),
+            targets: Targets::new(file_content, path),
         })
     }
 
     fn specify_makefile_name(target_path: String) -> Option<PathBuf> {
-        //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Pnpmfile.
-        //  https://www.gnu.org/software/make/manual/make.html#Pnpmfile-Names
-        // It needs to enumerate `Pnpmfile` too not only `makefile` to make it work on case insensitive file system
-        let makefile_name_options = ["GNUmakefile", "makefile", "Pnpmfile"];
+        let makefile_name_options = ["package.json"];
 
         let mut temp_result = Vec::<PathBuf>::new();
         let elements = fs::read_dir(target_path.clone()).unwrap();
@@ -72,7 +75,6 @@ impl Pnpm {
             }
         }
 
-        // It needs to return "GNUmakefile", "makefile", "Pnpmfile" in order of priority
         for makefile_name_option in makefile_name_options {
             for result in &temp_result {
                 if result.to_str().unwrap().contains(makefile_name_option) {
@@ -84,50 +86,33 @@ impl Pnpm {
         None
     }
 
-    // TODO: Add unit tests
-    pub fn target_to_file_and_line_number(
-        &self,
-        target_to_search: &Option<&String>,
-    ) -> (Option<String>, Option<u32>) {
-        let mut result: (Option<String>, Option<u32>) = (None, None);
-
-        if target_to_search.is_none() {
-            return result;
-        }
-        let target_to_search = target_to_search.unwrap();
-
-        if self.targets.0.contains(target_to_search) {
-            result.0 = Some(self.path.to_string_lossy().to_string());
-        }
-
-        if let Some(line_number) = target_line_number(self.path.clone(), target_to_search.clone()) {
-            result.1 = Some(line_number)
-        }
-
-        if result.0.is_some() && result.1.is_some() {
-            return result.clone();
-        }
-
-        for include_file in &self.include_files {
-            let result =
-                include_file.target_to_file_and_line_number(&Some(&target_to_search.clone()));
-            if result.0.is_some() {
-                return result;
-            }
-        }
-
-        (None, None)
-    }
-
     #[cfg(test)]
     pub fn new_for_test() -> Pnpm {
+        use super::runner_type;
+        use crate::model::command;
+
         Pnpm {
             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
             include_files: vec![],
             targets: Targets(vec![
-                "target0".to_string(),
-                "target1".to_string(),
-                "target2".to_string(),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "target0".to_string(),
+                    PathBuf::from(""),
+                    4,
+                ),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "target1".to_string(),
+                    PathBuf::from(""),
+                    4,
+                ),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "target2".to_string(),
+                    PathBuf::from(""),
+                    4,
+                ),
             ]),
         }
     }
@@ -175,6 +160,8 @@ fn line_to_including_file_paths(line: String) -> Option<Vec<PathBuf>> {
 
 #[cfg(test)]
 mod test {
+    use crate::model::{command, runner_type};
+
     use super::*;
 
     use std::fs::{self, File};
@@ -260,7 +247,20 @@ mod test {
                 makefile: Pnpm {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
-                    targets: Targets(vec!["test".to_string(), "run".to_string()]),
+                    targets: Targets(vec![
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "test".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "run".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                    ]),
                 },
                 expect: vec!["test", "run"],
             },
@@ -274,17 +274,69 @@ mod test {
                             include_files: vec![Pnpm {
                                 path: Path::new("path2-1").to_path_buf(),
                                 include_files: vec![],
-                                targets: Targets(vec!["test2-1".to_string(), "run2-1".to_string()]),
+                                targets: Targets(vec![
+                                    command::Command::new(
+                                        runner_type::RunnerType::Make,
+                                        "test2-1".to_string(),
+                                        PathBuf::from(""),
+                                        4,
+                                    ),
+                                    command::Command::new(
+                                        runner_type::RunnerType::Make,
+                                        "run2-1".to_string(),
+                                        PathBuf::from(""),
+                                        4,
+                                    ),
+                                ]),
                             }],
-                            targets: Targets(vec!["test2".to_string(), "run2".to_string()]),
+                            targets: Targets(vec![
+                                command::Command::new(
+                                    runner_type::RunnerType::Make,
+                                    "test2".to_string(),
+                                    PathBuf::from(""),
+                                    4,
+                                ),
+                                command::Command::new(
+                                    runner_type::RunnerType::Make,
+                                    "run2".to_string(),
+                                    PathBuf::from(""),
+                                    4,
+                                ),
+                            ]),
                         },
                         Pnpm {
                             path: Path::new("path3").to_path_buf(),
                             include_files: vec![],
-                            targets: Targets(vec!["test3".to_string(), "run3".to_string()]),
+                            targets: Targets(vec![
+                                command::Command::new(
+                                    runner_type::RunnerType::Make,
+                                    "test3".to_string(),
+                                    PathBuf::from(""),
+                                    4,
+                                ),
+                                command::Command::new(
+                                    runner_type::RunnerType::Make,
+                                    "run3".to_string(),
+                                    PathBuf::from(""),
+                                    4,
+                                ),
+                            ]),
                         },
                     ],
-                    targets: Targets(vec!["test1".to_string(), "run1".to_string()]),
+                    targets: Targets(vec![
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "test1".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "run1".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                    ]),
                 },
                 expect: vec![
                     "test1", "run1", "test2", "run2", "test2-1", "run2-1", "test3", "run3",
@@ -446,4 +498,3 @@ mod test {
         }
     }
 }
-

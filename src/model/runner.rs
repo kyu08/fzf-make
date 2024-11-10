@@ -12,9 +12,9 @@ pub enum Runner {
 }
 
 impl Runner {
-    pub fn list_commands(&self) -> Vec<String> {
+    pub fn list_commands(&self) -> Vec<command::Command> {
         match self {
-            Runner::MakeCommand(make) => make.to_targets_string(),
+            Runner::MakeCommand(make) => make.to_commands(),
             Runner::PnpmCommand(_) => todo!(),
         }
     }
@@ -22,16 +22,6 @@ impl Runner {
     pub fn path(&self) -> PathBuf {
         match self {
             Runner::MakeCommand(make) => make.path.clone(),
-            Runner::PnpmCommand(_) => todo!(),
-        }
-    }
-
-    pub fn command_to_file_and_line_number(
-        &self,
-        command: &Option<&String>,
-    ) -> (Option<String>, Option<u32>) {
-        match self {
-            Runner::MakeCommand(make) => make.target_to_file_and_line_number(command),
             Runner::PnpmCommand(_) => todo!(),
         }
     }

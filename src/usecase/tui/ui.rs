@@ -1,12 +1,20 @@
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
+
+use crate::model::command;
+
 use super::app::{AppState, CurrentPane, Model, SelectTargetState};
-use portable_pty::CommandBuilder;
+use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    text::Span,
+    text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
+use tui_term::widget::PseudoTerminal;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectTarget(model) = &mut model.app_state {
@@ -56,97 +64,95 @@ fn color_and_border_style_for_selectable(
 }
 
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
-fn render_preview_block(_model: &SelectTargetState, _f: &mut Frame, _chunk: ratatui::layout::Rect) {
-    // let narrow_down_targets = model.narrow_down_targets();
-    // // TODO: 他のtargetになったままの箇所をcommandにrenameする(--helpの表示も含む)
-    //
-    // let selecting_command =
-    //     &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
-    // // modelにselecting_commandを渡すとfile_name, line_numberを返してくれる関数を用意する
-    // // TODO: そもそもlistのためにMakefileを一度parseしているハズなのでそのときにfile_nameとline_numberも一緒に持っておくべき
-    // todo!("Command対応したらここが不要になるはず");
-    // let (file_name, line_number) = model
-    //     .runners
-    //     .command_to_file_and_line_number(selecting_command);
-    //
-    // let (fg_color_, border_style) =
-    //     color_and_border_style_for_selectable(model.current_pane.is_main());
-    //
-    // let title = Line::from(" ✨ Preview ");
-    // let block = Block::default()
-    //     .borders(Borders::ALL)
-    //     .border_type(border_style)
-    //     .border_style(Style::default().fg(fg_color_))
-    //     .title(title)
-    //     .title_style(TITLE_STYLE);
-    //
-    // if !model.get_search_area_text().is_empty() && narrow_down_targets.is_empty() {
-    //     f.render_widget(block, chunk);
-    //     return;
-    // }
-    //
-    // let pty_system = NativePtySystem::default();
-    //
-    // let file_name = file_name.unwrap(); // 基本的にNoneにならないはず
-    //                                     // let file_name = file_name.unwrap_or(model.runners.path().to_string_lossy().to_string());
-    // let line_number = line_number.unwrap_or(1);
-    // let cmd = preview_command(file_name, line_number);
-    //
-    // let pair = pty_system
-    //     .openpty(PtySize {
-    //         rows: 1000,
-    //         cols: 1000,
-    //         pixel_width: 0,
-    //         pixel_height: 0,
-    //     })
-    //     .unwrap();
-    // let mut child = pair.slave.spawn_command(cmd).unwrap();
-    //
-    // drop(pair.slave);
-    //
-    // let mut reader = pair.master.try_clone_reader().unwrap();
-    // let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
-    //
-    // {
-    //     let parser = parser.clone();
-    //     std::thread::spawn(move || {
-    //         // Consume the output from the child
-    //         let mut s = String::new();
-    //         reader.read_to_string(&mut s).unwrap();
-    //         if !s.is_empty() {
-    //             let mut parser = parser.write().unwrap();
-    //             parser.process(s.as_bytes());
-    //         }
-    //     });
-    // }
-    //
-    // {
-    //     // Drop writer on purpose
-    //     let _writer = pair.master.take_writer().unwrap();
-    // }
-    //
-    // // Wait for the child to complete
-    // let _child_exit_status = child.wait().unwrap();
-    //
-    // drop(pair.master);
-    //
-    // let binding = parser.read().unwrap();
-    // let screen = binding.screen();
-    //
-    // f.render_widget(
-    //     PseudoTerminal::new(screen)
-    //         .cursor(tui_term::widget::Cursor::default().symbol(""))
-    //         .block(block),
-    //     chunk,
-    // );
+fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    let narrow_down_targets = model.narrow_down_targets();
+
+    // 今の設計だとString -> command::Commandへの復元をしなくちゃいけない、、
+    let selecting_command =
+        narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
+    let (file_name, line_number) = match selecting_command {
+        Some(command) => (Some(command.file_name.clone()), Some(command.line_number)),
+        None => (None, None),
+    };
+
+    let (fg_color_, border_style) =
+        color_and_border_style_for_selectable(model.current_pane.is_main());
+
+    let title = Line::from(" ✨ Preview ");
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(border_style)
+        .border_style(Style::default().fg(fg_color_))
+        .title(title)
+        .title_style(TITLE_STYLE);
+
+    if !model.get_search_area_text().is_empty() && narrow_down_targets.is_empty() {
+        f.render_widget(block, chunk);
+        return;
+    }
+
+    let pty_system = NativePtySystem::default();
+
+    let file_name = file_name.unwrap(); // 基本的にNoneにならないはず
+                                        // let file_name = file_name.unwrap_or(model.runners.path().to_string_lossy().to_string());
+    let line_number = line_number.unwrap_or(1);
+    let cmd = preview_command(file_name, line_number);
+
+    let pair = pty_system
+        .openpty(PtySize {
+            rows: 1000,
+            cols: 1000,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .unwrap();
+    let mut child = pair.slave.spawn_command(cmd).unwrap();
+
+    drop(pair.slave);
+
+    let mut reader = pair.master.try_clone_reader().unwrap();
+    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
+
+    {
+        let parser = parser.clone();
+        std::thread::spawn(move || {
+            // Consume the output from the child
+            let mut s = String::new();
+            reader.read_to_string(&mut s).unwrap();
+            if !s.is_empty() {
+                let mut parser = parser.write().unwrap();
+                parser.process(s.as_bytes());
+            }
+        });
+    }
+
+    {
+        // Drop writer on purpose
+        let _writer = pair.master.take_writer().unwrap();
+    }
+
+    // Wait for the child to complete
+    let _child_exit_status = child.wait().unwrap();
+
+    drop(pair.master);
+
+    let binding = parser.read().unwrap();
+    let screen = binding.screen();
+
+    f.render_widget(
+        PseudoTerminal::new(screen)
+            .cursor(tui_term::widget::Cursor::default().symbol(""))
+            .block(block),
+        chunk,
+    );
 }
 
-fn _preview_command(file_name: String, line_number: u32) -> CommandBuilder {
+fn preview_command(file_path: PathBuf, line_number: u32) -> CommandBuilder {
     let cwd = std::env::current_dir().unwrap();
     let mut cmd = CommandBuilder::new("bat");
     cmd.cwd(cwd);
     cmd.args([
-        file_name.as_str(),
+        file_path.to_string_lossy().to_string().as_str(),
         "-p",
         "--style=numbers",
         "--color=always",
@@ -231,12 +237,16 @@ fn render_hint_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratatu
     f.render_widget(key_notes_footer, chunk);
 }
 
-fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bool) -> List<'_> {
+fn targets_block(
+    title: &str,
+    narrowed_down_targets: Vec<command::Command>,
+    is_current: bool,
+) -> List<'_> {
     let (fg_color, border_style) = color_and_border_style_for_selectable(is_current);
 
     let list: Vec<ListItem> = narrowed_down_targets
         .into_iter()
-        .map(|target| ListItem::new(target).style(Style::default()))
+        .map(|target| ListItem::new(target.to_string()).style(Style::default()))
         .collect();
 
     List::new(list)

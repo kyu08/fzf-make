@@ -28,11 +28,11 @@ impl Make {
         Make::new(Path::new(&makefile_name).to_path_buf())
     }
 
-    pub fn to_targets_string(&self) -> Vec<String> {
-        let mut result: Vec<String> = vec![];
-        result.append(&mut self.targets.0.clone());
+    pub fn to_commands(&self) -> Vec<command::Command> {
+        let mut result: Vec<command::Command> = vec![];
+        result.append(&mut self.targets.0.to_vec());
         for include_file in &self.include_files {
-            Vec::append(&mut result, &mut include_file.to_targets_string());
+            Vec::append(&mut result, &mut include_file.to_commands());
         }
 
         result
@@ -51,9 +51,9 @@ impl Make {
             .collect();
 
         Ok(Make {
-            path,
+            path: path.clone(),
             include_files,
-            targets: Targets::new(file_content),
+            targets: Targets::new(file_content, path),
         })
     }
 
@@ -90,41 +90,6 @@ impl Make {
         None
     }
 
-    // TODO: Add unit tests
-    pub fn target_to_file_and_line_number(
-        &self,
-        target_to_search: &Option<&String>,
-    ) -> (Option<String>, Option<u32>) {
-        let mut result: (Option<String>, Option<u32>) = (None, None);
-
-        if target_to_search.is_none() {
-            return result;
-        }
-        let target_to_search = target_to_search.unwrap();
-
-        if self.targets.0.contains(target_to_search) {
-            result.0 = Some(self.path.to_string_lossy().to_string());
-        }
-
-        if let Some(line_number) = target_line_number(self.path.clone(), target_to_search.clone()) {
-            result.1 = Some(line_number)
-        }
-
-        if result.0.is_some() && result.1.is_some() {
-            return result.clone();
-        }
-
-        for include_file in &self.include_files {
-            let result =
-                include_file.target_to_file_and_line_number(&Some(&target_to_search.clone()));
-            if result.0.is_some() {
-                return result;
-            }
-        }
-
-        (None, None)
-    }
-
     pub fn execute(&self, command: command::Command) -> Result<()> {
         println!(
             "{}",
@@ -146,13 +111,30 @@ impl Make {
 
     #[cfg(test)]
     pub fn new_for_test() -> Make {
+        use super::runner_type;
+
         Make {
             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
             include_files: vec![],
             targets: Targets(vec![
-                "target0".to_string(),
-                "target1".to_string(),
-                "target2".to_string(),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "target0".to_string(),
+                    PathBuf::from(""),
+                    4,
+                ),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "target1".to_string(),
+                    PathBuf::from(""),
+                    4,
+                ),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "target2".to_string(),
+                    PathBuf::from(""),
+                    4,
+                ),
             ]),
         }
     }
@@ -200,6 +182,8 @@ fn line_to_including_file_paths(line: String) -> Option<Vec<PathBuf>> {
 
 #[cfg(test)]
 mod test {
+    use crate::model::runner_type;
+
     use super::*;
 
     use std::fs::{self, File};
@@ -263,11 +247,11 @@ mod test {
     }
 
     #[test]
-    fn makefile_to_targets_string_test() {
+    fn makefile_to_commands_test() {
         struct Case {
             title: &'static str,
             makefile: Make,
-            expect: Vec<&'static str>,
+            expect: Vec<command::Command>,
         }
 
         let cases = vec![
@@ -285,9 +269,35 @@ mod test {
                 makefile: Make {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
-                    targets: Targets(vec!["test".to_string(), "run".to_string()]),
+                    targets: Targets(vec![
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "test".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "run".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                    ]),
                 },
-                expect: vec!["test", "run"],
+                expect: vec![
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "test".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "run".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                ],
             },
             Case {
                 title: "makefile with nested include directive",
@@ -299,30 +309,127 @@ mod test {
                             include_files: vec![Make {
                                 path: Path::new("path2-1").to_path_buf(),
                                 include_files: vec![],
-                                targets: Targets(vec!["test2-1".to_string(), "run2-1".to_string()]),
+                                targets: Targets(vec![
+                                    command::Command::new(
+                                        runner_type::RunnerType::Make,
+                                        "test2-1".to_string(),
+                                        PathBuf::from(""),
+                                        4,
+                                    ),
+                                    command::Command::new(
+                                        runner_type::RunnerType::Make,
+                                        "run2-1".to_string(),
+                                        PathBuf::from(""),
+                                        4,
+                                    ),
+                                ]),
                             }],
-                            targets: Targets(vec!["test2".to_string(), "run2".to_string()]),
+                            targets: Targets(vec![
+                                command::Command::new(
+                                    runner_type::RunnerType::Make,
+                                    "test2".to_string(),
+                                    PathBuf::from(""),
+                                    4,
+                                ),
+                                command::Command::new(
+                                    runner_type::RunnerType::Make,
+                                    "run2".to_string(),
+                                    PathBuf::from(""),
+                                    4,
+                                ),
+                            ]),
                         },
                         Make {
                             path: Path::new("path3").to_path_buf(),
                             include_files: vec![],
-                            targets: Targets(vec!["test3".to_string(), "run3".to_string()]),
+                            targets: Targets(vec![
+                                command::Command::new(
+                                    runner_type::RunnerType::Make,
+                                    "test3".to_string(),
+                                    PathBuf::from(""),
+                                    4,
+                                ),
+                                command::Command::new(
+                                    runner_type::RunnerType::Make,
+                                    "run3".to_string(),
+                                    PathBuf::from(""),
+                                    4,
+                                ),
+                            ]),
                         },
                     ],
-                    targets: Targets(vec!["test1".to_string(), "run1".to_string()]),
+                    targets: Targets(vec![
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "test1".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "run1".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                    ]),
                 },
                 expect: vec![
-                    "test1", "run1", "test2", "run2", "test2-1", "run2-1", "test3", "run3",
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "test1".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "run1".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "test2".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "run2".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "test2-1".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "run2-1".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "test3".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "run3".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
                 ],
             },
         ];
 
         for case in cases {
-            let expect_string: Vec<String> = case.expect.iter().map(|e| e.to_string()).collect();
-
             assert_eq!(
-                expect_string,
-                case.makefile.to_targets_string(),
+                case.expect,
+                case.makefile.to_commands(),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             )
