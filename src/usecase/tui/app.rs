@@ -334,16 +334,17 @@ impl SelectTargetState<'_> {
         }
     }
 
+    // TODO(#321): comment in this method
     // TODO: This method should return Result when it fails.
-    pub fn append_history(&self, command: &str) -> Option<Histories> {
-        match &self.histories {
-            Some(histories) => {
-                histories.append(&self.runners[0].path(), command)
-                // TODO(#321): For now, it is &self.runners[0] to pass the compilation, but it should be taken from runner::Command::path()
-            }
-            _ => None,
-        }
-    }
+    // pub fn append_history(&self, command: &str) -> Option<Histories> {
+    //     match &self.histories {
+    //         Some(histories) => {
+    //             histories.append(&self.runners[0].path(), command)
+    //             // TODO(#321): For now, it is &self.runners[0] to pass the compilation, but it should be taken from runner::Command::path()
+    //         }
+    //         _ => None,
+    //     }
+    // }
 
     fn selected_target(&self) -> Option<command::Command> {
         match self.targets_list_state.selected() {
