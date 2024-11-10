@@ -28,8 +28,15 @@ impl Usecase for Repeat {
             Ok(model) => match model.app_state {
                 AppState::SelectTarget(model) => {
                     match model.histories.map(|h| {
-                        h.get_latest_target(&model.runners.path())
-                            .map(execute_make_target)
+                        // todo!("ここの仕様どうする？");
+                        // 1. historyのうちcwdから始まるものを探してきて最新を実行（今の情報だと最新かどうかわからんわ）（履歴ファイルの中の並び順で時系列を表現する？e.g.一番上が最新）
+                        // 2. 複数候補がありそうなときは選択肢を表示して選ばせる?
+                        match &model.runners.first() {
+                            Some(runner) => {
+                                h.get_latest_target(&runner.path()).map(execute_make_target)
+                            }
+                            None => None,
+                        }
                     }) {
                         Some(Some(_)) => Ok(()),
                         _ => Err(anyhow!("No target found")),

@@ -17,6 +17,8 @@ pub trait Selector: std::fmt::Debug {
         &self,
         command: &Option<&String>,
     ) -> (Option<String>, Option<u32>);
+    // TODO: Implement this method.
+    // fn list_histories(&self) -> Vec<String>;
 }
 
 pub trait Executor {

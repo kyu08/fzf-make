@@ -14,11 +14,21 @@ impl Histories {
         }
     }
 
-    pub fn get_history(&self, path: &PathBuf) -> Option<Vec<String>> {
-        self.histories
-            .iter()
-            .find(|h| h.path == *path)
-            .map(|h| h.executed_targets.clone())
+    pub fn get_histories(&self, paths: Vec<PathBuf>) -> Vec<String> {
+        let mut histories: Vec<String> = Vec::new();
+
+        for path in paths {
+            let executed_targets = self
+                .histories
+                .iter()
+                .find(|h| h.path == path)
+                .map(|h| h.executed_targets.clone())
+                .unwrap_or(Vec::new());
+            histories = [histories, executed_targets].concat();
+        }
+
+        todo!("ここの返り値をVec<runner::Command>にする必要がある");
+        histories
     }
 
     pub fn append(&self, path: &PathBuf, executed_target: &str) -> Option<Self> {
@@ -75,6 +85,7 @@ impl Histories {
     }
 }
 
+// TODO: should return Result not Option(returns when it fails to get the home dir)
 pub fn history_file_path() -> Option<(PathBuf, String)> {
     const HISTORY_FILE_NAME: &str = "history.toml";
 
@@ -99,6 +110,8 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
 #[derive(Clone, PartialEq, Debug)]
 struct History {
     // TODO: runner_typeを追加する
+    // TODO: writeができることをテスト
+    // TODO: readができることをテスト
     path: PathBuf,
     executed_targets: Vec<String>,
 }

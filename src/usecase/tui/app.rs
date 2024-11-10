@@ -341,15 +341,14 @@ impl SelectTargetState<'_> {
     }
 
     fn selected_history(&self) -> Option<String> {
-        match self.get_history() {
+        let history = self.get_history();
+        if history.is_empty() {
+            return None;
+        }
+
+        match self.histories_list_state.selected() {
+            Some(i) => history.get(i).map(|s| s.to_string()),
             None => None,
-            Some(h) => match h.len() {
-                0 => None,
-                _ => match self.histories_list_state.selected() {
-                    Some(i) => h.get(i).map(|s| s.to_string()),
-                    None => None,
-                },
-            },
         }
     }
 
@@ -389,10 +388,22 @@ impl SelectTargetState<'_> {
             .collect()
     }
 
-    pub fn get_history(&self) -> Option<Vec<String>> {
+    pub fn get_history(&self) -> Vec<String> {
+        let paths = self
+            .runners
+            .iter()
+            .map(|r| r.path())
+            .collect::<Vec<PathBuf>>();
+
         self.histories
             .clone()
-            .and_then(|h| h.get_history(&self.runners.path()))
+            .map_or(Vec::new(), |h| h.get_histories(paths))
+        // UIに表示するためのhistory一覧を取得する関数。
+        // runnersを渡すと関連するhistory一覧を返すようにするのがよさそう。
+        //
+        // そのときにrunnerに必要なメソッドは以下か？
+        // - パスを取得するメソッド
+        // - runner_typeを取得するメソッド
     }
 
     fn next_target(&mut self) {
@@ -434,18 +445,11 @@ impl SelectTargetState<'_> {
     }
 
     fn next_history(&mut self) {
-        let history_list = match self.get_history() {
-            None => {
-                self.histories_list_state.select(None);
-                return;
-            }
-            Some(h) => {
-                if h.is_empty() {
-                    self.histories_list_state.select(None);
-                    return;
-                }
-                h
-            }
+        // TODO: refactor
+        let history_list = self.get_history();
+        if history_list.is_empty() {
+            self.histories_list_state.select(None);
+            return;
         };
 
         let i = match self.histories_list_state.selected() {
@@ -462,31 +466,26 @@ impl SelectTargetState<'_> {
     }
 
     fn previous_history(&mut self) {
-        let history_list = match self.get_history() {
-            None => {
+        let history_list_len = self.get_history().len();
+        match history_list_len {
+            0 => {
                 self.histories_list_state.select(None);
                 return;
             }
-            Some(h) => {
-                if h.is_empty() {
-                    self.histories_list_state.select(None);
-                    return;
-                }
-                h
+            _ => {
+                let i = match self.histories_list_state.selected() {
+                    Some(i) => {
+                        if i == 0 {
+                            history_list_len - 1
+                        } else {
+                            i - 1
+                        }
+                    }
+                    None => 0,
+                };
+                self.histories_list_state.select(Some(i));
             }
         };
-
-        let i = match self.histories_list_state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    history_list.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.histories_list_state.select(Some(i));
     }
 
     fn handle_key_input(&mut self, key_event: KeyEvent) {
@@ -535,7 +534,7 @@ impl SelectTargetState<'_> {
     fn new_for_test() -> Self {
         SelectTargetState {
             current_pane: CurrentPane::Main,
-            runners: Box::new(Make::new_for_test()),
+            runners: vec![Box::new(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: SelectTargetState::init_histories(vec![

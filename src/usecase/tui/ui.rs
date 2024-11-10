@@ -60,11 +60,14 @@ fn color_and_border_style_for_selectable(
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
 fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let narrow_down_targets = model.narrow_down_targets();
-    let selecting_target =
+    // TODO: 他のtargetになったままの箇所をcommandにrenameする(--helpの表示も含む)
+
+    let selecting_command =
         &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
+    // modelにselecting_commandを渡すとfile_name, line_numberを返してくれる関数を用意する
     let (file_name, line_number) = model
         .runners
-        .command_to_file_and_line_number(selecting_target);
+        .command_to_file_and_line_number(selecting_command);
 
     let (fg_color_, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
@@ -201,7 +204,7 @@ fn render_history_block(
     f.render_stateful_widget(
         targets_block(
             " 📚 History ",
-            model.get_history().unwrap_or_default(),
+            model.get_histories().unwrap_or_default(),
             model.current_pane.is_history(),
         ),
         chunk,
