@@ -2,11 +2,6 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-pub enum RunnerType {
-    Make,
-    Pnpm,
-}
-
 // TODO: Use associated constants if possible.
 // ref: https://doc.rust-lang.org/reference/items/associated-items.html#associated-constants
 pub trait Runner
@@ -26,6 +21,7 @@ pub trait Selector: std::fmt::Debug {
     // fn list_histories(&self) -> Vec<String>;
 }
 
-pub trait Executor {
+pub trait Executor: std::fmt::Debug {
+    fn show_command(&self) -> String;
     fn execute(&self) -> Result<()>;
 }

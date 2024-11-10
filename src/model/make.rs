@@ -1,6 +1,6 @@
 use super::{
     file_util,
-    runner::{Executor, Selector},
+    runner::{Executor, Runner, Selector},
     target::*,
 };
 use anyhow::{anyhow, Result};
@@ -156,17 +156,23 @@ impl Selector for Make {
     }
 }
 
+impl Runner for Make {}
+
 // impl Clone for Make {
 //     fn clone(&self) -> Self {
 //         self.clone()
 //     }
 // }
 
-// impl Executor for Make {
-//     fn execute(&self) -> Result<()> {
-//         Ok(())
-//     }
-// }
+impl Executor for Make {
+    fn execute(&self) -> Result<()> {
+        Ok(())
+    }
+
+    fn show_command(&self) -> String {
+        todo!()
+    }
+}
 
 /// The path should be relative path from current directory where make command is executed.
 /// So the path can be treated as it is.

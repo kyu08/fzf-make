@@ -2,7 +2,7 @@ use crate::usecase::usecase_main::Usecase;
 use anyhow::{anyhow, Result};
 
 use super::{
-    execute_make_command::execute_make_target,
+    execute_make_command::execute_make_command,
     tui::{
         app::{AppState, Model},
         config,
@@ -32,8 +32,11 @@ impl Usecase for Repeat {
                         // 1. Find the latest history that starts with cwd and execute it (need to save information about which one is the latest)
                         // 2. When there are multiple candidates, display the choices and let the user choose?
                         match &model.runners.first() {
-                            Some(runner) => {
-                                h.get_latest_target(&runner.path()).map(execute_make_target)
+                            Some(_runner) => {
+                                None::<String> // TODO: Fix this when history function is implemented
+                                               // h
+                                               // .get_latest_target(&runner.path())
+                                               // .map(execute_make_command),
                             }
                             None => None,
                         }
