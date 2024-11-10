@@ -37,13 +37,7 @@ use tui_textarea::TextArea;
 #[derive(PartialEq, Debug)]
 pub enum AppState<'a> {
     SelectTarget(SelectTargetState<'a>),
-    ExecuteTarget(ExecuteTargetState), // TODO: ここにrunner::Executor traitを渡すか、Command structを渡すか
-    // ## runner:: Executor
-    // pros: 凝集度が上がる
-    // cons: Making impossible states impossibleの反対では？
-    // ## Command struct
-    // pros:
-    // cons:
+    ExecuteTarget(ExecuteTargetState),
     ShouldQuit,
 }
 
@@ -270,7 +264,6 @@ fn update(model: &mut Model, message: Option<Message>) {
 pub struct SelectTargetState<'a> {
     pub current_pane: CurrentPane,
     pub runners: Vec<runner::Runner>,
-    // TODO: history系どうまとめるか考える
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
     pub histories: Option<Histories>,
@@ -314,12 +307,12 @@ impl SelectTargetState<'_> {
         } else {
             CurrentPane::Main
         };
-        let runner2 = { runner::Runner::MakeCommand(makefile) };
+        let runner = { runner::Runner::MakeCommand(makefile) };
 
-        let path = runner2.path();
+        let path = runner.path();
         Ok(SelectTargetState {
             current_pane,
-            runners: vec![runner2],
+            runners: vec![runner],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: Model::get_histories(path),
@@ -346,7 +339,7 @@ impl SelectTargetState<'_> {
         match &self.histories {
             Some(histories) => {
                 histories.append(&self.runners[0].path(), command)
-                // todo!("とりあえずコンパイルを通すために&self.runners[0]としているがrunner::Command::path()からとるべき");
+                // TODO(#321): For now, it is &self.runners[0] to pass the compilation, but it should be taken from runner::Command::path()
             }
             _ => None,
         }
@@ -383,12 +376,14 @@ impl SelectTargetState<'_> {
         if self.search_text_area.0.is_empty() {
             return commands;
         }
+
         // Store the commands in a temporary map in the form of map[command.to_string()]Command
         let mut temporary_command_map: HashMap<String, command::Command> = HashMap::new();
         for command in &commands {
             temporary_command_map.insert(command.to_string(), command.clone());
         }
 
+        // filter the commands using fuzzy finder based on the user input
         let filtered_list: Vec<String> = {
             let matcher = SkimMatcherV2::default();
             let mut list: Vec<(i64, String)> = commands
@@ -421,7 +416,7 @@ impl SelectTargetState<'_> {
 
     pub fn get_history(&self) -> Vec<command::Command> {
         vec![]
-        // TODO: implement when history function is implemented
+        // TODO(#321): implement when history function is implemented
         // UIに表示するためのhistory一覧を取得する関数。
         // runnersを渡すと関連するhistory一覧を返すようにするのがよさそう。
         // let paths = self
@@ -474,7 +469,6 @@ impl SelectTargetState<'_> {
     }
 
     fn next_history(&mut self) {
-        // TODO: refactor
         let history_list = self.get_history();
         if history_list.is_empty() {
             self.histories_list_state.select(None);
@@ -524,7 +518,7 @@ impl SelectTargetState<'_> {
     }
 
     fn store_history(&mut self, _command: &command::Command) {
-        // TODO: implement when history function is implemented
+        // TODO(#321): implement when history function is implemented
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
@@ -576,18 +570,12 @@ impl SelectTargetState<'_> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ExecuteTargetState {
     /// It is possible to have one concrete type like Command struct here.
     /// But from the perspective of simpleness of code base, this field has trait object.
     executor: runner::Runner,
     command: command::Command,
-}
-
-impl PartialEq for ExecuteTargetState {
-    fn eq(&self, _: &Self) -> bool {
-        true // TODO: fix
-    }
 }
 
 impl ExecuteTargetState {
@@ -624,6 +612,8 @@ impl<'a> PartialEq for TextArea_<'a> {
 
 #[cfg(test)]
 mod test {
+    use crate::model::runner_type;
+
     use super::*;
     use std::env;
 
@@ -764,35 +754,51 @@ mod test {
                     }),
                 },
             },
-            // Case {
-            //     title: "ExecuteTarget(Main)",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::ExecuteTarget),
-            //     expect_model: Model {
-            //         app_state: AppState::ExecuteTarget("target0".to_string()),
-            //     },
-            // },
-            // Case {
-            //     title: "ExecuteTarget(History)",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(1),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::ExecuteTarget),
-            //     expect_model: Model {
-            //         app_state: AppState::ExecuteTarget("history1".to_string()),
-            //     },
-            // },
+            Case {
+                title: "ExecuteTarget(Main)",
+                model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+                message: Some(Message::ExecuteTarget),
+                expect_model: Model {
+                    app_state: AppState::ExecuteTarget(ExecuteTargetState::new(
+                        runner::Runner::MakeCommand(Make::new_for_test()),
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "target0".to_string(),
+                            PathBuf::new(),
+                            0,
+                        )
+                    )),
+                },
+            },
+            Case {
+                title: "ExecuteTarget(History)",
+                model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        histories_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+                message: Some(Message::ExecuteTarget),
+                expect_model: Model {
+                    app_state: AppState::ExecuteTarget(ExecuteTargetState::new(
+                        runner::Runner::MakeCommand(Make::new_for_test()),
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "history1".to_string(),
+                            PathBuf::new(),
+                            0,
+                        )
+                    )),
+                },
+            },
             Case {
                 title: "Selecting position should be reset if some kind of char
                     was inputted when the target located not in top of the targets",

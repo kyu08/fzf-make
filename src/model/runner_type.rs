@@ -1,5 +1,6 @@
 use std::fmt;
 
+// TODO(#321): remove
 #[allow(dead_code)]
 #[derive(PartialEq, Debug, Clone)]
 pub enum RunnerType {

@@ -25,12 +25,12 @@ impl Usecase for Repeat {
             Ok(model) => match model.app_state {
                 AppState::SelectTarget(model) => {
                     match model.histories.map(|_h| {
-                        // TODO: Decide the specification of this.
+                        // TODO(#321): Decide the specification of this.
                         // 1. Find the latest history that starts with cwd and execute it (need to save information about which one is the latest)
                         // 2. When there are multiple candidates, display the choices and let the user choose?
                         match &model.runners.first() {
                             Some(_runner) => {
-                                None::<String> // TODO: Fix this when history function is implemented
+                                None::<String> // TODO(#321): Fix this when history function is implemented
                                                // h
                                                // .get_latest_target(&runner.path())
                                                // .map(execute_make_command),

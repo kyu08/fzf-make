@@ -12,7 +12,7 @@ pub struct Pnpm {
     include_files: Vec<Pnpm>,
     targets: Targets,
 }
-
+// TODO(#321): delete unnecessary implementation
 impl Pnpm {
     pub fn create_makefile() -> Result<Pnpm> {
         let Some(makefile_name) = Pnpm::specify_makefile_name(".".to_string()) else {

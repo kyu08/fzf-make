@@ -42,6 +42,7 @@ pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
     Ok(result)
 }
 
+#[allow(dead_code)] // TODO(#321): remove
 pub fn store_history(
     history_directory_path: PathBuf,
     history_file_name: String,
