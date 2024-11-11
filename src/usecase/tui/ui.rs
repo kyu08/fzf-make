@@ -1,3 +1,10 @@
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
+
+use crate::model::command;
+
 use super::app::{AppState, CurrentPane, Model, SelectTargetState};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
@@ -7,7 +14,6 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
-use std::sync::{Arc, RwLock};
 use tui_term::widget::PseudoTerminal;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
@@ -60,11 +66,9 @@ fn color_and_border_style_for_selectable(
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
 fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let narrow_down_targets = model.narrow_down_targets();
-    let selecting_target =
-        &narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
-    let (file_name, line_number) = model
-        .makefile
-        .target_to_file_and_line_number(selecting_target);
+
+    let selecting_command =
+        narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
 
     let (fg_color_, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
@@ -83,11 +87,12 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
     }
 
     let pty_system = NativePtySystem::default();
-
-    let file_name = file_name.unwrap_or(model.makefile.path.to_string_lossy().to_string());
-    let line_number = line_number.unwrap_or(1);
-    let cmd = preview_command(file_name, line_number);
-
+    let cmd = match selecting_command {
+        Some(command) => preview_command(command.file_name.clone(), command.line_number),
+        None => {
+            return;
+        }
+    };
     let pair = pty_system
         .openpty(PtySize {
             rows: 1000,
@@ -137,12 +142,12 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
     );
 }
 
-fn preview_command(file_name: String, line_number: u32) -> CommandBuilder {
+fn preview_command(file_path: PathBuf, line_number: u32) -> CommandBuilder {
     let cwd = std::env::current_dir().unwrap();
     let mut cmd = CommandBuilder::new("bat");
     cmd.cwd(cwd);
     cmd.args([
-        file_name.as_str(),
+        file_path.to_string_lossy().to_string().as_str(),
         "-p",
         "--style=numbers",
         "--color=always",
@@ -201,7 +206,7 @@ fn render_history_block(
     f.render_stateful_widget(
         targets_block(
             " 📚 History ",
-            model.get_history().unwrap_or_default(),
+            model.get_history(),
             model.current_pane.is_history(),
         ),
         chunk,
@@ -227,12 +232,16 @@ fn render_hint_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratatu
     f.render_widget(key_notes_footer, chunk);
 }
 
-fn targets_block(title: &str, narrowed_down_targets: Vec<String>, is_current: bool) -> List<'_> {
+fn targets_block(
+    title: &str,
+    narrowed_down_targets: Vec<command::Command>,
+    is_current: bool,
+) -> List<'_> {
     let (fg_color, border_style) = color_and_border_style_for_selectable(is_current);
 
     let list: Vec<ListItem> = narrowed_down_targets
         .into_iter()
-        .map(|target| ListItem::new(target).style(Style::default()))
+        .map(|target| ListItem::new(target.to_string()).style(Style::default()))
         .collect();
 
     List::new(list)

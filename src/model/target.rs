@@ -2,17 +2,17 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
-use super::file_util;
+use super::{command, runner_type};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Targets(pub Vec<String>);
+pub struct Targets(pub Vec<command::Command>);
 
 impl Targets {
-    pub fn new(content: String) -> Targets {
-        let mut result: Vec<String> = Vec::new();
+    pub fn new(content: String, path: PathBuf) -> Targets {
+        let mut result: Vec<command::Command> = Vec::new();
         let mut define_block_depth = 0;
 
-        for line in content.lines() {
+        for (i, line) in content.lines().enumerate() {
             match get_line_type(line) {
                 LineType::DefineStart => {
                     define_block_depth += 1;
@@ -23,7 +23,13 @@ impl Targets {
                 LineType::Normal => {
                     if define_block_depth == 0 {
                         if let Some(t) = line_to_target(line.to_string()) {
-                            result.push(t);
+                            let command = command::Command::new(
+                                runner_type::RunnerType::Make,
+                                t,
+                                path.clone(),
+                                i as u32 + 1,
+                            );
+                            result.push(command);
                         }
                     }
                 }
@@ -64,23 +70,6 @@ fn get_line_type(line: &str) -> LineType {
         },
         None => LineType::Normal,
     }
-}
-
-pub fn target_line_number(path: PathBuf, target_to_search: String) -> Option<u32> {
-    let content = match file_util::path_to_content(path) {
-        Ok(c) => c,
-        Err(_) => return None,
-    };
-
-    for (index, line) in content.lines().enumerate() {
-        if let Some(t) = line_to_target(line.to_string()) {
-            if t == target_to_search {
-                return Some(index as u32 + 1); // Line number starts from 1
-            }
-        }
-    }
-
-    None
 }
 
 fn line_to_target(line: String) -> Option<String> {
@@ -129,11 +118,36 @@ test: # run test
 echo:
 	@echo good",
                 expect: Targets(vec![
-                    "run".to_string(),
-                    "build".to_string(),
-                    "check".to_string(),
-                    "test".to_string(),
-                    "echo".to_string(),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "run".to_string(),
+                        PathBuf::from(""),
+                        3,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "build".to_string(),
+                        PathBuf::from(""),
+                        6,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "check".to_string(),
+                        PathBuf::from(""),
+                        9,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "test".to_string(),
+                        PathBuf::from(""),
+                        13,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "echo".to_string(),
+                        PathBuf::from(""),
+                        16,
+                    ),
                 ]),
             },
             Case {
@@ -147,7 +161,20 @@ clone:
 
 build:
 		@cargo build",
-                expect: Targets(vec!["clone".to_string(), "build".to_string()]),
+                expect: Targets(vec![
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "clone".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "build".to_string(),
+                        PathBuf::from(""),
+                        7,
+                    ),
+                ]),
             },
             Case {
                 title: "invalid format",
@@ -167,7 +194,20 @@ echo \"this is a trap: not good\"
 endef
 my_script:
 	$(file >my_script,$(script-block))\n",
-                expect: Targets(vec!["all".to_string(), "my_script".to_string()]),
+                expect: Targets(vec![
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "all".to_string(),
+                        PathBuf::from(""),
+                        3,
+                    ),
+                    command::Command::new(
+                        runner_type::RunnerType::Make,
+                        "my_script".to_string(),
+                        PathBuf::from(""),
+                        9,
+                    ),
+                ]),
             },
             Case {
                 title: "nested define",
@@ -198,7 +238,7 @@ endef
         for case in cases {
             assert_eq!(
                 case.expect,
-                Targets::new(case.contents.to_string()),
+                Targets::new(case.contents.to_string(), PathBuf::from("")),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
