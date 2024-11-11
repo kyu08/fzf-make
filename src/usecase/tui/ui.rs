@@ -69,10 +69,6 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
 
     let selecting_command =
         narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
-    let (file_name, line_number) = match selecting_command {
-        Some(command) => (Some(command.file_name.clone()), Some(command.line_number)),
-        None => (None, None),
-    };
 
     let (fg_color_, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
@@ -91,11 +87,12 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
     }
 
     let pty_system = NativePtySystem::default();
-
-    let file_name = file_name.unwrap();
-    let line_number = line_number.unwrap_or(1);
-    let cmd = preview_command(file_name, line_number);
-
+    let cmd = match selecting_command {
+        Some(command) => preview_command(command.file_name.clone(), command.line_number),
+        None => {
+            return;
+        }
+    };
     let pair = pty_system
         .openpty(PtySize {
             rows: 1000,
