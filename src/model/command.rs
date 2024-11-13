@@ -1,8 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::{fmt, path::PathBuf};
 
 use super::runner_type;
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct Command {
     pub runner_type: runner_type::RunnerType,
     pub name: String,

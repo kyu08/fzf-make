@@ -6,13 +6,15 @@ use std::{
     path::PathBuf,
 };
 
+use crate::model::command;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Histories {
     history: Vec<History>,
 }
 
 impl Histories {
-    fn from(histories: Vec<(PathBuf, Vec<String>)>) -> Self {
+    fn from(histories: Vec<(PathBuf, Vec<command::Command>)>) -> Self {
         let mut result: Vec<History> = vec![];
         for h in histories {
             result.push(History {
@@ -28,13 +30,13 @@ impl Histories {
 #[serde(rename_all = "kebab-case")]
 struct History {
     path: String,
-    executed_targets: Vec<String>,
+    executed_targets: Vec<command::Command>,
 }
 
-pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
+pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<command::Command>)>> {
     let histories: Histories = toml::from_str(&content)?;
 
-    let mut result: Vec<(PathBuf, Vec<String>)> = Vec::new();
+    let mut result: Vec<(PathBuf, Vec<command::Command>)> = Vec::new();
 
     for history in histories.history {
         result.push((PathBuf::from(history.path), history.executed_targets));
@@ -46,7 +48,7 @@ pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<String>)>> {
 pub fn store_history(
     history_directory_path: PathBuf,
     history_file_name: String,
-    histories_tuple: Vec<(PathBuf, Vec<String>)>,
+    histories_tuple: Vec<(PathBuf, Vec<command::Command>)>,
 ) -> Result<()> {
     let histories = Histories::from(histories_tuple);
 
@@ -63,6 +65,8 @@ pub fn store_history(
 
 #[cfg(test)]
 mod test {
+    use crate::model::runner_type;
+
     use super::*;
     use anyhow::Result;
 
@@ -71,7 +75,7 @@ mod test {
         struct Case {
             title: &'static str,
             content: String,
-            expect: Result<Vec<(PathBuf, Vec<String>)>>,
+            expect: Result<Vec<(PathBuf, Vec<command::Command>)>>,
         }
         let cases = vec![
             Case {
@@ -90,14 +94,42 @@ executed-targets = ["run", "echo1"]
                     (
                         PathBuf::from("/Users/user/code/fzf-make".to_string()),
                         vec![
-                            "test".to_string(),
-                            "check".to_string(),
-                            "spell-check".to_string(),
+                            command::Command::new(
+                                runner_type::RunnerType::Make,
+                                "target-a".to_string(),
+                                PathBuf::from("Makefile"),
+                                1,
+                            ),
+                            command::Command::new(
+                                runner_type::RunnerType::Make,
+                                "check".to_string(),
+                                PathBuf::from("Makefile"),
+                                4,
+                            ),
+                            command::Command::new(
+                                runner_type::RunnerType::Make,
+                                "spell-check".to_string(),
+                                PathBuf::from("Makefile"),
+                                4,
+                            ),
                         ],
                     ),
                     (
                         PathBuf::from("/Users/user/code/golang/go-playground".to_string()),
-                        vec!["run".to_string(), "echo1".to_string()],
+                        vec![
+                            command::Command::new(
+                                runner_type::RunnerType::Make,
+                                "run".to_string(),
+                                PathBuf::from("Makefile"),
+                                1,
+                            ),
+                            command::Command::new(
+                                runner_type::RunnerType::Make,
+                                "echo1".to_string(),
+                                PathBuf::from("Makefile"),
+                                4,
+                            ),
+                        ],
                     ),
                 ]),
             },

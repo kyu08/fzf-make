@@ -23,23 +23,13 @@ impl Usecase for Repeat {
         match Model::new(config::Config::default()) {
             Err(e) => Err(e),
             Ok(model) => match model.app_state {
-                AppState::SelectTarget(model) => {
-                    match model.histories.map(|_h| {
-                        // TODO(#321): Decide the specification of this.
-                        // 1. Find the latest history that starts with cwd and execute it (need to save information about which one is the latest)
-                        // 2. When there are multiple candidates, display the choices and let the user choose?
-                        match &model.runners.first() {
-                            Some(_runner) => {
-                                None::<String> // TODO(#321): Fix this when history function is implemented
-                                               // h
-                                               // .get_latest_target(&runner.path())
-                                               // .map(execute_make_command),
-                            }
-                            None => None,
-                        }
-                    }) {
-                        Some(Some(_)) => Ok(()),
-                        _ => Err(anyhow!("No target found")),
+                AppState::SelectTarget(state) => {
+                    match (
+                        state.runners.first(),
+                        state.histories.get_latest_target(&state.current_dir),
+                    ) {
+                        (Some(r), Some(h)) => r.execute(h),
+                        (_, _) => Err(anyhow!("fzf-make has not been executed in this path yet.")),
                     }
                 }
                 _ => Err(anyhow!("Invalid state")),

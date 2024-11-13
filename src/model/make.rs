@@ -69,6 +69,7 @@ impl Make {
             let file_name_string = file_name.to_str().unwrap();
             if makefile_name_options.contains(&file_name_string) {
                 let current_dir = match env::current_dir() {
+                    // TODO: use model.current_dir
                     Err(_) => return None,
                     Ok(d) => d,
                 };

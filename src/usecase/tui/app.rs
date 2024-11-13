@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{config, ui::ui};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
     execute,
@@ -23,6 +23,7 @@ use ratatui::{
 };
 use std::{
     collections::HashMap,
+    env,
     io::{self, Stderr},
     panic,
     path::PathBuf,
@@ -81,18 +82,22 @@ impl Model<'_> {
         }
     }
 
-    fn get_histories(makefile_path: PathBuf) -> Option<Histories> {
-        history_file_path().map(|(history_file_dir, history_file_name)| {
-            let content =
-                match path_to_content::path_to_content(history_file_dir.join(history_file_name)) {
+    fn get_histories(makefile_path: PathBuf) -> Histories {
+        match history_file_path() {
+            Some((history_file_dir, history_file_name)) => {
+                let content = match path_to_content::path_to_content(
+                    history_file_dir.join(history_file_name),
+                ) {
                     Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
                     Ok(c) => c,
                 };
-            // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
-            let histories = toml::parse_history(content.to_string()).unwrap_or_default();
+                // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
+                let histories = toml::parse_history(content.to_string()).unwrap_or_default();
 
-            Histories::new(makefile_path, histories)
-        })
+                Histories::new(makefile_path, histories)
+            }
+            None => Histories::default(makefile_path),
+        }
     }
 
     fn transition_to_execute_target_state(
@@ -262,11 +267,12 @@ fn update(model: &mut Model, message: Option<Message>) {
 
 #[derive(Debug)]
 pub struct SelectTargetState<'a> {
+    pub current_dir: PathBuf,
     pub current_pane: CurrentPane,
     pub runners: Vec<runner::Runner>,
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
-    pub histories: Option<Histories>,
+    pub histories: Histories,
     pub histories_list_state: ListState,
 }
 
@@ -297,6 +303,10 @@ impl PartialEq for SelectTargetState<'_> {
 
 impl SelectTargetState<'_> {
     pub fn new(config: config::Config) -> Result<Self> {
+        let current_dir = match env::current_dir() {
+            Ok(d) => d,
+            Err(e) => bail!("Failed to get current directory: {}", e),
+        };
         let makefile = match Make::create_makefile() {
             Err(e) => return Err(e),
             Ok(f) => f,
@@ -311,6 +321,7 @@ impl SelectTargetState<'_> {
 
         let path = runner.path();
         Ok(SelectTargetState {
+            current_dir,
             current_pane,
             runners: vec![runner],
             search_text_area: TextArea_(TextArea::default()),
@@ -416,6 +427,8 @@ impl SelectTargetState<'_> {
     }
 
     pub fn get_history(&self) -> Vec<command::Command> {
+        // TODO(#321): この関数内で
+        // historyにあるcommandをself.runnersから取得するよう(行数やファイル名を最新状態からとってこないとちゃんとプレビュー表示できないため)(e.g. ファイル行番号が変わってる場合プレビューがずれる)
         vec![]
         // TODO(#321): implement when history function is implemented
         // UIに表示するためのhistory一覧を取得する関数。
@@ -544,27 +557,45 @@ impl SelectTargetState<'_> {
     }
 
     #[cfg(test)]
-    fn init_histories(history_targets: Vec<String>) -> Option<Histories> {
+    fn init_histories(history_targets: Vec<command::Command>) -> Histories {
         use std::{env, path::Path};
 
         let makefile_path = env::current_dir().unwrap().join(Path::new("Test.mk"));
-        Some(Histories::new(
+        Histories::new(
             makefile_path.clone(),
             vec![(makefile_path, history_targets)],
-        ))
+        )
     }
 
     #[cfg(test)]
     fn new_for_test() -> Self {
+        use crate::model::runner_type;
+
         SelectTargetState {
+            current_dir: env::current_dir().unwrap(),
             current_pane: CurrentPane::Main,
             runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: SelectTargetState::init_histories(vec![
-                "history0".to_string(),
-                "history1".to_string(),
-                "history2".to_string(),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "history0".to_string(),
+                    PathBuf::from("Makefile"),
+                    1,
+                ),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "history1".to_string(),
+                    PathBuf::from("Makefile"),
+                    4,
+                ),
+                command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "history2".to_string(),
+                    PathBuf::from("Makefile"),
+                    7,
+                ),
             ]),
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         }

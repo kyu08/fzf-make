@@ -1,8 +1,9 @@
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 // TODO(#321): remove
 #[allow(dead_code)]
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum RunnerType {
     Make,
     Pnpm,
