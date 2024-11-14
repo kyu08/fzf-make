@@ -1,7 +1,8 @@
+use serde::{Deserialize, Serialize};
 use simple_home_dir::home_dir;
 use std::{env, path::PathBuf};
 
-use super::command;
+use super::{command, runner_type};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Histories {
@@ -66,6 +67,7 @@ impl Histories {
     }
 
     pub fn default(path: PathBuf) -> Self {
+        // TODO: should receive cwd instead of makefile_path
         let histories = vec![History::default(path)];
         Self { histories }
     }
@@ -111,8 +113,8 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
 
 #[derive(Clone, PartialEq, Debug)]
 struct History {
-    path: PathBuf,                           // TODO: rename to working_directory
-    executed_targets: Vec<command::Command>, // TODO: rename to executed_commands
+    path: PathBuf,                         // TODO: rename to working_directory
+    executed_targets: Vec<HistoryCommand>, // TODO: rename to executed_commands
 }
 
 impl History {
@@ -147,6 +149,16 @@ impl History {
             executed_targets,
         }
     }
+}
+
+/// In the history file, the command has only the name of the command and the runner type.
+/// Because its file name where it's defined and file number is variable.
+/// So we search them every time fzf-make is launched.
+#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct HistoryCommand {
+    runner_type: runner_type::RunnerType,
+    name: String,
 }
 
 #[cfg(test)]

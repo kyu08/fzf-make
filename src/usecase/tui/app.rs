@@ -86,12 +86,15 @@ impl Model<'_> {
     fn get_histories(makefile_path: PathBuf) -> Histories {
         match history_file_path() {
             Some((history_file_dir, history_file_name)) => {
-                let content = match path_to_content::path_to_content(
-                    history_file_dir.join(history_file_name),
-                ) {
-                    Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
-                    Ok(c) => c,
+                let content = {
+                    let content =
+                        path_to_content::path_to_content(history_file_dir.join(history_file_name));
+                    match content {
+                        Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
+                        Ok(c) => c,
+                    }
                 };
+
                 // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
                 let histories = toml::parse_history(content.to_string()).unwrap_or_default();
 
@@ -327,6 +330,8 @@ impl SelectTargetState<'_> {
             runners: vec![runner],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            // TODO:
+            // ここでHistoriesのうちすでに存在しないcommandをfilterする必要がありそう。その過程でcommand::Commandに変換するようにする。
             histories: Model::get_histories(path),
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         })
@@ -428,6 +433,9 @@ impl SelectTargetState<'_> {
     }
 
     pub fn get_history(&self) -> Vec<command::Command> {
+        // MEMO: mainではhistoriesの中からmakefile_pathのhistoryを取得する関数。
+        // cwdの履歴だけ取得するようにすればこの関数はいらなくなるかも。
+        //
         // TODO(#321): この関数内で
         // historyにあるcommandをself.runnersから取得するよう(行数やファイル名を最新状態からとってこないとちゃんとプレビュー表示できないため)(e.g. ファイル行番号が変わってる場合プレビューがずれる)
         vec![]

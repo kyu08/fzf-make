@@ -30,7 +30,7 @@ impl Histories {
 #[serde(rename_all = "kebab-case")]
 struct History {
     path: String,
-    executed_targets: Vec<command::Command>,
+    executed_targets: Vec<Histories::>,
 }
 
 pub fn parse_history(content: String) -> Result<Vec<(PathBuf, Vec<command::Command>)>> {
