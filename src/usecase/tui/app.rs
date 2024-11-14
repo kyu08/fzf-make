@@ -82,6 +82,7 @@ impl Model<'_> {
         }
     }
 
+    // TODO: pass cwd instead of makefile_path
     fn get_histories(makefile_path: PathBuf) -> Histories {
         match history_file_path() {
             Some((history_file_dir, history_file_name)) => {

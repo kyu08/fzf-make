@@ -81,13 +81,31 @@ mod test {
             Case {
                 title: "Success",
                 content: r#"
-[[history]]
+[[tasks]]
 path = "/Users/user/code/fzf-make"
-executed-targets = ["test", "check", "spell-check"]
 
-[[history]]
+[[tasks.commands]]
+runner = "make"
+command = "test"
+
+[[tasks.commands]]
+runner = "make"
+command = "check"
+
+[[tasks.commands]]
+runner = "make"
+command = "spell-check"
+
+[[tasks]]]
 path = "/Users/user/code/golang/go-playground"
-executed-targets = ["run", "echo1"]
+
+[[tasks.commands]]
+runner = "make"
+command = "run"
+
+[[tasks.commands]]
+runner = "make"
+command = "echo1"
                 "#
                 .to_string(),
                 expect: Ok(vec![
@@ -96,7 +114,9 @@ executed-targets = ["run", "echo1"]
                         vec![
                             command::Command::new(
                                 runner_type::RunnerType::Make,
-                                "target-a".to_string(),
+                                // WARN: ここにコマンドファイル名って持つ必要ないんだっけ？
+                                // ないならいらないフィールドをoptionにするか構造体を分けるかしたいなー
+                                "test".to_string(),
                                 PathBuf::from("Makefile"),
                                 1,
                             ),
