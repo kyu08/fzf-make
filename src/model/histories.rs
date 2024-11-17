@@ -1,22 +1,17 @@
-use serde::{Deserialize, Serialize};
 use simple_home_dir::home_dir;
 use std::{env, path::PathBuf};
 
 use super::{command, runner_type};
 
+/// Histories is a all collection of History. This equals whole content of history.toml.
+/// For now, we can define this as tuple like `pub struct Histories(Vec<History>);` but we don't.
+/// We respect that we can add some fields in the future easily.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Histories {
-    histories: Vec<History>,
+    pub histories: Vec<History>,
 }
 
 impl Histories {
-    pub fn new(makefile_path: PathBuf, histories: Vec<(PathBuf, Vec<command::Command>)>) -> Self {
-        match histories.len() {
-            0 => Self::default(makefile_path),
-            _ => Self::from(makefile_path, histories),
-        }
-    }
-
     // TODO(#321): Make this fn returns Vec<runner::Command>
     // pub fn get_histories(&self, paths: Vec<PathBuf>) -> Vec<String> {
     //     let mut histories: Vec<String> = Vec::new();
@@ -59,33 +54,11 @@ impl Histories {
     //     result
     // }
 
-    pub fn get_latest_target(&self, path: &PathBuf) -> Option<&command::Command> {
+    pub fn get_latest_command(&self, path: &PathBuf) -> Option<&HistoryCommand> {
         self.histories
             .iter()
             .find(|h| h.path == *path)
-            .map(|h| h.executed_targets.first())?
-    }
-
-    pub fn default(path: PathBuf) -> Self {
-        // TODO: should receive cwd instead of makefile_path
-        let histories = vec![History::default(path)];
-        Self { histories }
-    }
-
-    fn from(makefile_path: PathBuf, histories: Vec<(PathBuf, Vec<command::Command>)>) -> Self {
-        let mut result = Histories {
-            histories: Vec::new(),
-        };
-
-        for history in histories.clone() {
-            result.histories.push(History::from(history));
-        }
-
-        if !histories.iter().any(|h| h.0 == makefile_path) {
-            result.histories.push(History::default(makefile_path));
-        }
-
-        result
+            .map(|h| h.executed_commands.first())?
     }
 }
 
@@ -112,30 +85,30 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct History {
-    path: PathBuf,                         // TODO: rename to working_directory
-    executed_targets: Vec<HistoryCommand>, // TODO: rename to executed_commands
+pub struct History {
+    pub path: PathBuf,
+    pub executed_commands: Vec<HistoryCommand>, // TODO: rename to executed_commands
 }
 
 impl History {
     fn default(path: PathBuf) -> Self {
         Self {
             path,
-            executed_targets: Vec::new(),
+            executed_commands: Vec::new(),
         }
     }
 
     fn from(histories: (PathBuf, Vec<command::Command>)) -> Self {
         Self {
             path: histories.0,
-            executed_targets: histories.1,
+            executed_commands: histories.1,
         }
     }
 
     // TODO(#321): remove
     #[allow(dead_code)]
     fn append(&self, executed_target: command::Command) -> Self {
-        let mut executed_targets = self.executed_targets.clone();
+        let mut executed_targets = self.executed_commands.clone();
         executed_targets.retain(|t| *t != executed_target);
         executed_targets.insert(0, executed_target.clone());
 
@@ -146,7 +119,7 @@ impl History {
 
         Self {
             path: self.path.clone(),
-            executed_targets,
+            executed_commands: executed_targets,
         }
     }
 }
@@ -154,211 +127,14 @@ impl History {
 /// In the history file, the command has only the name of the command and the runner type.
 /// Because its file name where it's defined and file number is variable.
 /// So we search them every time fzf-make is launched.
-#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct HistoryCommand {
-    runner_type: runner_type::RunnerType,
-    name: String,
+#[derive(PartialEq, Clone, Debug)]
+pub struct HistoryCommand {
+    pub runner_type: runner_type::RunnerType,
+    pub name: String,
 }
 
 #[cfg(test)]
 mod test {
-    use crate::model::runner_type;
-
-    use super::*;
-
-    #[test]
-    fn histories_new_test() {
-        struct Case {
-            title: &'static str,
-            makefile_path: PathBuf,
-            histories: Vec<(PathBuf, Vec<command::Command>)>,
-            expect: Histories,
-        }
-        let cases = vec![
-            Case {
-                title: "histories.len() == 0",
-                makefile_path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                histories: vec![],
-                expect: Histories {
-                    histories: vec![History {
-                        path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                        executed_targets: vec![],
-                    }],
-                },
-            },
-            Case {
-                title: "histories.len() != 0(Including makefile_path)",
-                makefile_path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                histories: vec![
-                    (
-                        PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                        vec![
-                            command::Command::new(
-                                runner_type::RunnerType::Make,
-                                "target1".to_string(),
-                                PathBuf::from("Makefile"),
-                                1,
-                            ),
-                            command::Command::new(
-                                runner_type::RunnerType::Make,
-                                "target2".to_string(),
-                                PathBuf::from("Makefile"),
-                                4,
-                            ),
-                        ],
-                    ),
-                    (
-                        PathBuf::from("/Users/user/code/rustc".to_string()),
-                        vec![
-                            command::Command::new(
-                                runner_type::RunnerType::Make,
-                                "target-a".to_string(),
-                                PathBuf::from("Makefile"),
-                                1,
-                            ),
-                            command::Command::new(
-                                runner_type::RunnerType::Make,
-                                "target-b".to_string(),
-                                PathBuf::from("Makefile"),
-                                4,
-                            ),
-                        ],
-                    ),
-                ],
-                expect: Histories {
-                    histories: vec![
-                        History {
-                            path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                            executed_targets: vec![
-                                command::Command::new(
-                                    runner_type::RunnerType::Make,
-                                    "target1".to_string(),
-                                    PathBuf::from("Makefile"),
-                                    1,
-                                ),
-                                command::Command::new(
-                                    runner_type::RunnerType::Make,
-                                    "target2".to_string(),
-                                    PathBuf::from("Makefile"),
-                                    4,
-                                ),
-                            ],
-                        },
-                        History {
-                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
-                            executed_targets: vec![
-                                command::Command::new(
-                                    runner_type::RunnerType::Make,
-                                    "target-a".to_string(),
-                                    PathBuf::from("Makefile"),
-                                    1,
-                                ),
-                                command::Command::new(
-                                    runner_type::RunnerType::Make,
-                                    "target-b".to_string(),
-                                    PathBuf::from("Makefile"),
-                                    4,
-                                ),
-                            ],
-                        },
-                    ],
-                },
-            },
-            Case {
-                title: "histories.len() != 0(Not including makefile_path)",
-                makefile_path: PathBuf::from("/Users/user/code/cargo".to_string()),
-                histories: vec![
-                    (
-                        PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                        vec![
-                            command::Command::new(
-                                runner_type::RunnerType::Make,
-                                "target1".to_string(),
-                                PathBuf::from("Makefile"),
-                                1,
-                            ),
-                            command::Command::new(
-                                runner_type::RunnerType::Make,
-                                "target2".to_string(),
-                                PathBuf::from("Makefile"),
-                                4,
-                            ),
-                        ],
-                    ),
-                    (
-                        PathBuf::from("/Users/user/code/rustc".to_string()),
-                        vec![
-                            command::Command::new(
-                                runner_type::RunnerType::Make,
-                                "target-a".to_string(),
-                                PathBuf::from("Makefile"),
-                                1,
-                            ),
-                            command::Command::new(
-                                runner_type::RunnerType::Make,
-                                "target-b".to_string(),
-                                PathBuf::from("Makefile"),
-                                4,
-                            ),
-                        ],
-                    ),
-                ],
-                expect: Histories {
-                    histories: vec![
-                        History {
-                            path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                            executed_targets: vec![
-                                command::Command::new(
-                                    runner_type::RunnerType::Make,
-                                    "target1".to_string(),
-                                    PathBuf::from("Makefile"),
-                                    1,
-                                ),
-                                command::Command::new(
-                                    runner_type::RunnerType::Make,
-                                    "target2".to_string(),
-                                    PathBuf::from("Makefile"),
-                                    4,
-                                ),
-                            ],
-                        },
-                        History {
-                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
-                            executed_targets: vec![
-                                command::Command::new(
-                                    runner_type::RunnerType::Make,
-                                    "target-a".to_string(),
-                                    PathBuf::from("Makefile"),
-                                    1,
-                                ),
-                                command::Command::new(
-                                    runner_type::RunnerType::Make,
-                                    "target-b".to_string(),
-                                    PathBuf::from("Makefile"),
-                                    4,
-                                ),
-                            ],
-                        },
-                        History {
-                            path: PathBuf::from("/Users/user/code/cargo".to_string()),
-                            executed_targets: vec![],
-                        },
-                    ],
-                },
-            },
-        ];
-
-        for case in cases {
-            assert_eq!(
-                case.expect,
-                Histories::new(case.makefile_path, case.histories),
-                "\nFailed: 🚨{:?}🚨\n",
-                case.title,
-            )
-        }
-    }
-
     // TODO(#321): comment in this test
     // #[test]
     // fn histories_append_test() {

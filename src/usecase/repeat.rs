@@ -25,8 +25,8 @@ impl Usecase for Repeat {
             Ok(model) => match model.app_state {
                 AppState::SelectTarget(state) => {
                     match (
-                        state.runners.first(),
-                        state.histories.get_latest_target(&state.current_dir),
+                        state.runners.first(), // TODO: firstではなく最後に実行されたcommandのrunnerを使うべき
+                        state.histories.get_latest_command(&state.current_dir),
                     ) {
                         (Some(r), Some(h)) => r.execute(h),
                         (_, _) => Err(anyhow!("fzf-make has not been executed in this path yet.")),

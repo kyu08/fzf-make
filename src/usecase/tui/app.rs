@@ -2,9 +2,9 @@ use crate::{
     file::{path_to_content, toml},
     model::{
         command,
-        histories::{history_file_path, Histories},
+        histories::{self, history_file_path},
         make::Make,
-        runner,
+        runner, runner_type,
     },
 };
 
@@ -30,6 +30,9 @@ use std::{
     process,
 };
 use tui_textarea::TextArea;
+
+#[cfg(test)]
+use crate::model::histories::Histories;
 
 // AppState represents the state of the application.
 // "Making impossible states impossible"
@@ -82,26 +85,66 @@ impl Model<'_> {
         }
     }
 
-    // TODO: pass cwd instead of makefile_path
-    fn get_histories(makefile_path: PathBuf) -> Histories {
+    fn get_histories(
+        current_working_directory: PathBuf,
+        runners: Vec<runner::Runner>,
+    ) -> Vec<command::Command> {
         match history_file_path() {
             Some((history_file_dir, history_file_name)) => {
                 let content = {
                     let content =
                         path_to_content::path_to_content(history_file_dir.join(history_file_name));
                     match content {
-                        Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
                         Ok(c) => c,
+                        Err(_) => return vec![],
                     }
                 };
 
                 // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
-                let histories = toml::parse_history(content.to_string()).unwrap_or_default();
+                let histories = match toml::parse_history(content.to_string()) {
+                    Ok(h) => h,
+                    Err(_) => return vec![],
+                };
 
-                Histories::new(makefile_path, histories)
+                let mut result: Vec<command::Command> = Vec::new();
+                for history in histories.histories {
+                    if history.path != current_working_directory {
+                        continue;
+                    }
+                    result = Self::get_commands_from_history(history.executed_commands, &runners);
+                    break;
+                }
+                result
             }
-            None => Histories::default(makefile_path),
+            None => vec![],
         }
+    }
+
+    fn get_commands_from_history(
+        history_commands: Vec<histories::HistoryCommand>,
+        runners: &Vec<runner::Runner>,
+    ) -> Vec<command::Command> {
+        // TODO: Make this more readable and more performant.
+        let mut commands: Vec<command::Command> = Vec::new();
+        for history_command in history_commands {
+            match history_command.runner_type {
+                runner_type::RunnerType::Make => {
+                    for runner in runners {
+                        if let runner::Runner::MakeCommand(make) = runner {
+                            // PERF: This method is called every time. Memoize should be considered.
+                            for c in make.to_commands() {
+                                if c.name == history_command.name {
+                                    commands.push(c);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                runner_type::RunnerType::Pnpm => todo!(),
+            };
+        }
+        commands
     }
 
     fn transition_to_execute_target_state(
@@ -276,7 +319,7 @@ pub struct SelectTargetState<'a> {
     pub runners: Vec<runner::Runner>,
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
-    pub histories: Histories,
+    pub histories: Vec<command::Command>,
     pub histories_list_state: ListState,
 }
 
@@ -324,15 +367,15 @@ impl SelectTargetState<'_> {
         let runner = { runner::Runner::MakeCommand(makefile) };
 
         let path = runner.path();
+        let runners = vec![runner];
         Ok(SelectTargetState {
             current_dir,
             current_pane,
-            runners: vec![runner],
+            runners: runners.clone(),
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            // TODO:
-            // ここでHistoriesのうちすでに存在しないcommandをfilterする必要がありそう。その過程でcommand::Commandに変換するようにする。
-            histories: Model::get_histories(path),
+            // TODO: pass cwd instead of makefile_path
+            histories: Model::get_histories(path, runners),
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         })
     }
@@ -435,7 +478,9 @@ impl SelectTargetState<'_> {
     pub fn get_history(&self) -> Vec<command::Command> {
         // MEMO: mainではhistoriesの中からmakefile_pathのhistoryを取得する関数。
         // cwdの履歴だけ取得するようにすればこの関数はいらなくなるかも。
-        //
+        // TODO:
+        // そもそもapplication側ではcommand::Commandだけをhistoryとして持つべき。そうすれば実行時も楽だしpreviewも楽に出すことができる
+
         // TODO(#321): この関数内で
         // historyにあるcommandをself.runnersから取得するよう(行数やファイル名を最新状態からとってこないとちゃんとプレビュー表示できないため)(e.g. ファイル行番号が変わってる場合プレビューがずれる)
         vec![]
@@ -566,14 +611,22 @@ impl SelectTargetState<'_> {
     }
 
     #[cfg(test)]
-    fn init_histories(history_targets: Vec<command::Command>) -> Histories {
-        use std::{env, path::Path};
+    fn init_histories(history_commands: Vec<histories::HistoryCommand>) -> Histories {
+        let mut commands: Vec<histories::HistoryCommand> = Vec::new();
 
-        let makefile_path = env::current_dir().unwrap().join(Path::new("Test.mk"));
-        Histories::new(
-            makefile_path.clone(),
-            vec![(makefile_path, history_targets)],
-        )
+        for h in history_commands {
+            commands.push(histories::HistoryCommand {
+                runner_type: runner_type::RunnerType::Make,
+                name: h.name,
+            });
+        }
+
+        Histories {
+            histories: vec![histories::History {
+                path: env::current_dir().unwrap().join(Path::new("Test.mk")),
+                executed_commands: commands,
+            }],
+        }
     }
 
     #[cfg(test)]
@@ -587,24 +640,18 @@ impl SelectTargetState<'_> {
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
             histories: SelectTargetState::init_histories(vec![
-                command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "history0".to_string(),
-                    PathBuf::from("Makefile"),
-                    1,
-                ),
-                command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "history1".to_string(),
-                    PathBuf::from("Makefile"),
-                    4,
-                ),
-                command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "history2".to_string(),
-                    PathBuf::from("Makefile"),
-                    7,
-                ),
+                histories::HistoryCommand {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history0".to_string(),
+                },
+                histories::HistoryCommand {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history1".to_string(),
+                },
+                histories::HistoryCommand {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history2".to_string(),
+                },
             ]),
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         }

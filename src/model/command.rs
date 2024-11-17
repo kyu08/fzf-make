@@ -2,6 +2,7 @@ use std::{fmt, path::PathBuf};
 
 use super::runner_type;
 
+#[derive(PartialEq, Clone, Debug)]
 pub struct Command {
     pub runner_type: runner_type::RunnerType,
     pub name: String,
