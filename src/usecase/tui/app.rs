@@ -396,15 +396,17 @@ impl SelectTargetState<'_> {
 
     // TODO(#321): comment in this method
     // TODO: This method should return Result when it fails.
-    // pub fn append_history(&self, command: &str) -> Option<Histories> {
-    //     match &self.histories {
-    //         Some(histories) => {
-    //             histories.append(&self.runners[0].path(), command)
-    //             // TODO(#321): For now, it is &self.runners[0] to pass the compilation, but it should be taken from runner::Command::path()
-    //         }
-    //         _ => None,
-    //     }
-    // }
+    pub fn append_history(&self, command: &command::Command) -> Option<Histories> {
+        TODO: そのpathのhistoryをgetする
+        TODO: そのpathのhistoryがない場合はここで初期化して追加する
+        match &self.histories {
+            Some(histories) => {
+                histories.append(&self.runners[0].path(), command)
+                // TODO(#321): For now, it is &self.runners[0] to pass the compilation, but it should be taken from runner::Command::path()
+            }
+            _ => None,
+        }
+    }
 
     fn selected_target(&self) -> Option<command::Command> {
         match self.targets_list_state.selected() {
@@ -585,18 +587,18 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn store_history(&mut self, _command: &command::Command) {
-        // TODO(#321): implement when history function is implemented
+    fn store_history(&mut self, command: &command::Command) {
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
-        // if let Some(h) = self.append_history(command) {
-        //     self.histories = Some(h)
-        // };
-        // if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &self.histories) {
-        //     // TODO: handle error
-        //     let _ = toml::store_history(dir, file_name, h.to_tuple());
-        // };
+        // TODO(#321): implement when history function is implemented
+        if let Some(h) = self.append_history(command) {
+            self.histories = Some(h)
+        };
+        if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &self.histories) {
+            // TODO: handle error
+            let _ = toml::store_history(dir, file_name, h.to_tuple());
+        };
     }
 
     fn reset_selection(&mut self) {

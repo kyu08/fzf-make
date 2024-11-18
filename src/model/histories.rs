@@ -7,6 +7,7 @@ use super::{command, runner_type};
 /// For now, we can define this as tuple like `pub struct Histories(Vec<History>);` but we don't.
 /// We respect that we can add some fields in the future easily.
 #[derive(Clone, PartialEq, Debug)]
+// TODO: 削除する？
 pub struct Histories {
     pub histories: Vec<History>,
 }
@@ -91,12 +92,13 @@ impl History {
         }
     }
 
-    fn from(histories: (PathBuf, Vec<command::Command>)) -> Self {
-        Self {
-            path: histories.0,
-            executed_commands: histories.1,
-        }
-    }
+    // TODO: 不要そうだったら消す
+    // fn from(histories: (PathBuf, Vec<command::Command>)) -> Self {
+    //     Self {
+    //         path: histories.0,
+    //         executed_commands: histories.1,
+    //     }
+    // }
 
     // TODO(#321): remove
     #[allow(dead_code)]
