@@ -53,13 +53,6 @@ impl Histories {
     //     }
     //     result
     // }
-
-    pub fn get_latest_command(&self, path: &PathBuf) -> Option<&HistoryCommand> {
-        self.histories
-            .iter()
-            .find(|h| h.path == *path)
-            .map(|h| h.executed_commands.first())?
-    }
 }
 
 // TODO(#321): should return Result not Option(returns when it fails to get the home dir)

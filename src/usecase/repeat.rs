@@ -23,15 +23,13 @@ impl Usecase for Repeat {
         match Model::new(config::Config::default()) {
             Err(e) => Err(e),
             Ok(model) => match model.app_state {
-                AppState::SelectTarget(state) => {
-                    match (
-                        state.runners.first(), // TODO: firstではなく最後に実行されたcommandのrunnerを使うべき
-                        state.histories.get_latest_command(&state.current_dir),
-                    ) {
-                        (Some(r), Some(h)) => r.execute(h),
-                        (_, _) => Err(anyhow!("fzf-make has not been executed in this path yet.")),
-                    }
-                }
+                AppState::SelectTarget(state) => match state.get_latest_command() {
+                    Some(c) => match state.get_runner(&c.runner_type) {
+                        Some(runner) => runner.execute(c),
+                        None => Err(anyhow!("runner not found.")),
+                    },
+                    None => Err(anyhow!("fzf-make has not been executed in this path yet.")),
+                },
                 _ => Err(anyhow!("Invalid state")),
             },
         }

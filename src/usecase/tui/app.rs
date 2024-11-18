@@ -610,8 +610,29 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.lines().join("")
     }
 
+    pub fn get_latest_command(&self) -> Option<&command::Command> {
+        Some(self.histories.first()?)
+    }
+
+    pub fn get_runner(&self, runner_type: &runner_type::RunnerType) -> Option<runner::Runner> {
+        for runner in &self.runners {
+            match (runner_type, runner) {
+                (runner_type::RunnerType::Make, runner::Runner::MakeCommand(_)) => {
+                    return Some(runner.clone());
+                }
+                (runner_type::RunnerType::Pnpm, runner::Runner::PnpmCommand(_)) => {
+                    return Some(runner.clone());
+                }
+                _ => continue,
+            }
+        }
+        None
+    }
+
     #[cfg(test)]
     fn init_histories(history_commands: Vec<histories::HistoryCommand>) -> Histories {
+        use std::path::Path;
+
         let mut commands: Vec<histories::HistoryCommand> = Vec::new();
 
         for h in history_commands {
@@ -639,20 +660,26 @@ impl SelectTargetState<'_> {
             runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            histories: SelectTargetState::init_histories(vec![
-                histories::HistoryCommand {
-                    runner_type: runner_type::RunnerType::Make,
-                    name: "history0".to_string(),
-                },
-                histories::HistoryCommand {
-                    runner_type: runner_type::RunnerType::Make,
-                    name: "history1".to_string(),
-                },
-                histories::HistoryCommand {
-                    runner_type: runner_type::RunnerType::Make,
-                    name: "history2".to_string(),
-                },
-            ]),
+            // histories: SelectTargetState::init_histories(vec![
+            //     histories::HistoryCommand {
+            //         runner_type: runner_type::RunnerType::Make,
+            //         name: "history0".to_string(),
+            //     },
+            //     histories::HistoryCommand {
+            //         runner_type: runner_type::RunnerType::Make,
+            //         name: "history1".to_string(),
+            //     },
+            //     histories::HistoryCommand {
+            //         runner_type: runner_type::RunnerType::Make,
+            //         name: "history2".to_string(),
+            //     },
+            // ]),
+            histories: vec![command::Command {
+                runner_type: runner_type::RunnerType::Make,
+                name: "history0".to_string(),
+                file_name: todo!(),
+                line_number: todo!(),
+            }],
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         }
     }
