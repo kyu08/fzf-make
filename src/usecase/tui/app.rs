@@ -319,6 +319,14 @@ pub struct SelectTargetState<'a> {
     pub runners: Vec<runner::Runner>,
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
+    // このフィールドをVec<Histories>にするかこのままにするか
+    // 前者
+    // 実行時に変換が必要
+    // 後者
+    // 保存時に変換が必要
+    // 存在しないcommandを非表示にできる
+    // 将来的にpreviewできる
+    // TODO: ↑をコメントとして記述する
     pub histories: Vec<command::Command>,
     pub histories_list_state: ListState,
 }
@@ -391,20 +399,6 @@ impl SelectTargetState<'_> {
         match self.current_pane {
             CurrentPane::Main => self.current_pane = CurrentPane::History,
             CurrentPane::History => self.current_pane = CurrentPane::Main,
-        }
-    }
-
-    // TODO(#321): comment in this method
-    // TODO: This method should return Result when it fails.
-    pub fn append_history(&self, command: &command::Command) -> Option<Histories> {
-        TODO: そのpathのhistoryをgetする
-        TODO: そのpathのhistoryがない場合はここで初期化して追加する
-        match &self.histories {
-            Some(histories) => {
-                histories.append(&self.runners[0].path(), command)
-                // TODO(#321): For now, it is &self.runners[0] to pass the compilation, but it should be taken from runner::Command::path()
-            }
-            _ => None,
         }
     }
 
@@ -587,17 +581,24 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn store_history(&mut self, command: &command::Command) {
+    fn store_history(&self, command: &command::Command) {
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
-        // TODO(#321): implement when history function is implemented
-        if let Some(h) = self.append_history(command) {
-            self.histories = Some(h)
-        };
-        if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &self.histories) {
+        if let Some((dir, file_name)) = history_file_path() {
+            let new_history_commands: Vec<histories::HistoryCommand> =
+                [vec![command.clone()], self.histories.clone()]
+                    .concat()
+                    .iter()
+                    .map(|c| histories::HistoryCommand::from(c.clone()))
+                    .collect();
+            let history = histories::History {
+                path: self.current_dir.clone(),
+                executed_commands: new_history_commands,
+            };
+
             // TODO: handle error
-            let _ = toml::store_history(dir, file_name, h.to_tuple());
+            let _ = toml::store_history(dir, file_name, history);
         };
     }
 

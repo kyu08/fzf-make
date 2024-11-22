@@ -98,12 +98,19 @@ pub fn parse_history(content: String) -> Result<histories::Histories> {
     Ok(Histories::into(histories))
 }
 
-#[allow(dead_code)] // TODO(#321): remove
 pub fn store_history(
     history_directory_path: PathBuf,
     history_file_name: String,
-    histories: histories::Histories,
+    histories: histories::History,
 ) -> Result<()> {
+
+    TODO:
+    TODO:
+    TODO:
+    TODO:
+    // 1. 改めて履歴ファイルからhistoriesを取得する
+    // 2. cwdの履歴を更新する
+    // 3. historiesを保存する
     let histories = Histories::from(histories);
 
     if !history_directory_path.is_dir() {
