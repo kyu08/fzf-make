@@ -1,5 +1,5 @@
 use crate::{
-    file::{path_to_content, toml},
+    file::toml,
     model::{
         command,
         histories::{self, history_file_path},
@@ -31,8 +31,8 @@ use std::{
 };
 use tui_textarea::TextArea;
 
-#[cfg(test)]
-use crate::model::histories::Histories;
+// #[cfg(test)]
+// use crate::model::histories::Histories;
 
 // AppState represents the state of the application.
 // "Making impossible states impossible"
@@ -85,39 +85,22 @@ impl Model<'_> {
         }
     }
 
+    // returns available commands in cwd from history file
     fn get_histories(
         current_working_directory: PathBuf,
         runners: Vec<runner::Runner>,
     ) -> Vec<command::Command> {
-        match history_file_path() {
-            Some((history_file_dir, history_file_name)) => {
-                let content = {
-                    let content =
-                        path_to_content::path_to_content(history_file_dir.join(history_file_name));
-                    match content {
-                        Ok(c) => c,
-                        Err(_) => return vec![],
-                    }
-                };
+        let histories = toml::Histories::into(toml::Histories::get_history());
 
-                // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
-                let histories = match toml::parse_history(content.to_string()) {
-                    Ok(h) => h,
-                    Err(_) => return vec![],
-                };
-
-                let mut result: Vec<command::Command> = Vec::new();
-                for history in histories.histories {
-                    if history.path != current_working_directory {
-                        continue;
-                    }
-                    result = Self::get_commands_from_history(history.executed_commands, &runners);
-                    break;
-                }
-                result
+        let mut result: Vec<command::Command> = Vec::new();
+        for history in histories.histories {
+            if history.path != current_working_directory {
+                continue;
             }
-            None => vec![],
+            result = Self::get_commands_from_history(history.commands, &runners);
+            break;
         }
+        result
     }
 
     fn get_commands_from_history(
@@ -373,17 +356,15 @@ impl SelectTargetState<'_> {
             CurrentPane::Main
         };
         let runner = { runner::Runner::MakeCommand(makefile) };
-
-        let path = runner.path();
         let runners = vec![runner];
+
         Ok(SelectTargetState {
-            current_dir,
+            current_dir: current_dir.clone(),
             current_pane,
             runners: runners.clone(),
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            // TODO: pass cwd instead of makefile_path
-            histories: Model::get_histories(path, runners),
+            histories: Model::get_histories(current_dir, runners),
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         })
     }
@@ -594,11 +575,11 @@ impl SelectTargetState<'_> {
                     .collect();
             let history = histories::History {
                 path: self.current_dir.clone(),
-                executed_commands: new_history_commands,
+                commands: new_history_commands,
             };
 
             // TODO: handle error
-            let _ = toml::store_history(dir, file_name, history);
+            let _ = toml::store_history(self.current_dir.clone(), dir, file_name, history);
         };
     }
 
@@ -614,7 +595,7 @@ impl SelectTargetState<'_> {
     }
 
     pub fn get_latest_command(&self) -> Option<&command::Command> {
-        Some(self.histories.first()?)
+        self.histories.first()
     }
 
     pub fn get_runner(&self, runner_type: &runner_type::RunnerType) -> Option<runner::Runner> {
@@ -633,26 +614,25 @@ impl SelectTargetState<'_> {
     }
 
     #[cfg(test)]
-    fn init_histories(history_commands: Vec<histories::HistoryCommand>) -> Histories {
-        use std::path::Path;
-
-        let mut commands: Vec<histories::HistoryCommand> = Vec::new();
-
-        for h in history_commands {
-            commands.push(histories::HistoryCommand {
-                runner_type: runner_type::RunnerType::Make,
-                name: h.name,
-            });
-        }
-
-        Histories {
-            histories: vec![histories::History {
-                path: env::current_dir().unwrap().join(Path::new("Test.mk")),
-                executed_commands: commands,
-            }],
-        }
-    }
-
+    // fn init_histories(history_commands: Vec<histories::HistoryCommand>) -> Histories {
+    //     use std::path::Path;
+    //
+    //     let mut commands: Vec<histories::HistoryCommand> = Vec::new();
+    //
+    //     for h in history_commands {
+    //         commands.push(histories::HistoryCommand {
+    //             runner_type: runner_type::RunnerType::Make,
+    //             name: h.name,
+    //         });
+    //     }
+    //
+    //     Histories {
+    //         histories: vec![histories::History {
+    //             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
+    //             commands: commands,
+    //         }],
+    //     }
+    // }
     #[cfg(test)]
     fn new_for_test() -> Self {
         use crate::model::runner_type;
@@ -663,26 +643,26 @@ impl SelectTargetState<'_> {
             runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
             targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            // histories: SelectTargetState::init_histories(vec![
-            //     histories::HistoryCommand {
-            //         runner_type: runner_type::RunnerType::Make,
-            //         name: "history0".to_string(),
-            //     },
-            //     histories::HistoryCommand {
-            //         runner_type: runner_type::RunnerType::Make,
-            //         name: "history1".to_string(),
-            //     },
-            //     histories::HistoryCommand {
-            //         runner_type: runner_type::RunnerType::Make,
-            //         name: "history2".to_string(),
-            //     },
-            // ]),
-            histories: vec![command::Command {
-                runner_type: runner_type::RunnerType::Make,
-                name: "history0".to_string(),
-                file_name: todo!(),
-                line_number: todo!(),
-            }],
+            histories: vec![
+                command::Command {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history0".to_string(),
+                    file_name: PathBuf::from("Makefile"),
+                    line_number: 1,
+                },
+                command::Command {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history1".to_string(),
+                    file_name: PathBuf::from("Makefile"),
+                    line_number: 4,
+                },
+                command::Command {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history2".to_string(),
+                    file_name: PathBuf::from("Makefile"),
+                    line_number: 7,
+                },
+            ],
             histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
         }
     }

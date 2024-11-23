@@ -1,3 +1,8 @@
+use super::path_to_content;
+use crate::model::{
+    histories::{self, history_file_path},
+    runner_type,
+};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -6,23 +11,37 @@ use std::{
     path::PathBuf,
 };
 
-use crate::model::{histories, runner_type};
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Histories {
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct Histories {
     histories: Vec<History>,
 }
 
 impl Histories {
-    fn from(histories: histories::Histories) -> Self {
-        let mut result: Vec<History> = vec![];
-        for h in histories.histories {
-            result.push(History::from(h));
+    pub fn get_history() -> Histories {
+        match history_file_path() {
+            Some((history_file_dir, history_file_name)) => {
+                match path_to_content::path_to_content(history_file_dir.join(history_file_name)) {
+                    // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
+                    Ok(c) => match parse_history(c.to_string()) {
+                        Ok(h) => h,
+                        Err(_) => Histories { histories: vec![] },
+                    },
+                    Err(_) => Histories { histories: vec![] },
+                }
+            }
+            None => Histories { histories: vec![] },
         }
-        Self { histories: result }
     }
 
-    fn into(self) -> histories::Histories {
+    // fn from(histories: histories::Histories) -> Self {
+    //     let mut result: Vec<History> = vec![];
+    //     for h in histories.histories {
+    //         result.push(History::from(h));
+    //     }
+    //     Self { histories: result }
+    // }
+
+    pub fn into(self) -> histories::Histories {
         let mut result: Vec<histories::History> = vec![];
         for h in self.histories {
             result.push(History::into(h));
@@ -31,13 +50,13 @@ impl Histories {
     }
 }
 
-impl std::default::Default for Histories {
-    fn default() -> Self {
-        Self { histories: vec![] }
-    }
-}
+// impl std::default::Default for Histories {
+//     fn default() -> Self {
+//         Self { histories: vec![] }
+//     }
+// }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 struct History {
     path: PathBuf,
     commands: Vec<HistoryCommand>,
@@ -46,7 +65,7 @@ struct History {
 impl History {
     fn from(history: histories::History) -> Self {
         let mut commands: Vec<HistoryCommand> = vec![];
-        for h in history.executed_commands {
+        for h in history.commands {
             commands.push(HistoryCommand::from(h));
         }
 
@@ -64,13 +83,13 @@ impl History {
 
         histories::History {
             path: self.path,
-            executed_commands: commands,
+            commands,
         }
     }
 }
 
 /// toml representation of histories::HistoryCommand.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "kebab-case")]
 struct HistoryCommand {
     runner_type: runner_type::RunnerType,
@@ -93,32 +112,33 @@ impl HistoryCommand {
     }
 }
 
-pub fn parse_history(content: String) -> Result<histories::Histories> {
+pub fn parse_history(content: String) -> Result<Histories> {
     let histories = toml::from_str(&content)?;
-    Ok(Histories::into(histories))
+    Ok(histories)
 }
 
 pub fn store_history(
+    current_working_directory: PathBuf,
     history_directory_path: PathBuf,
     history_file_name: String,
-    histories: histories::History,
+    new_history: histories::History,
 ) -> Result<()> {
+    let mut all_histories = Histories::get_history();
 
-    TODO:
-    TODO:
-    TODO:
-    TODO:
-    // 1. 改めて履歴ファイルからhistoriesを取得する
-    // 2. cwdの履歴を更新する
-    // 3. historiesを保存する
-    let histories = Histories::from(histories);
+    for (i, history) in all_histories.clone().histories.iter().enumerate() {
+        if history.path == current_working_directory {
+            all_histories.histories[i] = History::from(new_history.clone());
+        }
+    }
+
+    // TODO: 2. cwdの履歴を更新する
 
     if !history_directory_path.is_dir() {
         fs::create_dir_all(history_directory_path.clone())?;
     }
-
+    // TODO: 3. historiesを保存する
     let mut history_file = File::create(history_directory_path.join(history_file_name))?;
-    history_file.write_all(toml::to_string(&histories).unwrap().as_bytes())?;
+    history_file.write_all(toml::to_string(&all_histories).unwrap().as_bytes())?;
     history_file.flush()?;
 
     Ok(())
@@ -126,8 +146,8 @@ pub fn store_history(
 
 #[cfg(test)]
 mod test {
-    use crate::model::runner_type;
     use super::*;
+    use crate::model::runner_type;
     use anyhow::Result;
 
     #[test]
@@ -135,95 +155,80 @@ mod test {
         struct Case {
             title: &'static str,
             content: String,
-            expect: Result<histories::Histories>,
+            expect: Result<Histories>,
         }
         let cases = vec![
             Case {
                 title: "Success",
                 content: r#"
-[[tasks]]
+[[histories]]
 path = "/Users/user/code/fzf-make"
 
-[[tasks.commands]]
-runner = "make"
-command = "test"
+[[histories.commands]]
+runner-type = "make"
+name = "test"
 
-[[tasks.commands]]
-runner = "make"
-command = "check"
+[[histories.commands]]
+runner-type = "make"
+name = "check"
 
-[[tasks.commands]]
-runner = "make"
-command = "spell-check"
+[[histories.commands]]
+runner-type = "make"
+name = "spell-check"
 
-[[tasks]]]
+[[histories]]
 path = "/Users/user/code/golang/go-playground"
 
-[[tasks.commands]]
-runner = "make"
-command = "run"
+[[histories.commands]]
+runner-type = "make"
+name = "run"
 
-[[tasks.commands]]
-runner = "make"
-command = "echo1"
+[[histories.commands]]
+runner-type = "make"
+name = "echo1"
                 "#
                 .to_string(),
-                expect: Ok(
-                    histories::Histories{ histories: vec![
-                        histories::History{ path: PathBuf::from("/Users/user/code/fzf-make".to_string()), executed_commands: vec![
-                            histories::HistoryCommand{ 
-                                runner_type: runner_type::RunnerType::Make,  
-                                name: "test".to_string() },
-                        ] },
-                    ] },
-                    // (
-                    //     PathBuf::from("/Users/user/code/fzf-make".to_string()),
-                    //     vec![
-                    //         command::Command::new(
-                    //             runner_type::RunnerType::Make,
-                    //             "test".to_string(),
-                    //             PathBuf::from("Makefile"),
-                    //             1,
-                    //         ),
-                    //         command::Command::new(
-                    //             runner_type::RunnerType::Make,
-                    //             "check".to_string(),
-                    //             PathBuf::from("Makefile"),
-                    //             4,
-                    //         ),
-                    //         command::Command::new(
-                    //             runner_type::RunnerType::Make,
-                    //             "spell-check".to_string(),
-                    //             PathBuf::from("Makefile"),
-                    //             4,
-                    //         ),
-                    //     ],
-                    // ),
-                    // (
-                    //     PathBuf::from("/Users/user/code/golang/go-playground".to_string()),
-                    //     vec![
-                    //         command::Command::new(
-                    //             runner_type::RunnerType::Make,
-                    //             "run".to_string(),
-                    //             PathBuf::from("Makefile"),
-                    //             1,
-                    //         ),
-                    //         command::Command::new(
-                    //             runner_type::RunnerType::Make,
-                    //             "echo1".to_string(),
-                    //             PathBuf::from("Makefile"),
-                    //             4,
-                    //         ),
-                    //     ],
-                    // ),
-                ),
+                expect: Ok(Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/fzf-make"),
+                            commands: vec![
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "test".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "check".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "spell-check".to_string(),
+                                },
+                            ],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/golang/go-playground"),
+                            commands: vec![
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "run".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "echo1".to_string(),
+                                },
+                            ],
+                        },
+                    ],
+                }),
             },
             Case {
                 title: "Error",
                 content: r#"
                 "#
                 .to_string(),
-                expect: Err(anyhow::anyhow!("TOML parse error at line 1, column 1\n  |\n1 | \n  | ^\nmissing field `history`\n")),
+                expect: Err(anyhow::anyhow!("TOML parse error at line 1, column 1\n  |\n1 | \n  | ^\nmissing field `histories`\n")),
             },
         ];
 

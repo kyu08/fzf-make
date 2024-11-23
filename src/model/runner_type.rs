@@ -4,6 +4,7 @@ use std::fmt;
 // TODO(#321): remove
 #[allow(dead_code)]
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum RunnerType {
     Make,
     Pnpm,

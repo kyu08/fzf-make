@@ -1,7 +1,6 @@
+use super::{command, runner_type};
 use simple_home_dir::home_dir;
 use std::{env, path::PathBuf};
-
-use super::{command, runner_type};
 
 /// Histories is a all collection of History. This equals whole content of history.toml.
 /// For now, we can define this as tuple like `pub struct Histories(Vec<History>);` but we don't.
@@ -82,16 +81,16 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
 #[derive(Clone, PartialEq, Debug)]
 pub struct History {
     pub path: PathBuf,
-    pub executed_commands: Vec<HistoryCommand>, // TODO: rename to executed_commands
+    pub commands: Vec<HistoryCommand>, // TODO: rename to executed_commands
 }
 
 impl History {
-    fn default(path: PathBuf) -> Self {
-        Self {
-            path,
-            executed_commands: Vec::new(),
-        }
-    }
+    // fn default(path: PathBuf) -> Self {
+    //     Self {
+    //         path,
+    //         commands: Vec::new(),
+    //     }
+    // }
 
     // TODO: 不要そうだったら消す
     // fn from(histories: (PathBuf, Vec<command::Command>)) -> Self {
@@ -103,10 +102,10 @@ impl History {
 
     // TODO(#321): remove
     #[allow(dead_code)]
-    fn append(&self, executed_target: command::Command) -> Self {
-        let mut executed_targets = self.executed_commands.clone();
-        executed_targets.retain(|t| *t != executed_target);
-        executed_targets.insert(0, executed_target.clone());
+    fn append(&self, _executed_target: command::Command) -> Self {
+        let mut executed_targets = self.commands.clone();
+        // executed_targets.retain(|t| *t != executed_target);
+        // executed_targets.insert(0, executed_target.clone());
 
         const MAX_LENGTH: usize = 10;
         if MAX_LENGTH < executed_targets.len() {
@@ -115,7 +114,7 @@ impl History {
 
         Self {
             path: self.path.clone(),
-            executed_commands: executed_targets,
+            commands: executed_targets,
         }
     }
 }
