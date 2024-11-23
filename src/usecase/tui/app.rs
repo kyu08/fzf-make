@@ -24,7 +24,8 @@ use ratatui::{
 use std::{
     collections::HashMap,
     env,
-    io::{self, Stderr},
+    fs::File,
+    io::{self, Stderr, Write},
     panic,
     path::PathBuf,
     process,
@@ -100,6 +101,14 @@ impl Model<'_> {
             result = Self::get_commands_from_history(history.commands, &runners);
             break;
         }
+
+        println!("{:?}", result);
+        let mut debug_file = File::create("debug.txt").unwrap();
+        debug_file
+            .write_all(format!("{:?}", result).as_bytes())
+            .unwrap();
+        let _ = debug_file.flush();
+
         result
     }
 
@@ -107,6 +116,7 @@ impl Model<'_> {
         history_commands: Vec<histories::HistoryCommand>,
         runners: &Vec<runner::Runner>,
     ) -> Vec<command::Command> {
+        // なぜかhistoryが表示されないのを修正する
         // TODO: Make this more readable and more performant.
         let mut commands: Vec<command::Command> = Vec::new();
         for history_command in history_commands {
@@ -278,7 +288,8 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::ExecuteTarget) => {
                 if let Some(command) = s.get_selected_target() {
                     // TODO: make this a method of SelectTargetState
-                    s.store_history(&command);
+                    s.store_history(command.clone());
+                    // TODO: s.runners[0]ではなくcommand.runner_type を利用する
                     let executor: runner::Runner = s.runners[0].clone();
 
                     model.transition_to_execute_target_state(executor, command);
@@ -453,26 +464,7 @@ impl SelectTargetState<'_> {
     }
 
     pub fn get_history(&self) -> Vec<command::Command> {
-        // MEMO: mainではhistoriesの中からmakefile_pathのhistoryを取得する関数。
-        // cwdの履歴だけ取得するようにすればこの関数はいらなくなるかも。
-        // TODO:
-        // そもそもapplication側ではcommand::Commandだけをhistoryとして持つべき。そうすれば実行時も楽だしpreviewも楽に出すことができる
-
-        // TODO(#321): この関数内で
-        // historyにあるcommandをself.runnersから取得するよう(行数やファイル名を最新状態からとってこないとちゃんとプレビュー表示できないため)(e.g. ファイル行番号が変わってる場合プレビューがずれる)
-        vec![]
-        // TODO(#321): implement when history function is implemented
-        // UIに表示するためのhistory一覧を取得する関数。
-        // runnersを渡すと関連するhistory一覧を返すようにするのがよさそう。
-        // let paths = self
-        //     .runners
-        //     .iter()
-        //     .map(|r| r.path())
-        //     .collect::<Vec<PathBuf>>();
-        //
-        // self.histories
-        //     .clone()
-        //     .map_or(Vec::new(), |h| h.get_histories(paths))
+        self.histories.clone()
     }
 
     fn next_target(&mut self) {
@@ -562,24 +554,19 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn store_history(&self, command: &command::Command) {
+    fn store_history(&self, command: command::Command) {
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
         if let Some((dir, file_name)) = history_file_path() {
-            let new_history_commands: Vec<histories::HistoryCommand> =
-                [vec![command.clone()], self.histories.clone()]
-                    .concat()
-                    .iter()
-                    .map(|c| histories::HistoryCommand::from(c.clone()))
-                    .collect();
-            let history = histories::History {
-                path: self.current_dir.clone(),
-                commands: new_history_commands,
-            };
+            let all_histories = toml::Histories::get_history().into().append(
+                self.current_dir.clone(),
+                self.histories.clone(),
+                command,
+            );
 
             // TODO: handle error
-            let _ = toml::store_history(self.current_dir.clone(), dir, file_name, history);
+            let _ = toml::store_history(dir, file_name, all_histories);
         };
     }
 

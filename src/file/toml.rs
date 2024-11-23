@@ -33,13 +33,13 @@ impl Histories {
         }
     }
 
-    // fn from(histories: histories::Histories) -> Self {
-    //     let mut result: Vec<History> = vec![];
-    //     for h in histories.histories {
-    //         result.push(History::from(h));
-    //     }
-    //     Self { histories: result }
-    // }
+    fn from(histories: histories::Histories) -> Self {
+        let mut result: Vec<History> = vec![];
+        for h in histories.histories {
+            result.push(History::from(h));
+        }
+        Self { histories: result }
+    }
 
     pub fn into(self) -> histories::Histories {
         let mut result: Vec<histories::History> = vec![];
@@ -118,27 +118,19 @@ pub fn parse_history(content: String) -> Result<Histories> {
 }
 
 pub fn store_history(
-    current_working_directory: PathBuf,
     history_directory_path: PathBuf,
     history_file_name: String,
-    new_history: histories::History,
+    new_history: histories::Histories,
 ) -> Result<()> {
-    let mut all_histories = Histories::get_history();
-
-    for (i, history) in all_histories.clone().histories.iter().enumerate() {
-        if history.path == current_working_directory {
-            all_histories.histories[i] = History::from(new_history.clone());
-        }
-    }
-
-    // TODO: 2. cwdの履歴を更新する
-
     if !history_directory_path.is_dir() {
         fs::create_dir_all(history_directory_path.clone())?;
     }
-    // TODO: 3. historiesを保存する
     let mut history_file = File::create(history_directory_path.join(history_file_name))?;
-    history_file.write_all(toml::to_string(&all_histories).unwrap().as_bytes())?;
+    history_file.write_all(
+        toml::to_string(&Histories::from(new_history))
+            .unwrap()
+            .as_bytes(),
+    )?;
     history_file.flush()?;
 
     Ok(())

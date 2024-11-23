@@ -30,30 +30,36 @@ impl Histories {
     //     histories
     // }
 
-    // pub fn append(&self, path: &PathBuf, executed_target: &str) -> Option<Self> {
-    //     let mut new_histories = self.histories.clone();
-    //
-    //     new_histories
-    //         .iter()
-    //         .position(|h| h.path == *path)
-    //         .map(|index| {
-    //             let new_history = new_histories[index].append(executed_target.to_string());
-    //             new_histories[index] = new_history;
-    //
-    //             Self {
-    //                 histories: new_histories,
-    //             }
-    //         })
-    // }
+    pub fn append(
+        &self,
+        current_dir: PathBuf,
+        histories_before_update: Vec<command::Command>,
+        command: command::Command,
+    ) -> Self {
+        let new_history_commands: Vec<HistoryCommand> = [vec![command], histories_before_update]
+            .concat()
+            .iter()
+            .map(|c| HistoryCommand::from(c.clone()))
+            .collect();
+        let history = History {
+            path: current_dir.clone(),
+            commands: new_history_commands,
+        };
 
-    // pub fn to_tuple(&self) -> Vec<(PathBuf, Vec<String>)> {
-    //     let mut result = Vec::new();
-    //
-    //     for history in &self.histories {
-    //         result.push((history.path.clone(), history.executed_targets.clone()));
-    //     }
-    //     result
-    // }
+        let mut new_histories = self.histories.clone();
+        match new_histories.iter().position(|h| h.path == history.path) {
+            Some(index) => {
+                new_histories[index] = history;
+            }
+            None => {
+                new_histories.insert(0, history);
+            }
+        }
+
+        Histories {
+            histories: new_histories,
+        }
+    }
 }
 
 // TODO(#321): should return Result not Option(returns when it fails to get the home dir)
