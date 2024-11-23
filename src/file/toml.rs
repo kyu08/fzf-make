@@ -52,12 +52,6 @@ impl Histories {
     }
 }
 
-// impl std::default::Default for Histories {
-//     fn default() -> Self {
-//         Self { histories: vec![] }
-//     }
-// }
-
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 struct History {
     path: PathBuf,

@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::process;
 use std::{
-    env, fs,
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -20,8 +20,8 @@ impl Make {
         format!("make {}", command.name)
     }
 
-    pub fn create_makefile() -> Result<Make> {
-        let Some(makefile_name) = Make::specify_makefile_name(".".to_string()) else {
+    pub fn create_makefile(current_dir: PathBuf) -> Result<Make> {
+        let Some(makefile_name) = Make::specify_makefile_name(current_dir, ".".to_string()) else {
             return Err(anyhow!("makefile not found.\n"));
         };
         Make::new(Path::new(&makefile_name).to_path_buf())
@@ -56,7 +56,7 @@ impl Make {
         })
     }
 
-    fn specify_makefile_name(target_path: String) -> Option<PathBuf> {
+    fn specify_makefile_name(current_dir: PathBuf, target_path: String) -> Option<PathBuf> {
         //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
         //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
         // It needs to enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
@@ -68,12 +68,6 @@ impl Make {
             let file_name = e.unwrap().file_name();
             let file_name_string = file_name.to_str().unwrap();
             if makefile_name_options.contains(&file_name_string) {
-                let current_dir = match env::current_dir() {
-                    // TODO: use model.current_dir
-                    Err(_) => return None,
-                    Ok(d) => d,
-                };
-
                 temp_result.push(current_dir.join(file_name));
             }
         }
@@ -104,6 +98,7 @@ impl Make {
     #[cfg(test)]
     pub fn new_for_test() -> Make {
         use super::runner_type;
+        use std::env;
 
         Make {
             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
@@ -174,11 +169,12 @@ fn line_to_including_file_paths(line: String) -> Option<Vec<PathBuf>> {
 
 #[cfg(test)]
 mod test {
-    use crate::model::runner_type;
-
     use super::*;
-
-    use std::fs::{self, File};
+    use crate::model::runner_type;
+    use std::{
+        env,
+        fs::{self, File},
+    };
     use uuid::Uuid;
 
     #[test]
@@ -231,7 +227,10 @@ mod test {
 
             assert_eq!(
                 expect,
-                Make::specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
+                Make::specify_makefile_name(
+                    env::current_dir().unwrap(),
+                    tmp_dir.to_string_lossy().to_string()
+                ),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );

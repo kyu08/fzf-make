@@ -55,14 +55,6 @@ pub struct History {
 }
 
 impl History {
-    // #[allow(dead_code)]
-    // fn from(histories: (PathBuf, Vec<command::Command>)) -> Self {
-    //     Self {
-    //         path: histories.0,
-    //         commands: histories.1,
-    //     }
-    // }
-
     // TODO: ut
     fn append(&self, executed_command: command::Command) -> Self {
         let mut updated_commands = self.commands.clone();
