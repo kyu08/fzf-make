@@ -108,7 +108,7 @@ impl HistoryCommand {
     }
 }
 
-// TODO(#321): should return Result not Option(returns when it fails to get the home dir)
+// TODO: should return Result not Option(returns when it fails to get the home dir)
 pub fn history_file_path() -> Option<(PathBuf, String)> {
     const HISTORY_FILE_NAME: &str = "history.toml";
 
