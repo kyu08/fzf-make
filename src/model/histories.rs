@@ -5,30 +5,11 @@ use std::path::PathBuf;
 /// For now, we can define this as tuple like `pub struct Histories(Vec<History>);` but we don't.
 /// We respect that we can add some fields in the future easily.
 #[derive(Clone, PartialEq, Debug)]
-// TODO: 削除する？とはいえappendなどのメソッドはapp側ではなくここに実装したほうが凝集度が高くてよさそう。
-//
 pub struct Histories {
     pub histories: Vec<History>,
 }
 
 impl Histories {
-    // TODO(#321): Make this fn returns Vec<runner::Command>
-    // pub fn get_histories(&self, paths: Vec<PathBuf>) -> Vec<String> {
-    //     let mut histories: Vec<String> = Vec::new();
-    //
-    //     for path in paths {
-    //         let executed_targets = self
-    //             .histories
-    //             .iter()
-    //             .find(|h| h.path == path)
-    //             .map(|h| h.executed_targets.clone())
-    //             .unwrap_or(Vec::new());
-    //         histories = [histories, executed_targets].concat();
-    //     }
-    //
-    //     histories
-    // }
-
     // TODO: ut
     pub fn append(
         &self,
