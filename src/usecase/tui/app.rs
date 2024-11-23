@@ -1,3 +1,4 @@
+use super::{config, ui::ui};
 use crate::{
     file::toml,
     model::{
@@ -7,8 +8,6 @@ use crate::{
         runner, runner_type,
     },
 };
-
-use super::{config, ui::ui};
 use anyhow::{anyhow, bail, Result};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
@@ -30,9 +29,6 @@ use std::{
     process,
 };
 use tui_textarea::TextArea;
-
-// #[cfg(test)]
-// use crate::model::histories::Histories;
 
 // AppState represents the state of the application.
 // "Making impossible states impossible"
