@@ -274,12 +274,10 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
             Some(Message::ExecuteTarget) => {
                 if let Some(command) = s.get_selected_target() {
-                    // TODO: make this a method of SelectTargetState
                     s.store_history(command.clone());
-                    // TODO: s.runners[0]ではなくcommand.runner_type を利用する
-                    let executor: runner::Runner = s.runners[0].clone();
-
-                    model.transition_to_execute_target_state(executor, command);
+                    if let Some(r) = command.runner_type.to_runner(&s.runners) {
+                        model.transition_to_execute_target_state(r, command);
+                    }
                 };
             }
             Some(Message::NextTarget) => s.next_target(),
