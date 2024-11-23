@@ -1,6 +1,5 @@
 use super::{command, runner_type};
-use simple_home_dir::home_dir;
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
 
 /// Histories is a all collection of History. This equals whole content of history.toml.
 /// For now, we can define this as tuple like `pub struct Histories(Vec<History>);` but we don't.
@@ -30,29 +29,35 @@ impl Histories {
     //     histories
     // }
 
+    // TODO: ut
     pub fn append(
         &self,
         current_dir: PathBuf,
-        histories_before_update: Vec<command::Command>,
+        history_of_cwd: Vec<command::Command>,
         command: command::Command,
     ) -> Self {
-        let new_history_commands: Vec<HistoryCommand> = [vec![command], histories_before_update]
-            .concat()
-            .iter()
-            .map(|c| HistoryCommand::from(c.clone()))
-            .collect();
-        let history = History {
-            path: current_dir.clone(),
-            commands: new_history_commands,
+        let new_history = {
+            let history_commands: Vec<HistoryCommand> = history_of_cwd
+                .iter()
+                .map(|c| HistoryCommand::from(c.clone()))
+                .collect();
+            let history = History {
+                path: current_dir.clone(),
+                commands: history_commands,
+            };
+            history.append(command)
         };
 
         let mut new_histories = self.histories.clone();
-        match new_histories.iter().position(|h| h.path == history.path) {
+        match new_histories
+            .iter()
+            .position(|h| h.path == new_history.path)
+        {
             Some(index) => {
-                new_histories[index] = history;
+                new_histories[index] = new_history;
             }
             None => {
-                new_histories.insert(0, history);
+                new_histories.insert(0, new_history);
             }
         }
 
@@ -62,65 +67,36 @@ impl Histories {
     }
 }
 
-// TODO(#321): should return Result not Option(returns when it fails to get the home dir)
-pub fn history_file_path() -> Option<(PathBuf, String)> {
-    const HISTORY_FILE_NAME: &str = "history.toml";
-
-    match env::var("FZF_MAKE_IS_TESTING") {
-        Ok(_) => {
-            // When testing
-            let cwd = std::env::current_dir().unwrap();
-            Some((
-                cwd.join(PathBuf::from("test_dir")),
-                HISTORY_FILE_NAME.to_string(),
-            ))
-        }
-        _ => home_dir().map(|home_dir| {
-            (
-                home_dir.join(PathBuf::from(".config/fzf-make")),
-                HISTORY_FILE_NAME.to_string(),
-            )
-        }),
-    }
-}
-
 #[derive(Clone, PartialEq, Debug)]
 pub struct History {
     pub path: PathBuf,
-    pub commands: Vec<HistoryCommand>, // TODO: rename to executed_commands
+    pub commands: Vec<HistoryCommand>,
 }
 
 impl History {
-    // fn default(path: PathBuf) -> Self {
-    //     Self {
-    //         path,
-    //         commands: Vec::new(),
-    //     }
-    // }
-
-    // TODO: 不要そうだったら消す
+    // #[allow(dead_code)]
     // fn from(histories: (PathBuf, Vec<command::Command>)) -> Self {
     //     Self {
     //         path: histories.0,
-    //         executed_commands: histories.1,
+    //         commands: histories.1,
     //     }
     // }
 
-    // TODO(#321): remove
-    #[allow(dead_code)]
-    fn append(&self, _executed_target: command::Command) -> Self {
-        let mut executed_targets = self.commands.clone();
-        // executed_targets.retain(|t| *t != executed_target);
-        // executed_targets.insert(0, executed_target.clone());
+    // TODO: ut
+    fn append(&self, executed_command: command::Command) -> Self {
+        let mut updated_commands = self.commands.clone();
+        // removes the executed_command from the history
+        updated_commands.retain(|t| *t != HistoryCommand::from(executed_command.clone()));
+        updated_commands.insert(0, HistoryCommand::from(executed_command.clone()));
 
         const MAX_LENGTH: usize = 10;
-        if MAX_LENGTH < executed_targets.len() {
-            executed_targets.truncate(MAX_LENGTH);
+        if MAX_LENGTH < updated_commands.len() {
+            updated_commands.truncate(MAX_LENGTH);
         }
 
         Self {
             path: self.path.clone(),
-            commands: executed_targets,
+            commands: updated_commands,
         }
     }
 }

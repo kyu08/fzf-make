@@ -2,7 +2,7 @@ use crate::{
     file::toml,
     model::{
         command,
-        histories::{self, history_file_path},
+        histories::{self},
         make::Make,
         runner, runner_type,
     },
@@ -24,8 +24,7 @@ use ratatui::{
 use std::{
     collections::HashMap,
     env,
-    fs::File,
-    io::{self, Stderr, Write},
+    io::{self, Stderr},
     panic,
     path::PathBuf,
     process,
@@ -102,13 +101,6 @@ impl Model<'_> {
             break;
         }
 
-        println!("{:?}", result);
-        let mut debug_file = File::create("debug.txt").unwrap();
-        debug_file
-            .write_all(format!("{:?}", result).as_bytes())
-            .unwrap();
-        let _ = debug_file.flush();
-
         result
     }
 
@@ -116,7 +108,6 @@ impl Model<'_> {
         history_commands: Vec<histories::HistoryCommand>,
         runners: &Vec<runner::Runner>,
     ) -> Vec<command::Command> {
-        // なぜかhistoryが表示されないのを修正する
         // TODO: Make this more readable and more performant.
         let mut commands: Vec<command::Command> = Vec::new();
         for history_command in history_commands {
@@ -558,7 +549,7 @@ impl SelectTargetState<'_> {
         // NOTE: self.get_selected_target should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
-        if let Some((dir, file_name)) = history_file_path() {
+        if let Some((dir, file_name)) = toml::history_file_path() {
             let all_histories = toml::Histories::get_history().into().append(
                 self.current_dir.clone(),
                 self.histories.clone(),

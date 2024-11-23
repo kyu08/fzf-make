@@ -1,11 +1,13 @@
 use super::path_to_content;
 use crate::model::{
-    histories::{self, history_file_path},
+    histories::{self},
     runner_type,
 };
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use simple_home_dir::home_dir;
 use std::{
+    env,
     fs::{self, File},
     io::Write,
     path::PathBuf,
@@ -109,6 +111,28 @@ impl HistoryCommand {
             runner_type: self.runner_type,
             name: self.name,
         }
+    }
+}
+
+// TODO(#321): should return Result not Option(returns when it fails to get the home dir)
+pub fn history_file_path() -> Option<(PathBuf, String)> {
+    const HISTORY_FILE_NAME: &str = "history.toml";
+
+    match env::var("FZF_MAKE_IS_TESTING") {
+        Ok(_) => {
+            // When testing
+            let cwd = std::env::current_dir().unwrap();
+            Some((
+                cwd.join(PathBuf::from("test_dir")),
+                HISTORY_FILE_NAME.to_string(),
+            ))
+        }
+        _ => home_dir().map(|home_dir| {
+            (
+                home_dir.join(PathBuf::from(".config/fzf-make")),
+                HISTORY_FILE_NAME.to_string(),
+            )
+        }),
     }
 }
 
