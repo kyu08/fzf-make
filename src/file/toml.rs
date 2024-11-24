@@ -277,4 +277,143 @@ name = "echo1"
             }
         }
     }
+
+    #[test]
+    fn parse_history_in_considering_history_file_format_version_test() {
+        struct Case {
+            title: &'static str,
+            content: String,
+            expect: Histories,
+        }
+        let cases = vec![
+            Case {
+                title: "Success(new format)",
+                content: r#"
+[[histories]]
+path = "/Users/user/code/fzf-make"
+
+[[histories.commands]]
+runner-type = "make"
+name = "test"
+
+[[histories.commands]]
+runner-type = "make"
+name = "check"
+
+[[histories.commands]]
+runner-type = "make"
+name = "spell-check"
+
+[[histories]]
+path = "/Users/user/code/golang/go-playground"
+
+[[histories.commands]]
+runner-type = "make"
+name = "run"
+
+[[histories.commands]]
+runner-type = "make"
+name = "echo1"
+                "#
+                .to_string(),
+                expect: Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/fzf-make"),
+                            commands: vec![
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "test".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "check".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "spell-check".to_string(),
+                                },
+                            ],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/golang/go-playground"),
+                            commands: vec![
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "run".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "echo1".to_string(),
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+            Case {
+                title: "Success(old format)",
+                content: r#"
+[[history]]
+path = "/Users/user/code/fzf-make"
+executed-targets = ["test", "check", "spell-check"]
+
+[[history]]
+path = "/Users/user/code/golang/go-playground"
+executed-targets = ["run", "echo1"]
+                "#
+                .to_string(),
+                expect: Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/fzf-make"),
+                            commands: vec![
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "test".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "check".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "spell-check".to_string(),
+                                },
+                            ],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/golang/go-playground"),
+                            commands: vec![
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "run".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "echo1".to_string(),
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+            // Case {
+            //     title: "Error",
+            //     content: r#"
+            //     "#
+            //     .to_string(),
+            //     expect: Histories::default(),
+            // },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                Histories::parse_history_in_considering_history_file_format_version(case.content),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            )
+        }
+    }
 }
