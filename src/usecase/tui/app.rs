@@ -298,14 +298,9 @@ pub struct SelectTargetState<'a> {
     pub runners: Vec<runner::Runner>,
     pub search_text_area: TextArea_<'a>,
     pub targets_list_state: ListState,
-    // このフィールドをVec<Histories>にするかこのままにするか
-    // 前者
-    // 実行時に変換が必要
-    // 後者
-    // 保存時に変換が必要
-    // 存在しないcommandを非表示にできる
-    // 将来的にpreviewできる
-    // TODO: ↑をコメントとして記述する
+    /// This field could have been of type `Vec<Histories>`, but it was intentionally made of type `Vec<command::Command>`.
+    /// This is because it allows for future features such as displaying the contents of history in the preview window
+    /// or hiding commands that existed at the time of execution but no longer exist.
     pub histories: Vec<command::Command>,
     pub histories_list_state: ListState,
 }
