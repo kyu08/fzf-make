@@ -49,7 +49,6 @@ pub struct History {
 }
 
 impl History {
-    // TODO: ut
     fn append(&self, executed_command: command::Command) -> Self {
         let mut updated_commands = self.commands.clone();
         // removes the executed_command from the history
@@ -96,9 +95,9 @@ mod test {
     fn histories_append_test() {
         struct Case {
             title: &'static str,
-            histories: Histories,
+            before: Histories,
             command_to_append: command::Command,
-            expect: Histories,
+            after: Histories,
         }
 
         let path_to_append = PathBuf::from("/Users/user/code/fzf-make".to_string());
@@ -107,7 +106,7 @@ mod test {
                 // Use raw string literal as workaround for
                 // https://github.com/rust-lang/rustfmt/issues/4800.
                 title: r#"The command executed is appended to the existing history if there is history for cwd."#,
-                histories: Histories {
+                before: Histories {
                     histories: vec![
                         History {
                             path: PathBuf::from("/Users/user/code/rustc".to_string()),
@@ -131,7 +130,7 @@ mod test {
                     file_name: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
-                expect: Histories {
+                after: Histories {
                     histories: vec![
                         History {
                             path: PathBuf::from("/Users/user/code/rustc".to_string()),
@@ -158,7 +157,7 @@ mod test {
             },
             Case {
                 title: r#"A new history is appended if there is no history for cwd."#,
-                histories: Histories {
+                before: Histories {
                     histories: vec![History {
                         path: PathBuf::from("/Users/user/code/rustc".to_string()),
                         commands: vec![HistoryCommand {
@@ -173,7 +172,7 @@ mod test {
                     file_name: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
-                expect: Histories {
+                after: Histories {
                     histories: vec![
                         History {
                             path: path_to_append.clone(),
@@ -196,8 +195,8 @@ mod test {
 
         for case in cases {
             assert_eq!(
-                case.expect,
-                case.histories
+                case.after,
+                case.before
                     .append(path_to_append.clone(), case.command_to_append),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
@@ -205,291 +204,226 @@ mod test {
         }
     }
 
-    // TODO(#321): comment in this test
-    // #[test]
-    // fn history_append_test() {
-    //     struct Case {
-    //         title: &'static str,
-    //         appending_target: command::Command,
-    //         history: History,
-    //         expect: History,
-    //     }
-    //     let path = PathBuf::from("/Users/user/code/fzf-make".to_string());
-    //     let cases = vec![
-    //         Case {
-    //             title: "Append to head",
-    //             appending_target: command::Command::new(
-    //                 runner_type::RunnerType::Make,
-    //                 "history2".to_string(),
-    //                 PathBuf::from("Makefile"),
-    //                 1,
-    //             ),
-    //             history: History {
-    //                 path: path.clone(),
-    //                 executed_targets: vec![
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history0".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         1,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history1".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                 ],
-    //             },
-    //             expect: History {
-    //                 path: path.clone(),
-    //                 executed_targets: vec![
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history2".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         1,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history0".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history1".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                 ],
-    //             },
-    //         },
-    //         Case {
-    //             title: "Append to head(Append to empty)",
-    //             appending_target: command::Command::new(
-    //                 runner_type::RunnerType::Make,
-    //                 "history0".to_string(),
-    //                 PathBuf::from("Makefile"),
-    //                 4,
-    //             ),
-    //             history: History {
-    //                 path: path.clone(),
-    //                 executed_targets: vec![],
-    //             },
-    //             expect: History {
-    //                 path: path.clone(),
-    //                 executed_targets: vec![command::Command::new(
-    //                     runner_type::RunnerType::Make,
-    //                     "history0".to_string(),
-    //                     PathBuf::from("Makefile"),
-    //                     4,
-    //                 )],
-    //             },
-    //         },
-    //         Case {
-    //             title: "Append to head(Remove duplicated)",
-    //             appending_target: command::Command::new(
-    //                 runner_type::RunnerType::Make,
-    //                 "history1".to_string(),
-    //                 PathBuf::from("Makefile"),
-    //                 4,
-    //             ),
-    //             history: History {
-    //                 path: path.clone(),
-    //                 executed_targets: vec![
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history0".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         1,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history1".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history2".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                 ],
-    //             },
-    //             expect: History {
-    //                 path: path.clone(),
-    //                 executed_targets: vec![
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history1".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         1,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history0".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history2".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                 ],
-    //             },
-    //         },
-    //         Case {
-    //             title: "Truncate when length exceeds 10",
-    //             appending_target: command::Command::new(
-    //                 runner_type::RunnerType::Make,
-    //                 "history11".to_string(),
-    //                 PathBuf::from("Makefile"),
-    //                 1,
-    //             ),
-    //             history: History {
-    //                 path: path.clone(),
-    //                 executed_targets: vec![
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history0".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         1,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history1".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history2".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history3".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history4".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history5".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history6".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history7".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history8".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history9".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                 ],
-    //             },
-    //             expect: History {
-    //                 path: path.clone(),
-    //                 executed_targets: vec![
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history11".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         1,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history0".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         1,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history1".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history2".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history3".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history4".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history5".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history6".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history7".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                     command::Command::new(
-    //                         runner_type::RunnerType::Make,
-    //                         "history8".to_string(),
-    //                         PathBuf::from("Makefile"),
-    //                         4,
-    //                     ),
-    //                 ],
-    //             },
-    //         },
-    //     ];
-    //
-    //     for case in cases {
-    //         assert_eq!(
-    //             case.expect,
-    //             case.history.append(case.appending_target),
-    //             "\nFailed: 🚨{:?}🚨\n",
-    //             case.title,
-    //         )
-    //     }
-    // }
+    #[test]
+    fn history_append_test() {
+        struct Case {
+            title: &'static str,
+            before: History,
+            command_to_append: command::Command,
+            after: History,
+        }
+        let path = PathBuf::from("/Users/user/code/fzf-make".to_string());
+        let cases = vec![
+            Case {
+                title: "Append to head",
+                before: History {
+                    path: path.clone(),
+                    commands: vec![
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history0".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history1".to_string(),
+                        },
+                    ],
+                },
+                command_to_append: command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "history2".to_string(),
+                    PathBuf::from("Makefile"),
+                    1,
+                ),
+                after: History {
+                    path: path.clone(),
+                    commands: vec![
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history2".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history0".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history1".to_string(),
+                        },
+                    ],
+                },
+            },
+            Case {
+                title: "Append to head(Append to empty)",
+                before: History {
+                    path: path.clone(),
+                    commands: vec![],
+                },
+                command_to_append: command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "history0".to_string(),
+                    PathBuf::from("Makefile"),
+                    4,
+                ),
+                after: History {
+                    path: path.clone(),
+                    commands: vec![HistoryCommand {
+                        runner_type: runner_type::RunnerType::Make,
+                        name: "history0".to_string(),
+                    }],
+                },
+            },
+            Case {
+                title: "Append to head(Remove duplicated command)",
+                before: History {
+                    path: path.clone(),
+                    commands: vec![
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history0".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history1".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history2".to_string(),
+                        },
+                    ],
+                },
+                command_to_append: command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "history2".to_string(),
+                    PathBuf::from("Makefile"),
+                    1,
+                ),
+                after: History {
+                    path: path.clone(),
+                    commands: vec![
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history2".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history0".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history1".to_string(),
+                        },
+                    ],
+                },
+            },
+            Case {
+                title: "Truncate when length exceeds 10",
+                before: History {
+                    path: path.clone(),
+                    commands: vec![
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history0".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history1".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history2".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history3".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history4".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history5".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history6".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history7".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history8".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history9".to_string(),
+                        },
+                    ],
+                },
+                command_to_append: command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "history10".to_string(),
+                    PathBuf::from("Makefile"),
+                    1,
+                ),
+                after: History {
+                    path: path.clone(),
+                    commands: vec![
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history10".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history0".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history1".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history2".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history3".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history4".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history5".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history6".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history7".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history8".to_string(),
+                        },
+                    ],
+                },
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.after,
+                case.before.append(case.command_to_append),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            )
+        }
+    }
 }
