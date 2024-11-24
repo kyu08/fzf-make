@@ -45,6 +45,8 @@ impl Histories {
 #[derive(Clone, PartialEq, Debug)]
 pub struct History {
     pub path: PathBuf,
+    /// The commands are sorted in descending order of execution time.
+    /// This means that the first element is the most recently executed command.
     pub commands: Vec<HistoryCommand>,
 }
 
