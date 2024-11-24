@@ -398,13 +398,13 @@ executed-targets = ["run", "echo1"]
                     ],
                 },
             },
-            // Case {
-            //     title: "Error",
-            //     content: r#"
-            //     "#
-            //     .to_string(),
-            //     expect: Histories::default(),
-            // },
+            Case {
+                title: "Error",
+                content: r#"
+                "#
+                .to_string(),
+                expect: Histories::default(),
+            },
         ];
 
         for case in cases {
