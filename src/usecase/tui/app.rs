@@ -858,32 +858,28 @@ mod test {
                     )),
                 },
             },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "ExecuteTarget(History)",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(1),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::ExecuteTarget),
-            //     expect_model: Model {
-            //         app_state: AppState::ExecuteTarget(ExecuteTargetState::new(
-            //             runner::Runner::MakeCommand(Make::new_for_test()),
-            //             command::Command::new(
-            //                 runner_type::RunnerType::Make,
-            //                 "history1".to_string(),
-            //                 PathBuf::new(),
-            //                 4,
-            //             )
-            //         )),
-            //     },
-            // },
+            Case {
+                title: "ExecuteTarget(History)",
+                model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+                message: Some(Message::ExecuteTarget),
+                expect_model: Model {
+                    app_state: AppState::ExecuteTarget(ExecuteTargetState::new(
+                        runner::Runner::MakeCommand(Make::new_for_test()),
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "history1".to_string(),
+                            PathBuf::from("Makefile"),
+                            4,
+                        ),
+                    )),
+                },
+            },
             Case {
                 title: "Selecting position should be reset if some kind of char
                     was inputted when the target located not in top of the targets",
@@ -982,106 +978,90 @@ mod test {
                     }),
                 },
             },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "NextHistory",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(0),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::NextHistory),
-            //     expect_model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(1),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            // },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "PreviousHistory",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(0),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::NextHistory),
-            //     expect_model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(1),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            // },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "When the last history is selected and NextHistory is received, it returns to the beginning.",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(2),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::NextHistory),
-            //     expect_model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(0),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            // },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "When the first history is selected and PreviousHistory is received, it moves to the last history.",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(0),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::PreviousHistory),
-            //     expect_model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(2),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            // },
+            Case {
+                title: "NextHistory",
+                model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+            },
+            Case {
+                title: "PreviousHistory",
+                model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+            },
+            Case {
+                title: "When the last history is selected and NextHistory is received, it returns to the beginning.",
+                model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(2),
+                        ),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+            },
+            Case {
+                title: "When the first history is selected and PreviousHistory is received, it moves to the last history.",
+                model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+                message: Some(Message::PreviousHistory),
+                expect_model: Model {
+                    app_state: AppState::SelectTarget(SelectTargetState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(2),
+                        ),
+                        ..SelectTargetState::new_for_test()
+                    }),
+                },
+            },
         ];
 
         // NOTE: When running tests, you need to set FZF_MAKE_IS_TESTING=true. Otherwise, the developer's history file will be overwritten.
