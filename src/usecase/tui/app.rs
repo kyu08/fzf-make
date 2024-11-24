@@ -1,15 +1,14 @@
+use super::{config, ui::ui};
 use crate::{
-    file::{path_to_content, toml},
+    file::toml,
     model::{
         command,
-        histories::{history_file_path, Histories},
+        histories::{self},
         make::Make,
-        runner,
+        runner, runner_type,
     },
 };
-
-use super::{config, ui::ui};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
     execute,
@@ -23,6 +22,7 @@ use ratatui::{
 };
 use std::{
     collections::HashMap,
+    env,
     io::{self, Stderr},
     panic,
     path::PathBuf,
@@ -36,8 +36,8 @@ use tui_textarea::TextArea;
 // See: https://www.youtube.com/watch?v=IcgmSRJHu_8
 #[derive(PartialEq, Debug)]
 pub enum AppState<'a> {
-    SelectTarget(SelectTargetState<'a>),
-    ExecuteTarget(ExecuteTargetState),
+    SelectCommand(SelectCommandState<'a>),
+    ExecuteCommand(ExecuteCommandState),
     ShouldQuit,
 }
 
@@ -48,9 +48,9 @@ pub struct Model<'a> {
 
 impl Model<'_> {
     pub fn new(config: config::Config) -> Result<Self> {
-        match SelectTargetState::new(config) {
+        match SelectCommandState::new(config) {
             Ok(s) => Ok(Model {
-                app_state: AppState::SelectTarget(s),
+                app_state: AppState::SelectCommand(s),
             }),
             Err(e) => Err(e),
         }
@@ -58,21 +58,21 @@ impl Model<'_> {
 
     fn handle_key_input(&self, key: KeyEvent) -> Option<Message> {
         match &self.app_state {
-            AppState::SelectTarget(s) => match key.code {
+            AppState::SelectCommand(s) => match key.code {
                 KeyCode::Tab => Some(Message::MoveToNextPane),
                 KeyCode::Esc => Some(Message::Quit),
                 _ => match s.current_pane {
                     CurrentPane::Main => match key.code {
-                        KeyCode::Down => Some(Message::NextTarget),
-                        KeyCode::Up => Some(Message::PreviousTarget),
-                        KeyCode::Enter => Some(Message::ExecuteTarget),
+                        KeyCode::Down => Some(Message::NextCommand),
+                        KeyCode::Up => Some(Message::PreviousCommand),
+                        KeyCode::Enter => Some(Message::ExecuteCommand),
                         _ => Some(Message::SearchTextAreaKeyInput(key)),
                     },
                     CurrentPane::History => match key.code {
                         KeyCode::Char('q') => Some(Message::Quit),
                         KeyCode::Down => Some(Message::NextHistory),
                         KeyCode::Up => Some(Message::PreviousHistory),
-                        KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteTarget),
+                        KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteCommand),
                         _ => None,
                     },
                 },
@@ -81,44 +81,75 @@ impl Model<'_> {
         }
     }
 
-    fn get_histories(makefile_path: PathBuf) -> Option<Histories> {
-        history_file_path().map(|(history_file_dir, history_file_name)| {
-            let content =
-                match path_to_content::path_to_content(history_file_dir.join(history_file_name)) {
-                    Err(_) => return Histories::new(makefile_path, vec![]), // NOTE: Show error message on message pane https://github.com/kyu08/fzf-make/issues/152
-                    Ok(c) => c,
-                };
-            // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
-            let histories = toml::parse_history(content.to_string()).unwrap_or_default();
+    // returns available commands in cwd from history file
+    fn get_histories(
+        current_working_directory: PathBuf,
+        runners: Vec<runner::Runner>,
+    ) -> Vec<command::Command> {
+        let histories = toml::Histories::into(toml::Histories::get_history());
 
-            Histories::new(makefile_path, histories)
-        })
+        let mut result: Vec<command::Command> = Vec::new();
+        for history in histories.histories {
+            if history.path != current_working_directory {
+                continue;
+            }
+            result = Self::get_commands_from_history(history.commands, &runners);
+            break;
+        }
+
+        result
     }
 
-    fn transition_to_execute_target_state(
+    fn get_commands_from_history(
+        history_commands: Vec<histories::HistoryCommand>,
+        runners: &Vec<runner::Runner>,
+    ) -> Vec<command::Command> {
+        // TODO: Make this more readable and more performant.
+        let mut commands: Vec<command::Command> = Vec::new();
+        for history_command in history_commands {
+            match history_command.runner_type {
+                runner_type::RunnerType::Make => {
+                    for runner in runners {
+                        if let runner::Runner::MakeCommand(make) = runner {
+                            // PERF: This method is called every time. Memoize should be considered.
+                            for c in make.to_commands() {
+                                if c.name == history_command.name {
+                                    commands.push(c);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                runner_type::RunnerType::Pnpm => todo!(),
+            };
+        }
+        commands
+    }
+
+    fn transition_to_execute_command_state(
         &mut self,
         runner: runner::Runner,
         command: command::Command,
     ) {
-        self.app_state = AppState::ExecuteTarget(ExecuteTargetState::new(runner, command));
+        self.app_state = AppState::ExecuteCommand(ExecuteCommandState::new(runner, command));
     }
 
     fn transition_to_should_quit_state(&mut self) {
-        // TODO: remove mut
         self.app_state = AppState::ShouldQuit;
     }
 
-    pub fn should_quit(&self) -> bool {
+    fn should_quit(&self) -> bool {
         self.app_state == AppState::ShouldQuit
     }
 
-    pub fn is_target_selected(&self) -> bool {
-        matches!(self.app_state, AppState::ExecuteTarget(_))
+    fn is_command_selected(&self) -> bool {
+        matches!(self.app_state, AppState::ExecuteCommand(_))
     }
 
-    pub fn command_to_execute(&self) -> Option<(runner::Runner, command::Command)> {
+    fn command_to_execute(&self) -> Option<(runner::Runner, command::Command)> {
         match &self.app_state {
-            AppState::ExecuteTarget(command) => {
+            AppState::ExecuteCommand(command) => {
                 let command = command.clone();
                 Some((command.executor, command.command))
             }
@@ -142,7 +173,7 @@ pub fn main(config: config::Config) -> Result<()> {
         }
         let mut model = model.unwrap();
 
-        let target = match run(&mut terminal, &mut model) {
+        let command = match run(&mut terminal, &mut model) {
             Ok(t) => t,
             Err(e) => {
                 shutdown_terminal(&mut terminal)?;
@@ -152,7 +183,7 @@ pub fn main(config: config::Config) -> Result<()> {
 
         shutdown_terminal(&mut terminal)?;
 
-        match target {
+        match command {
             Some((runner, command)) => {
                 runner.show_command(&command);
                 let _ = runner.execute(&command); // TODO: handle error
@@ -184,7 +215,7 @@ fn run<'a, B: Backend>(
         match handle_event(model) {
             Ok(message) => {
                 update(model, message);
-                if model.should_quit() || model.is_target_selected() {
+                if model.should_quit() || model.is_command_selected() {
                     break;
                 }
             }
@@ -214,9 +245,9 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
 
 enum Message {
     SearchTextAreaKeyInput(KeyEvent),
-    ExecuteTarget,
-    NextTarget,
-    PreviousTarget,
+    ExecuteCommand,
+    NextCommand,
+    PreviousCommand,
     MoveToNextPane,
     NextHistory,
     PreviousHistory,
@@ -237,20 +268,19 @@ fn handle_event(model: &Model) -> io::Result<Option<Message>> {
 // TODO: make this method Model's method
 // TODO: Make this function returns `Result` or have a field like Model.error to hold errors
 fn update(model: &mut Model, message: Option<Message>) {
-    if let AppState::SelectTarget(ref mut s) = model.app_state {
+    if let AppState::SelectCommand(ref mut s) = model.app_state {
         match message {
             Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
-            Some(Message::ExecuteTarget) => {
-                if let Some(command) = s.get_selected_target() {
-                    // TODO: make this a method of SelectTargetState
-                    s.store_history(&command);
-                    let executor: runner::Runner = s.runners[0].clone();
-
-                    model.transition_to_execute_target_state(executor, command);
+            Some(Message::ExecuteCommand) => {
+                if let Some(command) = s.get_selected_command() {
+                    s.store_history(command.clone());
+                    if let Some(r) = command.runner_type.to_runner(&s.runners) {
+                        model.transition_to_execute_command_state(r, command);
+                    }
                 };
             }
-            Some(Message::NextTarget) => s.next_target(),
-            Some(Message::PreviousTarget) => s.previous_target(),
+            Some(Message::NextCommand) => s.next_command(),
+            Some(Message::PreviousCommand) => s.previous_command(),
             Some(Message::MoveToNextPane) => s.move_to_next_pane(),
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
@@ -261,23 +291,27 @@ fn update(model: &mut Model, message: Option<Message>) {
 }
 
 #[derive(Debug)]
-pub struct SelectTargetState<'a> {
+pub struct SelectCommandState<'a> {
+    pub current_dir: PathBuf,
     pub current_pane: CurrentPane,
     pub runners: Vec<runner::Runner>,
     pub search_text_area: TextArea_<'a>,
-    pub targets_list_state: ListState,
-    pub histories: Option<Histories>,
-    pub histories_list_state: ListState,
+    pub commands_list_state: ListState,
+    /// This field could have been of type `Vec<Histories>`, but it was intentionally made of type `Vec<command::Command>`.
+    /// This is because it allows for future features such as displaying the contents of history in the preview window
+    /// or hiding commands that existed at the time of execution but no longer exist.
+    pub history: Vec<command::Command>,
+    pub history_list_state: ListState,
 }
 
-impl PartialEq for SelectTargetState<'_> {
+impl PartialEq for SelectCommandState<'_> {
     fn eq(&self, other: &Self) -> bool {
-        let without_runners = self.current_pane == other.current_pane
+        let other_than_runners = self.current_pane == other.current_pane
             && self.search_text_area == other.search_text_area
-            && self.targets_list_state == other.targets_list_state
-            && self.histories == other.histories
-            && self.histories_list_state == other.histories_list_state;
-        if !without_runners {
+            && self.commands_list_state == other.commands_list_state
+            && self.history == other.history
+            && self.history_list_state == other.history_list_state;
+        if !other_than_runners {
             return false; // Early return for performance
         }
 
@@ -295,9 +329,13 @@ impl PartialEq for SelectTargetState<'_> {
     }
 }
 
-impl SelectTargetState<'_> {
+impl SelectCommandState<'_> {
     pub fn new(config: config::Config) -> Result<Self> {
-        let makefile = match Make::create_makefile() {
+        let current_dir = match env::current_dir() {
+            Ok(d) => d,
+            Err(e) => bail!("Failed to get current directory: {}", e),
+        };
+        let makefile = match Make::new(current_dir.clone()) {
             Err(e) => return Err(e),
             Ok(f) => f,
         };
@@ -308,21 +346,22 @@ impl SelectTargetState<'_> {
             CurrentPane::Main
         };
         let runner = { runner::Runner::MakeCommand(makefile) };
+        let runners = vec![runner];
 
-        let path = runner.path();
-        Ok(SelectTargetState {
+        Ok(SelectCommandState {
+            current_dir: current_dir.clone(),
             current_pane,
-            runners: vec![runner],
+            runners: runners.clone(),
             search_text_area: TextArea_(TextArea::default()),
-            targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            histories: Model::get_histories(path),
-            histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            history: Model::get_histories(current_dir, runners),
+            history_list_state: ListState::with_selected(ListState::default(), Some(0)),
         })
     }
 
-    fn get_selected_target(&self) -> Option<command::Command> {
+    fn get_selected_command(&self) -> Option<command::Command> {
         match self.current_pane {
-            CurrentPane::Main => self.selected_target(),
+            CurrentPane::Main => self.selected_command(),
             CurrentPane::History => self.selected_history(),
         }
     }
@@ -334,21 +373,9 @@ impl SelectTargetState<'_> {
         }
     }
 
-    // TODO(#321): comment in this method
-    // TODO: This method should return Result when it fails.
-    // pub fn append_history(&self, command: &str) -> Option<Histories> {
-    //     match &self.histories {
-    //         Some(histories) => {
-    //             histories.append(&self.runners[0].path(), command)
-    //             // TODO(#321): For now, it is &self.runners[0] to pass the compilation, but it should be taken from runner::Command::path()
-    //         }
-    //         _ => None,
-    //     }
-    // }
-
-    fn selected_target(&self) -> Option<command::Command> {
-        match self.targets_list_state.selected() {
-            Some(i) => self.narrow_down_targets().get(i).cloned(),
+    fn selected_command(&self) -> Option<command::Command> {
+        match self.commands_list_state.selected() {
+            Some(i) => self.narrow_down_commands().get(i).cloned(),
             None => None,
         }
     }
@@ -359,13 +386,13 @@ impl SelectTargetState<'_> {
             return None;
         }
 
-        match self.histories_list_state.selected() {
+        match self.history_list_state.selected() {
             Some(i) => history.get(i).cloned(),
             None => None,
         }
     }
 
-    pub fn narrow_down_targets(&self) -> Vec<command::Command> {
+    pub fn narrow_down_commands(&self) -> Vec<command::Command> {
         let commands = {
             let mut commands: Vec<command::Command> = Vec::new();
             for runner in &self.runners {
@@ -389,19 +416,19 @@ impl SelectTargetState<'_> {
             let matcher = SkimMatcherV2::default();
             let mut list: Vec<(i64, String)> = commands
                 .into_iter()
-                .filter_map(|target| {
+                .filter_map(|command| {
                     let mut key_input = self.search_text_area.0.lines().join("");
                     key_input.retain(|c| !c.is_whitespace());
                     matcher
-                        .fuzzy_indices(&target.to_string(), key_input.as_str())
-                        .map(|(score, _)| (score, target.to_string()))
+                        .fuzzy_indices(&command.to_string(), key_input.as_str())
+                        .map(|(score, _)| (score, command.to_string()))
                 })
                 .collect();
 
             list.sort_by(|(score1, _), (score2, _)| score1.cmp(score2));
             list.reverse();
 
-            list.into_iter().map(|(_, target)| target).collect()
+            list.into_iter().map(|(_, command)| command).collect()
         };
 
         let mut result: Vec<command::Command> = Vec::new();
@@ -416,30 +443,18 @@ impl SelectTargetState<'_> {
     }
 
     pub fn get_history(&self) -> Vec<command::Command> {
-        vec![]
-        // TODO(#321): implement when history function is implemented
-        // UIに表示するためのhistory一覧を取得する関数。
-        // runnersを渡すと関連するhistory一覧を返すようにするのがよさそう。
-        // let paths = self
-        //     .runners
-        //     .iter()
-        //     .map(|r| r.path())
-        //     .collect::<Vec<PathBuf>>();
-        //
-        // self.histories
-        //     .clone()
-        //     .map_or(Vec::new(), |h| h.get_histories(paths))
+        self.history.clone()
     }
 
-    fn next_target(&mut self) {
-        if self.narrow_down_targets().is_empty() {
-            self.targets_list_state.select(None);
+    fn next_command(&mut self) {
+        if self.narrow_down_commands().is_empty() {
+            self.commands_list_state.select(None);
             return;
         }
 
-        let i = match self.targets_list_state.selected() {
+        let i = match self.commands_list_state.selected() {
             Some(i) => {
-                if self.narrow_down_targets().len() - 1 <= i {
+                if self.narrow_down_commands().len() - 1 <= i {
                     0
                 } else {
                     i + 1
@@ -447,36 +462,36 @@ impl SelectTargetState<'_> {
             }
             None => 0,
         };
-        self.targets_list_state.select(Some(i));
+        self.commands_list_state.select(Some(i));
     }
 
-    fn previous_target(&mut self) {
-        if self.narrow_down_targets().is_empty() {
-            self.targets_list_state.select(None);
+    fn previous_command(&mut self) {
+        if self.narrow_down_commands().is_empty() {
+            self.commands_list_state.select(None);
             return;
         }
 
-        let i = match self.targets_list_state.selected() {
+        let i = match self.commands_list_state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.narrow_down_targets().len() - 1
+                    self.narrow_down_commands().len() - 1
                 } else {
                     i - 1
                 }
             }
             None => 0,
         };
-        self.targets_list_state.select(Some(i));
+        self.commands_list_state.select(Some(i));
     }
 
     fn next_history(&mut self) {
         let history_list = self.get_history();
         if history_list.is_empty() {
-            self.histories_list_state.select(None);
+            self.history_list_state.select(None);
             return;
         };
 
-        let i = match self.histories_list_state.selected() {
+        let i = match self.history_list_state.selected() {
             Some(i) => {
                 if history_list.len() - 1 <= i {
                     0
@@ -486,17 +501,17 @@ impl SelectTargetState<'_> {
             }
             None => 0,
         };
-        self.histories_list_state.select(Some(i));
+        self.history_list_state.select(Some(i));
     }
 
     fn previous_history(&mut self) {
         let history_list_len = self.get_history().len();
         match history_list_len {
             0 => {
-                self.histories_list_state.select(None);
+                self.history_list_state.select(None);
             }
             _ => {
-                let i = match self.histories_list_state.selected() {
+                let i = match self.history_list_state.selected() {
                     Some(i) => {
                         if i == 0 {
                             history_list_len - 1
@@ -506,7 +521,7 @@ impl SelectTargetState<'_> {
                     }
                     None => 0,
                 };
-                self.histories_list_state.select(Some(i));
+                self.history_list_state.select(Some(i));
             }
         };
     }
@@ -518,70 +533,96 @@ impl SelectTargetState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn store_history(&mut self, _command: &command::Command) {
-        // TODO(#321): implement when history function is implemented
-        // NOTE: self.get_selected_target should be called before self.append_history.
+    fn store_history(&self, command: command::Command) {
+        // NOTE: self.get_selected_command should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
-        // if let Some(h) = self.append_history(command) {
-        //     self.histories = Some(h)
-        // };
-        // if let (Some((dir, file_name)), Some(h)) = (history_file_path(), &self.histories) {
-        //     // TODO: handle error
-        //     let _ = toml::store_history(dir, file_name, h.to_tuple());
-        // };
+        if let Some((dir, file_name)) = toml::history_file_path() {
+            let all_histories = toml::Histories::get_history()
+                .into()
+                .append(self.current_dir.clone(), command);
+
+            // TODO: handle error
+            let _ = toml::create_or_update_history_file(dir, file_name, all_histories);
+        };
     }
 
     fn reset_selection(&mut self) {
-        if self.narrow_down_targets().is_empty() {
-            self.targets_list_state.select(None);
+        if self.narrow_down_commands().is_empty() {
+            self.commands_list_state.select(None);
         }
-        self.targets_list_state.select(Some(0));
+        self.commands_list_state.select(Some(0));
     }
 
     pub fn get_search_area_text(&self) -> String {
         self.search_text_area.0.lines().join("")
     }
 
-    #[cfg(test)]
-    fn init_histories(history_targets: Vec<String>) -> Option<Histories> {
-        use std::{env, path::Path};
+    pub fn get_latest_command(&self) -> Option<&command::Command> {
+        self.history.first()
+    }
 
-        let makefile_path = env::current_dir().unwrap().join(Path::new("Test.mk"));
-        Some(Histories::new(
-            makefile_path.clone(),
-            vec![(makefile_path, history_targets)],
-        ))
+    pub fn get_runner(&self, runner_type: &runner_type::RunnerType) -> Option<runner::Runner> {
+        for runner in &self.runners {
+            match (runner_type, runner) {
+                (runner_type::RunnerType::Make, runner::Runner::MakeCommand(_)) => {
+                    return Some(runner.clone());
+                }
+                (runner_type::RunnerType::Pnpm, runner::Runner::PnpmCommand(_)) => {
+                    return Some(runner.clone());
+                }
+                _ => continue,
+            }
+        }
+        None
     }
 
     #[cfg(test)]
     fn new_for_test() -> Self {
-        SelectTargetState {
+        use crate::model::runner_type;
+
+        SelectCommandState {
+            current_dir: env::current_dir().unwrap(),
             current_pane: CurrentPane::Main,
             runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
-            targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            histories: SelectTargetState::init_histories(vec![
-                "history0".to_string(),
-                "history1".to_string(),
-                "history2".to_string(),
-            ]),
-            histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            history: vec![
+                command::Command {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history0".to_string(),
+                    file_name: PathBuf::from("Makefile"),
+                    line_number: 1,
+                },
+                command::Command {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history1".to_string(),
+                    file_name: PathBuf::from("Makefile"),
+                    line_number: 4,
+                },
+                command::Command {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "history2".to_string(),
+                    file_name: PathBuf::from("Makefile"),
+                    line_number: 7,
+                },
+            ],
+            history_list_state: ListState::with_selected(ListState::default(), Some(0)),
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExecuteTargetState {
+pub struct ExecuteCommandState {
     /// It is possible to have one concrete type like Command struct here.
     /// But from the perspective of simpleness of code base, this field has trait object.
     executor: runner::Runner,
     command: command::Command,
 }
 
-impl ExecuteTargetState {
+impl ExecuteCommandState {
     fn new(executor: runner::Runner, command: command::Command) -> Self {
-        ExecuteTargetState { executor, command }
+        ExecuteCommandState { executor, command }
     }
 }
 
@@ -613,9 +654,9 @@ impl<'a> PartialEq for TextArea_<'a> {
 
 #[cfg(test)]
 mod test {
-    use crate::model::runner_type;
-
     use super::*;
+    use crate::model::runner_type;
+    use pretty_assertions::assert_eq;
     use std::env;
 
     #[test]
@@ -630,40 +671,40 @@ mod test {
             Case {
                 title: "MoveToNextPane(Main -> History)",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
+                    app_state: AppState::SelectCommand(SelectCommandState {
                         current_pane: CurrentPane::Main,
-                        ..SelectTargetState::new_for_test()
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
                 message: Some(Message::MoveToNextPane),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
+                    app_state: AppState::SelectCommand(SelectCommandState {
                         current_pane: CurrentPane::History,
-                        ..SelectTargetState::new_for_test()
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
                 title: "MoveToNextPane(History -> Main)",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
+                    app_state: AppState::SelectCommand(SelectCommandState {
                         current_pane: CurrentPane::History,
-                        ..SelectTargetState::new_for_test()
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
                 message: Some(Message::MoveToNextPane),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
+                    app_state: AppState::SelectCommand(SelectCommandState {
                         current_pane: CurrentPane::Main,
-                        ..SelectTargetState::new_for_test()
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
                 title: "Quit",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
                 message: Some(Message::Quit),
@@ -674,97 +715,118 @@ mod test {
             Case {
                 title: "SearchTextAreaKeyInput(a)",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
                 message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
                     KeyCode::Char('a'),
                 ))),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
+                    app_state: AppState::SelectCommand(SelectCommandState {
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('a')));
                             TextArea_(text_area)
                         },
-                        ..SelectTargetState::new_for_test()
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
                 title: "Next(0 -> 1)",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::NextTarget),
+                message: Some(Message::NextCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
                 title: "Next(2 -> 0)",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(2)),
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(2),
+                        ),
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::NextTarget),
+                message: Some(Message::NextCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
                 title: "Previous(1 -> 0)",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::PreviousTarget),
+                message: Some(Message::PreviousCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
                 title: "Previous(0 -> 2)",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::PreviousTarget),
+                message: Some(Message::PreviousCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(2)),
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(2),
+                        ),
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
-                title: "ExecuteTarget(Main)",
+                title: "ExecuteCommand(Main)",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::ExecuteTarget),
+                message: Some(Message::ExecuteCommand),
                 expect_model: Model {
-                    app_state: AppState::ExecuteTarget(ExecuteTargetState::new(
+                    app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
                         runner::Runner::MakeCommand(Make::new_for_test()),
                         command::Command::new(
                             runner_type::RunnerType::Make,
@@ -775,70 +837,72 @@ mod test {
                     )),
                 },
             },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "ExecuteTarget(History)",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(1),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::ExecuteTarget),
-            //     expect_model: Model {
-            //         app_state: AppState::ExecuteTarget(ExecuteTargetState::new(
-            //             runner::Runner::MakeCommand(Make::new_for_test()),
-            //             command::Command::new(
-            //                 runner_type::RunnerType::Make,
-            //                 "history1".to_string(),
-            //                 PathBuf::new(),
-            //                 4,
-            //             )
-            //         )),
-            //     },
-            // },
+            Case {
+                title: "ExecuteCommand(History)",
+                model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+                message: Some(Message::ExecuteCommand),
+                expect_model: Model {
+                    app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
+                        runner::Runner::MakeCommand(Make::new_for_test()),
+                        command::Command::new(
+                            runner_type::RunnerType::Make,
+                            "history1".to_string(),
+                            PathBuf::from("Makefile"),
+                            4,
+                        ),
+                    )),
+                },
+            },
             Case {
                 title: "Selecting position should be reset if some kind of char
-                    was inputted when the target located not in top of the targets",
+                    was inputted when the command located not in top of the commands",
                 model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
-                        ..SelectTargetState::new_for_test()
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
                 message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
                     KeyCode::Char('a'),
                 ))),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('a')));
                             TextArea_(text_area)
                         },
-                        ..SelectTargetState::new_for_test()
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
-                title: "NextTarget when there is no targets to select, panic should not occur",
+                title: "NextCommand when there is no commands to select, panic should not occur",
                 model: {
                     let mut m = Model {
-                        app_state: AppState::SelectTarget(SelectTargetState {
-                            targets_list_state: ListState::with_selected(
+                        app_state: AppState::SelectCommand(SelectCommandState {
+                            commands_list_state: ListState::with_selected(
                                 ListState::default(),
                                 None,
                             ),
-                            ..SelectTargetState::new_for_test()
+                            ..SelectCommandState::new_for_test()
                         }),
                     };
                     update(
-                        // There should not be targets because init_model has ["target0", "target1", "target2"] as target.
+                        // There should not be commands because init_model has ["target0", "target1", "target2"] as command.
                         &mut m,
                         Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
                             KeyCode::Char('w'),
@@ -846,33 +910,33 @@ mod test {
                     );
                     m
                 },
-                message: Some(Message::NextTarget),
+                message: Some(Message::NextCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), None),
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(ListState::default(), None),
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('w')));
                             TextArea_(text_area)
                         },
-                        ..SelectTargetState::new_for_test()
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
-                title: "PreviousTarget when there is no targets to select, panic should not occur",
+                title: "PreviousCommand when there is no commands to select, panic should not occur",
                 model: {
                     let mut m = Model {
-                        app_state: AppState::SelectTarget(SelectTargetState {
-                            targets_list_state: ListState::with_selected(
+                        app_state: AppState::SelectCommand(SelectCommandState {
+                            commands_list_state: ListState::with_selected(
                                 ListState::default(),
                                 None,
                             ),
-                            ..SelectTargetState::new_for_test()
+                            ..SelectCommandState::new_for_test()
                         }),
                     };
                     update(
-                        // There should not be targets because init_model has ["target0", "target1", "target2"] as target.
+                        // There should not be commands because init_model has ["target0", "target1", "target2"] as command.
                         &mut m,
                         Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
                             KeyCode::Char('w'),
@@ -880,119 +944,103 @@ mod test {
                     );
                     m
                 },
-                message: Some(Message::PreviousTarget),
+                message: Some(Message::PreviousCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), None),
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(ListState::default(), None),
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('w')));
                             TextArea_(text_area)
                         },
-                        ..SelectTargetState::new_for_test()
+                        ..SelectCommandState::new_for_test()
                     }),
                 },
             },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "NextHistory",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(0),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::NextHistory),
-            //     expect_model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(1),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            // },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "PreviousHistory",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(0),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::NextHistory),
-            //     expect_model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(1),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            // },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "When the last history is selected and NextHistory is received, it returns to the beginning.",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(2),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::NextHistory),
-            //     expect_model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(0),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            // },
-            // TODO(#321): comment in this test
-            // Case {
-            //     title: "When the first history is selected and PreviousHistory is received, it moves to the last history.",
-            //     model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(0),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            //     message: Some(Message::PreviousHistory),
-            //     expect_model: Model {
-            //         app_state: AppState::SelectTarget(SelectTargetState {
-            //             current_pane: CurrentPane::History,
-            //             histories_list_state: ListState::with_selected(
-            //                 ListState::default(),
-            //                 Some(2),
-            //             ),
-            //             ..SelectTargetState::new_for_test()
-            //         }),
-            //     },
-            // },
+            Case {
+                title: "NextHistory",
+                model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+            },
+            Case {
+                title: "PreviousHistory",
+                model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+            },
+            Case {
+                title: "When the last history is selected and NextHistory is received, it returns to the beginning.",
+                model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(2),
+                        ),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+                message: Some(Message::NextHistory),
+                expect_model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+            },
+            Case {
+                title: "When the first history is selected and PreviousHistory is received, it moves to the last history.",
+                model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+                message: Some(Message::PreviousHistory),
+                expect_model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        current_pane: CurrentPane::History,
+                        history_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(2),
+                        ),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+            },
         ];
 
         // NOTE: When running tests, you need to set FZF_MAKE_IS_TESTING=true. Otherwise, the developer's history file will be overwritten.

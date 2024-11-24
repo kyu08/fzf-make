@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::process;
 use std::{
-    env, fs,
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -20,11 +20,30 @@ impl Make {
         format!("make {}", command.name)
     }
 
-    pub fn create_makefile() -> Result<Make> {
-        let Some(makefile_name) = Make::specify_makefile_name(".".to_string()) else {
+    pub fn new(current_dir: PathBuf) -> Result<Make> {
+        let Some(makefile_name) = Make::specify_makefile_name(current_dir, ".".to_string()) else {
             return Err(anyhow!("makefile not found.\n"));
         };
-        Make::new(Path::new(&makefile_name).to_path_buf())
+        Make::new_internal(Path::new(&makefile_name).to_path_buf())
+    }
+
+    // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
+    // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
+    fn new_internal(path: PathBuf) -> Result<Make> {
+        // If the file path does not exist, the make command cannot be executed in the first place,
+        // so it is not handled here.
+        let file_content = file_util::path_to_content(path.clone())?;
+        let include_files = content_to_include_file_paths(file_content.clone())
+            .iter()
+            .map(|included_file_path| Make::new_internal(included_file_path.clone()))
+            .filter_map(Result::ok)
+            .collect();
+
+        Ok(Make {
+            path: path.clone(),
+            include_files,
+            targets: Targets::new(file_content, path),
+        })
     }
 
     pub fn to_commands(&self) -> Vec<command::Command> {
@@ -37,26 +56,7 @@ impl Make {
         result
     }
 
-    // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
-    // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
-    fn new(path: PathBuf) -> Result<Make> {
-        // If the file path does not exist, the make command cannot be executed in the first place,
-        // so it is not handled here.
-        let file_content = file_util::path_to_content(path.clone())?;
-        let include_files = content_to_include_file_paths(file_content.clone())
-            .iter()
-            .map(|included_file_path| Make::new(included_file_path.clone()))
-            .filter_map(Result::ok)
-            .collect();
-
-        Ok(Make {
-            path: path.clone(),
-            include_files,
-            targets: Targets::new(file_content, path),
-        })
-    }
-
-    fn specify_makefile_name(target_path: String) -> Option<PathBuf> {
+    fn specify_makefile_name(current_dir: PathBuf, target_path: String) -> Option<PathBuf> {
         //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
         //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
         // It needs to enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
@@ -68,11 +68,6 @@ impl Make {
             let file_name = e.unwrap().file_name();
             let file_name_string = file_name.to_str().unwrap();
             if makefile_name_options.contains(&file_name_string) {
-                let current_dir = match env::current_dir() {
-                    Err(_) => return None,
-                    Ok(d) => d,
-                };
-
                 temp_result.push(current_dir.join(file_name));
             }
         }
@@ -103,6 +98,7 @@ impl Make {
     #[cfg(test)]
     pub fn new_for_test() -> Make {
         use super::runner_type;
+        use std::env;
 
         Make {
             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
@@ -134,7 +130,7 @@ impl Make {
 /// The path should be relative path from current directory where make command is executed.
 /// So the path can be treated as it is.
 /// NOTE: path include `..` is not supported for now like `include ../c.mk`.
-pub fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
+fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     for line in file_content.lines() {
         let Some(include_files) = line_to_including_file_paths(line.to_string()) else {
@@ -173,11 +169,13 @@ fn line_to_including_file_paths(line: String) -> Option<Vec<PathBuf>> {
 
 #[cfg(test)]
 mod test {
-    use crate::model::runner_type;
-
     use super::*;
-
-    use std::fs::{self, File};
+    use crate::model::runner_type;
+    use pretty_assertions::assert_eq;
+    use std::{
+        env,
+        fs::{self, File},
+    };
     use uuid::Uuid;
 
     #[test]
@@ -230,7 +228,10 @@ mod test {
 
             assert_eq!(
                 expect,
-                Make::specify_makefile_name(tmp_dir.to_string_lossy().to_string()),
+                Make::specify_makefile_name(
+                    env::current_dir().unwrap(),
+                    tmp_dir.to_string_lossy().to_string()
+                ),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );

@@ -1,11 +1,5 @@
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
-
+use super::app::{AppState, CurrentPane, Model, SelectCommandState};
 use crate::model::command;
-
-use super::app::{AppState, CurrentPane, Model, SelectTargetState};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -14,10 +8,14 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 use tui_term::widget::PseudoTerminal;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
-    if let AppState::SelectTarget(model) = &mut model.app_state {
+    if let AppState::SelectCommand(model) = &mut model.app_state {
         let main_and_key_bindings = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(3), Constraint::Length(1)])
@@ -30,18 +28,18 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
             .split(main_and_key_bindings[0]);
         render_input_block(model, f, main[1]);
 
-        let preview_and_targets = Layout::default()
+        let preview_and_commands = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
             .split(main[0]);
-        render_preview_block(model, f, preview_and_targets[0]);
+        render_preview_block(model, f, preview_and_commands[0]);
 
-        let targets = Layout::default()
+        let commands = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-            .split(preview_and_targets[1]);
-        render_targets_block(model, f, targets[0]);
-        render_history_block(model, f, targets[1]);
+            .split(preview_and_commands[1]);
+        render_commands_block(model, f, commands[0]);
+        render_history_block(model, f, commands[1]);
     }
 }
 
@@ -64,11 +62,11 @@ fn color_and_border_style_for_selectable(
 }
 
 // Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
-fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let narrow_down_targets = model.narrow_down_targets();
+fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    let narrow_down_commands = model.narrow_down_commands();
 
     let selecting_command =
-        narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
+        narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
     let (fg_color_, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
@@ -81,7 +79,7 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
         .title(title)
         .title_style(TITLE_STYLE);
 
-    if !model.get_search_area_text().is_empty() && narrow_down_targets.is_empty() {
+    if !model.get_search_area_text().is_empty() && narrow_down_commands.is_empty() {
         f.render_widget(block, chunk);
         return;
     }
@@ -159,24 +157,24 @@ fn preview_command(file_path: PathBuf, line_number: u32) -> CommandBuilder {
     cmd
 }
 
-fn render_targets_block(
-    model: &mut SelectTargetState,
+fn render_commands_block(
+    model: &mut SelectCommandState,
     f: &mut Frame,
     chunk: ratatui::layout::Rect,
 ) {
     f.render_stateful_widget(
-        targets_block(
-            " 📢 Targets ",
-            model.narrow_down_targets(),
+        commands_block(
+            " 📢 Commands ",
+            model.narrow_down_commands(),
             model.current_pane.is_main(),
         ),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
-        &mut model.targets_list_state,
+        &mut model.commands_list_state,
     );
 }
 
-fn render_input_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_input_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let (fg_color, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
 
@@ -193,35 +191,35 @@ fn render_input_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratat
     model
         .search_text_area
         .0
-        .set_placeholder_text("Type text to search target");
+        .set_placeholder_text("Type text to search command");
 
     f.render_widget(&model.search_text_area.0, chunk);
 }
 
 fn render_history_block(
-    model: &mut SelectTargetState,
+    model: &mut SelectCommandState,
     f: &mut Frame,
     chunk: ratatui::layout::Rect,
 ) {
     f.render_stateful_widget(
-        targets_block(
+        commands_block(
             " 📚 History ",
             model.get_history(),
             model.current_pane.is_history(),
         ),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
-        &mut model.histories_list_state,
+        &mut model.history_list_state,
     );
 }
 
-fn render_hint_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let hint_text = match model.current_pane {
         CurrentPane::Main => {
-            "Execute the selected target: <enter> | Select target: ↑/↓ | Narrow down target: (type any character) | Move to next tab: <tab> | Quit: <esc>"
+            "Execute the selected command: <enter> | Select command: ↑/↓ | Narrow down command: (type any character) | Move to next tab: <tab> | Quit: <esc>"
         }
         CurrentPane::History => {
-            "Execute the selected target: <enter> | Select target: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
+            "Execute the selected command: <enter> | Select command: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
         }
     };
     let hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
@@ -232,16 +230,16 @@ fn render_hint_block(model: &mut SelectTargetState, f: &mut Frame, chunk: ratatu
     f.render_widget(key_notes_footer, chunk);
 }
 
-fn targets_block(
+fn commands_block(
     title: &str,
-    narrowed_down_targets: Vec<command::Command>,
+    narrowed_down_commands: Vec<command::Command>,
     is_current: bool,
 ) -> List<'_> {
     let (fg_color, border_style) = color_and_border_style_for_selectable(is_current);
 
-    let list: Vec<ListItem> = narrowed_down_targets
+    let list: Vec<ListItem> = narrowed_down_commands
         .into_iter()
-        .map(|target| ListItem::new(target.to_string()).style(Style::default()))
+        .map(|command| ListItem::new(command.to_string()).style(Style::default()))
         .collect();
 
     List::new(list)

@@ -1,11 +1,28 @@
+use super::runner;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
-// TODO(#321): remove
-#[allow(dead_code)]
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum RunnerType {
     Make,
     Pnpm,
+}
+
+impl RunnerType {
+    pub fn to_runner(&self, runners: &Vec<runner::Runner>) -> Option<runner::Runner> {
+        match self {
+            RunnerType::Make => {
+                for r in runners {
+                    if matches!(r, runner::Runner::MakeCommand(_)) {
+                        return Some(r.clone());
+                    }
+                }
+                None
+            }
+            RunnerType::Pnpm => todo!("implement and write test"),
+        }
+    }
 }
 
 impl fmt::Display for RunnerType {

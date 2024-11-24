@@ -1,8 +1,6 @@
-use std::path::PathBuf;
-
-use regex::Regex;
-
 use super::{command, runner_type};
+use regex::Regex;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Targets(pub Vec<command::Command>);
@@ -88,6 +86,7 @@ fn line_to_target(line: String) -> Option<String> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn content_to_targets_test() {
