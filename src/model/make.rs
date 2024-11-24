@@ -130,7 +130,7 @@ impl Make {
 /// The path should be relative path from current directory where make command is executed.
 /// So the path can be treated as it is.
 /// NOTE: path include `..` is not supported for now like `include ../c.mk`.
-pub fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
+fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     for line in file_content.lines() {
         let Some(include_files) = line_to_including_file_paths(line.to_string()) else {
