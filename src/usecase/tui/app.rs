@@ -543,7 +543,7 @@ impl SelectCommandState<'_> {
                 .append(self.current_dir.clone(), command);
 
             // TODO: handle error
-            let _ = toml::store_history(dir, file_name, all_histories);
+            let _ = toml::create_or_update_history_file(dir, file_name, all_histories);
         };
     }
 

@@ -135,7 +135,7 @@ pub fn parse_history(content: String) -> Result<Histories> {
     Ok(histories)
 }
 
-pub fn store_history(
+pub fn create_or_update_history_file(
     history_directory_path: PathBuf,
     history_file_name: String,
     new_history: histories::Histories,
