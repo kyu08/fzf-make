@@ -139,15 +139,15 @@ impl Model<'_> {
         self.app_state = AppState::ShouldQuit;
     }
 
-    pub fn should_quit(&self) -> bool {
+    fn should_quit(&self) -> bool {
         self.app_state == AppState::ShouldQuit
     }
 
-    pub fn is_command_selected(&self) -> bool {
+    fn is_command_selected(&self) -> bool {
         matches!(self.app_state, AppState::ExecuteCommand(_))
     }
 
-    pub fn command_to_execute(&self) -> Option<(runner::Runner, command::Command)> {
+    fn command_to_execute(&self) -> Option<(runner::Runner, command::Command)> {
         match &self.app_state {
             AppState::ExecuteCommand(command) => {
                 let command = command.clone();
