@@ -750,7 +750,7 @@ mod test {
                 },
                 message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
                     KeyCode::Backspace,
-                ))), 
+                ))),
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
                         commands_list_state: ListState::with_selected(
@@ -952,7 +952,8 @@ mod test {
                 },
             },
             Case {
-                title: "PreviousCommand when there is no commands to select, panic should not occur",
+                title: "PreviousCommand when there is no commands to select, 
+                    panic should not occur",
                 model: {
                     let mut m = Model {
                         app_state: AppState::SelectCommand(SelectCommandState {
@@ -1022,14 +1023,12 @@ mod test {
                 },
             },
             Case {
-                title: "When the last history is selected and NextHistory is received, it returns to the beginning.",
+                title: "When the last history is selected and NextHistory is received, 
+                    it returns to the beginning.",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
                         current_pane: CurrentPane::History,
-                        history_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(2),
-                        ),
+                        history_list_state: ListState::with_selected(ListState::default(), Some(2)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
@@ -1037,23 +1036,18 @@ mod test {
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
                         current_pane: CurrentPane::History,
-                        history_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(0),
-                        ),
+                        history_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
             },
             Case {
-                title: "When the first history is selected and PreviousHistory is received, it moves to the last history.",
+                title: "When the first history is selected and PreviousHistory is received, 
+                    it moves to the last history.",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
                         current_pane: CurrentPane::History,
-                        history_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(0),
-                        ),
+                        history_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
@@ -1061,10 +1055,7 @@ mod test {
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
                         current_pane: CurrentPane::History,
-                        history_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(2),
-                        ),
+                        history_list_state: ListState::with_selected(ListState::default(), Some(2)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
