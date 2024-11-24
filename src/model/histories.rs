@@ -69,9 +69,10 @@ impl History {
     }
 }
 
-/// In the history file, the command has only the name of the command and the runner type.
-/// Because its file name where it's defined and file number is variable.
-/// So we search them every time fzf-make is launched.
+/// In the history file, the command has only the name of the command and the runner type though
+/// command::Command has `file_name`, `line_number` as well.
+/// Because its file name where it's defined and line number is variable.
+/// So we search them every time fzf-make is launched instead of storing them in the history file.
 #[derive(PartialEq, Clone, Debug)]
 pub struct HistoryCommand {
     pub runner_type: runner_type::RunnerType,
