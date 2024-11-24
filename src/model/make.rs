@@ -171,6 +171,7 @@ fn line_to_including_file_paths(line: String) -> Option<Vec<PathBuf>> {
 mod test {
     use super::*;
     use crate::model::runner_type;
+    use pretty_assertions::assert_eq;
     use std::{
         env,
         fs::{self, File},

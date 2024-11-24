@@ -677,9 +677,9 @@ impl<'a> PartialEq for TextArea_<'a> {
 
 #[cfg(test)]
 mod test {
-    use crate::model::runner_type;
-
     use super::*;
+    use crate::model::runner_type;
+    use pretty_assertions::assert_eq;
     use std::env;
 
     #[test]

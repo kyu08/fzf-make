@@ -159,6 +159,7 @@ mod test {
     use super::*;
     use crate::model::runner_type;
     use anyhow::Result;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn parse_history_test() {

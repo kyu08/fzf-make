@@ -88,6 +88,7 @@ fn line_to_target(line: String) -> Option<String> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn content_to_targets_test() {
