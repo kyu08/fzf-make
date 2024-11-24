@@ -136,7 +136,6 @@ impl Model<'_> {
     }
 
     fn transition_to_should_quit_state(&mut self) {
-        // TODO: remove mut
         self.app_state = AppState::ShouldQuit;
     }
 

@@ -6,8 +6,6 @@ use std::path::PathBuf;
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Runner {
-    // TODO(#321): Use associated constants if possible.
-    // ref: https://doc.rust-lang.org/reference/items/associated-items.html#associated-constants
     MakeCommand(make::Make),
     PnpmCommand(pnpm::Pnpm),
 }
