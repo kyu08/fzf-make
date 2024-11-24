@@ -1,4 +1,4 @@
-use super::path_to_content;
+use super::{path_to_content, toml_old};
 use crate::model::{
     histories::{self},
     runner_type,
@@ -23,16 +23,25 @@ impl Histories {
         match history_file_path() {
             Some((history_file_dir, history_file_name)) => {
                 match path_to_content::path_to_content(history_file_dir.join(history_file_name)) {
-                    // TODO: Show error message on message pane if parsing history file failed. https://github.com/kyu08/fzf-make/issues/152
-                    Ok(c) => match parse_history(c.to_string()) {
-                        Ok(h) => h,
-                        Err(_) => Histories { histories: vec![] },
-                    },
-                    Err(_) => Histories { histories: vec![] },
+                    Ok(c) => Histories::parse_history_in_considering_history_file_format_version(c),
+                    Err(_) => Histories::default(),
                 }
             }
-            None => Histories { histories: vec![] },
+            None => Histories::default(),
         }
+    }
+
+    fn parse_history_in_considering_history_file_format_version(content: String) -> Histories {
+        // NOTE: The history file format has changed after https://github.com/kyu08/fzf-make/pull/324.
+        // So at first we try to parse it as the new format, and then try to parse it as the old format.
+        match parse_history(content.to_string()) {
+            Ok(h) => h,
+            Err(_) => toml_old::parse_history(content.to_string()).unwrap_or_default(),
+        }
+    }
+
+    pub fn new(histories: Vec<History>) -> Self {
+        Self { histories }
     }
 
     fn from(histories: histories::Histories) -> Self {
@@ -53,7 +62,7 @@ impl Histories {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-struct History {
+pub struct History {
     path: PathBuf,
     commands: Vec<HistoryCommand>,
 }
@@ -82,17 +91,25 @@ impl History {
             commands,
         }
     }
+
+    pub fn new(path: PathBuf, commands: Vec<HistoryCommand>) -> Self {
+        Self { path, commands }
+    }
 }
 
 /// toml representation of histories::HistoryCommand.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "kebab-case")]
-struct HistoryCommand {
+pub struct HistoryCommand {
     runner_type: runner_type::RunnerType,
     name: String,
 }
 
 impl HistoryCommand {
+    pub fn new(runner_type: runner_type::RunnerType, name: String) -> Self {
+        Self { runner_type, name }
+    }
+
     fn from(command: histories::HistoryCommand) -> Self {
         Self {
             runner_type: command.runner_type,
