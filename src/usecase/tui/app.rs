@@ -539,11 +539,9 @@ impl SelectTargetState<'_> {
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
         if let Some((dir, file_name)) = toml::history_file_path() {
-            let all_histories = toml::Histories::get_history().into().append(
-                self.current_dir.clone(),
-                self.history.clone(),
-                command,
-            );
+            let all_histories = toml::Histories::get_history()
+                .into()
+                .append(self.current_dir.clone(), command);
 
             // TODO: handle error
             let _ = toml::store_history(dir, file_name, all_histories);

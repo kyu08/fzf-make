@@ -10,25 +10,19 @@ pub struct Histories {
 }
 
 impl Histories {
-    // TODO: ut
-    pub fn append(
-        &self,
-        current_dir: PathBuf,
-        history_of_cwd: Vec<command::Command>,
-        command: command::Command,
-    ) -> Self {
+    pub fn append(&self, current_dir: PathBuf, command: command::Command) -> Self {
+        // Update the command history for the current directory.
         let new_history = {
-            let history_commands: Vec<HistoryCommand> = history_of_cwd
-                .iter()
-                .map(|c| HistoryCommand::from(c.clone()))
-                .collect();
-            let history = History {
-                path: current_dir.clone(),
-                commands: history_commands,
-            };
-            history.append(command)
+            match self.histories.iter().find(|h| h.path == current_dir) {
+                Some(history) => history.append(command.clone()),
+                None => History {
+                    path: current_dir,
+                    commands: vec![HistoryCommand::from(command)],
+                },
+            }
         };
 
+        // Update the whole histories.
         let mut new_histories = self.histories.clone();
         match new_histories
             .iter()
@@ -94,87 +88,123 @@ impl HistoryCommand {
 
 #[cfg(test)]
 mod test {
-    // TODO(#321): comment in this test
-    // #[test]
-    // fn histories_append_test() {
-    //     struct Case {
-    //         title: &'static str,
-    //         path: PathBuf,
-    //         appending_target: &'static str,
-    //         histories: Histories,
-    //         expect: Option<Histories>,
-    //     }
-    //     let cases = vec![
-    //         Case {
-    //             title: "Success",
-    //             path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-    //             appending_target: "history1",
-    //             histories: Histories {
-    //                 histories: vec![
-    //                     History {
-    //                         path: PathBuf::from("/Users/user/code/rustc".to_string()),
-    //                         executed_targets: vec!["history0".to_string(), "history1".to_string()],
-    //                     },
-    //                     History {
-    //                         path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-    //                         executed_targets: vec![
-    //                             "history0".to_string(),
-    //                             "history1".to_string(),
-    //                             "history2".to_string(),
-    //                         ],
-    //                     },
-    //                 ],
-    //             },
-    //             expect: Some(Histories {
-    //                 histories: vec![
-    //                     History {
-    //                         path: PathBuf::from("/Users/user/code/rustc".to_string()),
-    //                         executed_targets: vec!["history0".to_string(), "history1".to_string()],
-    //                     },
-    //                     History {
-    //                         path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-    //                         executed_targets: vec![
-    //                             "history1".to_string(),
-    //                             "history0".to_string(),
-    //                             "history2".to_string(),
-    //                         ],
-    //                     },
-    //                 ],
-    //             }),
-    //         },
-    //         Case {
-    //             title: "Returns None when path is not found",
-    //             path: PathBuf::from("/Users/user/code/non-existent-dir".to_string()),
-    //             appending_target: "history1",
-    //             histories: Histories {
-    //                 histories: vec![
-    //                     History {
-    //                         path: PathBuf::from("/Users/user/code/rustc".to_string()),
-    //                         executed_targets: vec!["history0".to_string(), "history1".to_string()],
-    //                     },
-    //                     History {
-    //                         path: PathBuf::from("/Users/user/code/fzf-make".to_string()),
-    //                         executed_targets: vec![
-    //                             "history0".to_string(),
-    //                             "history1".to_string(),
-    //                             "history2".to_string(),
-    //                         ],
-    //                     },
-    //                 ],
-    //             },
-    //             expect: None,
-    //         },
-    //     ];
-    //
-    //     for case in cases {
-    //         assert_eq!(
-    //             case.expect,
-    //             case.histories.append(&case.path, case.appending_target),
-    //             "\nFailed: 🚨{:?}🚨\n",
-    //             case.title,
-    //         )
-    //     }
-    // }
+    use super::*;
+    use pretty_assertions::assert_eq;
+    use std::path::PathBuf;
+
+    #[test]
+    fn histories_append_test() {
+        struct Case {
+            title: &'static str,
+            histories: Histories,
+            command_to_append: command::Command,
+            expect: Histories,
+        }
+
+        let path_to_append = PathBuf::from("/Users/user/code/fzf-make".to_string());
+        let cases = vec![
+            Case {
+                // Use raw string literal as workaround for
+                // https://github.com/rust-lang/rustfmt/issues/4800.
+                title: r#"The command executed is appended to the existing history if there is history for cwd."#,
+                histories: Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
+                            commands: vec![HistoryCommand {
+                                runner_type: runner_type::RunnerType::Make,
+                                name: "history0".to_string(),
+                            }],
+                        },
+                        History {
+                            path: path_to_append.clone(),
+                            commands: vec![HistoryCommand {
+                                runner_type: runner_type::RunnerType::Make,
+                                name: "history0".to_string(),
+                            }],
+                        },
+                    ],
+                },
+                command_to_append: command::Command {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "append".to_string(),
+                    file_name: PathBuf::from("Makefile"),
+                    line_number: 1,
+                },
+                expect: Histories {
+                    histories: vec![
+                        History {
+                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
+                            commands: vec![HistoryCommand {
+                                runner_type: runner_type::RunnerType::Make,
+                                name: "history0".to_string(),
+                            }],
+                        },
+                        History {
+                            path: path_to_append.clone(),
+                            commands: vec![
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "append".to_string(),
+                                },
+                                HistoryCommand {
+                                    runner_type: runner_type::RunnerType::Make,
+                                    name: "history0".to_string(),
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+            Case {
+                title: r#"A new history is appended if there is no history for cwd."#,
+                histories: Histories {
+                    histories: vec![History {
+                        path: PathBuf::from("/Users/user/code/rustc".to_string()),
+                        commands: vec![HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            name: "history0".to_string(),
+                        }],
+                    }],
+                },
+                command_to_append: command::Command {
+                    runner_type: runner_type::RunnerType::Make,
+                    name: "append".to_string(),
+                    file_name: PathBuf::from("Makefile"),
+                    line_number: 1,
+                },
+                expect: Histories {
+                    histories: vec![
+                        History {
+                            path: path_to_append.clone(),
+                            commands: vec![HistoryCommand {
+                                runner_type: runner_type::RunnerType::Make,
+                                name: "append".to_string(),
+                            }],
+                        },
+                        History {
+                            path: PathBuf::from("/Users/user/code/rustc".to_string()),
+                            commands: vec![HistoryCommand {
+                                runner_type: runner_type::RunnerType::Make,
+                                name: "history0".to_string(),
+                            }],
+                        },
+                    ],
+                },
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                case.histories
+                    .append(path_to_append.clone(), case.command_to_append),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            )
+        }
+    }
+
     // TODO(#321): comment in this test
     // #[test]
     // fn history_append_test() {
