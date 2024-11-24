@@ -355,11 +355,11 @@ name = "echo1"
                 title: "Success(old format)",
                 content: r#"
 [[history]]
-path = "/Users/user/code/fzf-make"
+path = "/Users/user/code/fzf-make/Makefile"
 executed-targets = ["test", "check", "spell-check"]
 
 [[history]]
-path = "/Users/user/code/golang/go-playground"
+path = "/Users/user/code/golang/go-playground/Makefile"
 executed-targets = ["run", "echo1"]
                 "#
                 .to_string(),

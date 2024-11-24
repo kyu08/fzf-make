@@ -20,7 +20,10 @@ impl Histories {
                     c,
                 ));
             }
-            result.push(fzf_make_toml::History::new(PathBuf::from(h.path), commands));
+            // NOTE: In old format, the path includes the file name but new format does not.
+            let mut makefile_path = PathBuf::from(h.path);
+            makefile_path.pop();
+            result.push(fzf_make_toml::History::new(makefile_path, commands));
         }
 
         fzf_make_toml::Histories::new(result)
@@ -49,6 +52,46 @@ mod test {
     use pretty_assertions::assert_eq;
 
     #[test]
+    fn into_histories_test() {
+        struct Case {
+            title: &'static str,
+            before: Histories,
+            after: fzf_make_toml::Histories,
+        }
+        let cases = vec![Case {
+            title: "Success",
+            before: Histories {
+                history: vec![History {
+                    path: "path/Makefile".to_string(),
+                    executed_targets: vec!["command1".to_string(), "command2".to_string()],
+                }],
+            },
+            after: fzf_make_toml::Histories::new(vec![fzf_make_toml::History::new(
+                PathBuf::from("path"),
+                vec![
+                    fzf_make_toml::HistoryCommand::new(
+                        runner_type::RunnerType::Make,
+                        "command1".to_string(),
+                    ),
+                    fzf_make_toml::HistoryCommand::new(
+                        runner_type::RunnerType::Make,
+                        "command2".to_string(),
+                    ),
+                ],
+            )]),
+        }];
+
+        for case in cases {
+            assert_eq!(
+                case.after,
+                case.before.into_histories(),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            )
+        }
+    }
+
+    #[test]
     fn parse_history_test() {
         struct Case {
             title: &'static str,
@@ -60,11 +103,11 @@ mod test {
                 title: "Success",
                 content: r#"
 [[history]]
-path = "/Users/user/code/fzf-make"
+path = "/Users/user/code/fzf-make/Makefile"
 executed-targets = ["test", "check", "spell-check"]
 
 [[history]]
-path = "/Users/user/code/golang/go-playground"
+path = "/Users/user/code/golang/go-playground/Makefile"
 executed-targets = ["run", "echo1"]
                 "#
                 .to_string(),
@@ -118,8 +161,8 @@ executed-targets = ["run", "echo1"]
                     "\nFailed: 🚨{:?}🚨\n",
                     case.title,
                 ),
-                Err(_) => assert_eq!(
-                    case.expect.unwrap_err().to_string(),
+                Err(err) => assert_eq!(
+                    err.to_string(),
                     parse_history(case.content).unwrap_err().to_string(),
                     "\nFailed: 🚨{:?}🚨\n",
                     case.title,

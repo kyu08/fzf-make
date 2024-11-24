@@ -1,4 +1,5 @@
 mod controller;
+mod err;
 mod file;
 mod model;
 mod usecase;
@@ -8,11 +9,8 @@ fn main() {
     let result = panic::catch_unwind(|| {
         controller::controller_main::run();
     });
-    match result {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            std::process::exit(1);
-        }
+    if let Err(e) = result {
+        println!("{}", err::any_to_string::any_to_string(&*e));
+        std::process::exit(1);
     }
 }
