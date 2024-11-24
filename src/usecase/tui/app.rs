@@ -1,5 +1,6 @@
 use super::{config, ui::ui};
 use crate::{
+    err::any_to_string,
     file::toml,
     model::{
         command,
@@ -198,7 +199,7 @@ pub fn main(config: config::Config) -> Result<()> {
         Err(e) => {
             disable_raw_mode()?;
             execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
-            println!("panic: {:?}", e);
+            println!("{}", any_to_string::any_to_string(&*e));
             process::exit(1);
         }
     }
