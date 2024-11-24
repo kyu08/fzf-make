@@ -528,9 +528,12 @@ impl SelectCommandState<'_> {
     }
 
     fn handle_key_input(&mut self, key_event: KeyEvent) {
-        if let KeyCode::Char(_) = key_event.code {
-            self.reset_selection();
-        };
+        match key_event.code {
+            KeyCode::Char(_) | KeyCode::Backspace => {
+                self.reset_selection();
+            }
+            _ => {}
+        }
         self.search_text_area.0.input(key_event);
     }
 
@@ -730,6 +733,30 @@ mod test {
                             text_area.input(KeyEvent::from(KeyCode::Char('a')));
                             TextArea_(text_area)
                         },
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+            },
+            Case {
+                title: "when BackSpace is inputted, the selection should be reset",
+                model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
+                        ..SelectCommandState::new_for_test()
+                    }),
+                },
+                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
+                    KeyCode::Backspace,
+                ))), 
+                expect_model: Model {
+                    app_state: AppState::SelectCommand(SelectCommandState {
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
