@@ -1,10 +1,9 @@
-use crate::usecase::usecase_main::Usecase;
-use anyhow::{anyhow, Result};
-
 use super::tui::{
     app::{AppState, Model},
     config,
 };
+use crate::usecase::usecase_main::Usecase;
+use anyhow::{anyhow, Result};
 
 pub struct Repeat;
 

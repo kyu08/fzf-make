@@ -1,11 +1,5 @@
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
-
-use crate::model::command;
-
 use super::app::{AppState, CurrentPane, Model, SelectCommandState};
+use crate::model::command;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -13,6 +7,10 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
+};
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
 };
 use tui_term::widget::PseudoTerminal;
 
