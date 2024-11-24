@@ -578,26 +578,6 @@ impl SelectCommandState<'_> {
     }
 
     #[cfg(test)]
-    // fn init_histories(history_commands: Vec<histories::HistoryCommand>) -> Histories {
-    //     use std::path::Path;
-    //
-    //     let mut commands: Vec<histories::HistoryCommand> = Vec::new();
-    //
-    //     for h in history_commands {
-    //         commands.push(histories::HistoryCommand {
-    //             runner_type: runner_type::RunnerType::Make,
-    //             name: h.name,
-    //         });
-    //     }
-    //
-    //     Histories {
-    //         histories: vec![histories::History {
-    //             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
-    //             commands: commands,
-    //         }],
-    //     }
-    // }
-    #[cfg(test)]
     fn new_for_test() -> Self {
         use crate::model::runner_type;
 

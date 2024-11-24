@@ -20,7 +20,7 @@ impl RunnerType {
                 }
                 None
             }
-            RunnerType::Pnpm => todo!(),
+            RunnerType::Pnpm => todo!("implement and write test"),
         }
     }
 }
