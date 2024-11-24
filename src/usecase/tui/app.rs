@@ -5,6 +5,7 @@ use crate::{
     model::{
         command,
         histories::{self},
+        js_package_manager::get_js_package_manager,
         make::Make,
         runner, runner_type,
     },
@@ -336,18 +337,26 @@ impl SelectCommandState<'_> {
             Ok(d) => d,
             Err(e) => bail!("Failed to get current directory: {}", e),
         };
-        let makefile = match Make::new(current_dir.clone()) {
-            Err(e) => return Err(e),
-            Ok(f) => f,
-        };
 
         let current_pane = if config.get_focus_history() {
             CurrentPane::History
         } else {
             CurrentPane::Main
         };
-        let runner = { runner::Runner::MakeCommand(makefile) };
-        let runners = vec![runner];
+
+        let runners = {
+            let mut runners = vec![];
+
+            match Make::new(current_dir.clone()) {
+                Err(e) => return Err(e),
+                Ok(f) => {
+                    runners.push(runner::Runner::MakeCommand(f));
+                }
+            };
+            let js_package_manager = get_js_package_manager(current_dir.clone());
+            runners.push(js_package_manager);
+            runners
+        };
 
         Ok(SelectCommandState {
             current_dir: current_dir.clone(),
