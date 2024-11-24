@@ -335,7 +335,7 @@ impl SelectCommandState<'_> {
             Ok(d) => d,
             Err(e) => bail!("Failed to get current directory: {}", e),
         };
-        let makefile = match Make::create_makefile(current_dir.clone()) {
+        let makefile = match Make::new(current_dir.clone()) {
             Err(e) => return Err(e),
             Ok(f) => f,
         };

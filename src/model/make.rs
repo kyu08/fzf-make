@@ -20,11 +20,30 @@ impl Make {
         format!("make {}", command.name)
     }
 
-    pub fn create_makefile(current_dir: PathBuf) -> Result<Make> {
+    pub fn new(current_dir: PathBuf) -> Result<Make> {
         let Some(makefile_name) = Make::specify_makefile_name(current_dir, ".".to_string()) else {
             return Err(anyhow!("makefile not found.\n"));
         };
-        Make::new(Path::new(&makefile_name).to_path_buf())
+        Make::new_internal(Path::new(&makefile_name).to_path_buf())
+    }
+
+    // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
+    // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
+    fn new_internal(path: PathBuf) -> Result<Make> {
+        // If the file path does not exist, the make command cannot be executed in the first place,
+        // so it is not handled here.
+        let file_content = file_util::path_to_content(path.clone())?;
+        let include_files = content_to_include_file_paths(file_content.clone())
+            .iter()
+            .map(|included_file_path| Make::new_internal(included_file_path.clone()))
+            .filter_map(Result::ok)
+            .collect();
+
+        Ok(Make {
+            path: path.clone(),
+            include_files,
+            targets: Targets::new(file_content, path),
+        })
     }
 
     pub fn to_commands(&self) -> Vec<command::Command> {
@@ -35,25 +54,6 @@ impl Make {
         }
 
         result
-    }
-
-    // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
-    // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
-    fn new(path: PathBuf) -> Result<Make> {
-        // If the file path does not exist, the make command cannot be executed in the first place,
-        // so it is not handled here.
-        let file_content = file_util::path_to_content(path.clone())?;
-        let include_files = content_to_include_file_paths(file_content.clone())
-            .iter()
-            .map(|included_file_path| Make::new(included_file_path.clone()))
-            .filter_map(Result::ok)
-            .collect();
-
-        Ok(Make {
-            path: path.clone(),
-            include_files,
-            targets: Targets::new(file_content, path),
-        })
     }
 
     fn specify_makefile_name(current_dir: PathBuf, target_path: String) -> Option<PathBuf> {
