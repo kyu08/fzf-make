@@ -1,7 +1,6 @@
+use super::runner;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-
-use super::runner;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]

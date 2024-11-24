@@ -1,8 +1,6 @@
-use std::path::PathBuf;
-
-use regex::Regex;
-
 use super::{command, runner_type};
+use regex::Regex;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Targets(pub Vec<command::Command>);

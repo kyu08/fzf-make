@@ -1,6 +1,5 @@
-use std::{fmt, path::PathBuf};
-
 use super::runner_type;
+use std::{fmt, path::PathBuf};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Command {
