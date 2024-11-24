@@ -115,7 +115,7 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
     match env::var("FZF_MAKE_IS_TESTING") {
         Ok(_) => {
             // When testing
-            let cwd = std::env::current_dir().unwrap();
+            let cwd = env::current_dir().unwrap();
             Some((
                 cwd.join(PathBuf::from("test_dir")),
                 HISTORY_FILE_NAME.to_string(),
