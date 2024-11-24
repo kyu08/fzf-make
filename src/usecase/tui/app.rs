@@ -273,7 +273,7 @@ fn update(model: &mut Model, message: Option<Message>) {
         match message {
             Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
             Some(Message::ExecuteTarget) => {
-                if let Some(command) = s.get_selected_target() {
+                if let Some(command) = s.get_selected_command() {
                     s.store_history(command.clone());
                     if let Some(r) = command.runner_type.to_runner(&s.runners) {
                         model.transition_to_execute_target_state(r, command);
@@ -297,21 +297,21 @@ pub struct SelectTargetState<'a> {
     pub current_pane: CurrentPane,
     pub runners: Vec<runner::Runner>,
     pub search_text_area: TextArea_<'a>,
-    pub targets_list_state: ListState,
+    pub commands_list_state: ListState,
     /// This field could have been of type `Vec<Histories>`, but it was intentionally made of type `Vec<command::Command>`.
     /// This is because it allows for future features such as displaying the contents of history in the preview window
     /// or hiding commands that existed at the time of execution but no longer exist.
-    pub histories: Vec<command::Command>,
-    pub histories_list_state: ListState,
+    pub history: Vec<command::Command>,
+    pub history_list_state: ListState,
 }
 
 impl PartialEq for SelectTargetState<'_> {
     fn eq(&self, other: &Self) -> bool {
         let without_runners = self.current_pane == other.current_pane
             && self.search_text_area == other.search_text_area
-            && self.targets_list_state == other.targets_list_state
-            && self.histories == other.histories
-            && self.histories_list_state == other.histories_list_state;
+            && self.commands_list_state == other.commands_list_state
+            && self.history == other.history
+            && self.history_list_state == other.history_list_state;
         if !without_runners {
             return false; // Early return for performance
         }
@@ -354,13 +354,13 @@ impl SelectTargetState<'_> {
             current_pane,
             runners: runners.clone(),
             search_text_area: TextArea_(TextArea::default()),
-            targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            histories: Model::get_histories(current_dir, runners),
-            histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            history: Model::get_histories(current_dir, runners),
+            history_list_state: ListState::with_selected(ListState::default(), Some(0)),
         })
     }
 
-    fn get_selected_target(&self) -> Option<command::Command> {
+    fn get_selected_command(&self) -> Option<command::Command> {
         match self.current_pane {
             CurrentPane::Main => self.selected_target(),
             CurrentPane::History => self.selected_history(),
@@ -375,7 +375,7 @@ impl SelectTargetState<'_> {
     }
 
     fn selected_target(&self) -> Option<command::Command> {
-        match self.targets_list_state.selected() {
+        match self.commands_list_state.selected() {
             Some(i) => self.narrow_down_targets().get(i).cloned(),
             None => None,
         }
@@ -387,7 +387,7 @@ impl SelectTargetState<'_> {
             return None;
         }
 
-        match self.histories_list_state.selected() {
+        match self.history_list_state.selected() {
             Some(i) => history.get(i).cloned(),
             None => None,
         }
@@ -444,16 +444,16 @@ impl SelectTargetState<'_> {
     }
 
     pub fn get_history(&self) -> Vec<command::Command> {
-        self.histories.clone()
+        self.history.clone()
     }
 
     fn next_target(&mut self) {
         if self.narrow_down_targets().is_empty() {
-            self.targets_list_state.select(None);
+            self.commands_list_state.select(None);
             return;
         }
 
-        let i = match self.targets_list_state.selected() {
+        let i = match self.commands_list_state.selected() {
             Some(i) => {
                 if self.narrow_down_targets().len() - 1 <= i {
                     0
@@ -463,16 +463,16 @@ impl SelectTargetState<'_> {
             }
             None => 0,
         };
-        self.targets_list_state.select(Some(i));
+        self.commands_list_state.select(Some(i));
     }
 
     fn previous_target(&mut self) {
         if self.narrow_down_targets().is_empty() {
-            self.targets_list_state.select(None);
+            self.commands_list_state.select(None);
             return;
         }
 
-        let i = match self.targets_list_state.selected() {
+        let i = match self.commands_list_state.selected() {
             Some(i) => {
                 if i == 0 {
                     self.narrow_down_targets().len() - 1
@@ -482,17 +482,17 @@ impl SelectTargetState<'_> {
             }
             None => 0,
         };
-        self.targets_list_state.select(Some(i));
+        self.commands_list_state.select(Some(i));
     }
 
     fn next_history(&mut self) {
         let history_list = self.get_history();
         if history_list.is_empty() {
-            self.histories_list_state.select(None);
+            self.history_list_state.select(None);
             return;
         };
 
-        let i = match self.histories_list_state.selected() {
+        let i = match self.history_list_state.selected() {
             Some(i) => {
                 if history_list.len() - 1 <= i {
                     0
@@ -502,17 +502,17 @@ impl SelectTargetState<'_> {
             }
             None => 0,
         };
-        self.histories_list_state.select(Some(i));
+        self.history_list_state.select(Some(i));
     }
 
     fn previous_history(&mut self) {
         let history_list_len = self.get_history().len();
         match history_list_len {
             0 => {
-                self.histories_list_state.select(None);
+                self.history_list_state.select(None);
             }
             _ => {
-                let i = match self.histories_list_state.selected() {
+                let i = match self.history_list_state.selected() {
                     Some(i) => {
                         if i == 0 {
                             history_list_len - 1
@@ -522,7 +522,7 @@ impl SelectTargetState<'_> {
                     }
                     None => 0,
                 };
-                self.histories_list_state.select(Some(i));
+                self.history_list_state.select(Some(i));
             }
         };
     }
@@ -541,7 +541,7 @@ impl SelectTargetState<'_> {
         if let Some((dir, file_name)) = toml::history_file_path() {
             let all_histories = toml::Histories::get_history().into().append(
                 self.current_dir.clone(),
-                self.histories.clone(),
+                self.history.clone(),
                 command,
             );
 
@@ -552,9 +552,9 @@ impl SelectTargetState<'_> {
 
     fn reset_selection(&mut self) {
         if self.narrow_down_targets().is_empty() {
-            self.targets_list_state.select(None);
+            self.commands_list_state.select(None);
         }
-        self.targets_list_state.select(Some(0));
+        self.commands_list_state.select(Some(0));
     }
 
     pub fn get_search_area_text(&self) -> String {
@@ -562,7 +562,7 @@ impl SelectTargetState<'_> {
     }
 
     pub fn get_latest_command(&self) -> Option<&command::Command> {
-        self.histories.first()
+        self.history.first()
     }
 
     pub fn get_runner(&self, runner_type: &runner_type::RunnerType) -> Option<runner::Runner> {
@@ -609,8 +609,8 @@ impl SelectTargetState<'_> {
             current_pane: CurrentPane::Main,
             runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
-            targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            histories: vec![
+            commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            history: vec![
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
                     name: "history0".to_string(),
@@ -630,7 +630,7 @@ impl SelectTargetState<'_> {
                     line_number: 7,
                 },
             ],
-            histories_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            history_list_state: ListState::with_selected(ListState::default(), Some(0)),
         }
     }
 }
@@ -766,7 +766,10 @@ mod test {
                 message: Some(Message::NextTarget),
                 expect_model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
                         ..SelectTargetState::new_for_test()
                     }),
                 },
@@ -775,14 +778,20 @@ mod test {
                 title: "Next(2 -> 0)",
                 model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(2)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(2),
+                        ),
                         ..SelectTargetState::new_for_test()
                     }),
                 },
                 message: Some(Message::NextTarget),
                 expect_model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
                         ..SelectTargetState::new_for_test()
                     }),
                 },
@@ -791,14 +800,20 @@ mod test {
                 title: "Previous(1 -> 0)",
                 model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
                         ..SelectTargetState::new_for_test()
                     }),
                 },
                 message: Some(Message::PreviousTarget),
                 expect_model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
                         ..SelectTargetState::new_for_test()
                     }),
                 },
@@ -807,14 +822,20 @@ mod test {
                 title: "Previous(0 -> 2)",
                 model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
                         ..SelectTargetState::new_for_test()
                     }),
                 },
                 message: Some(Message::PreviousTarget),
                 expect_model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(2)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(2),
+                        ),
                         ..SelectTargetState::new_for_test()
                     }),
                 },
@@ -870,7 +891,10 @@ mod test {
                     was inputted when the target located not in top of the targets",
                 model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(1)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(1),
+                        ),
                         ..SelectTargetState::new_for_test()
                     }),
                 },
@@ -879,7 +903,10 @@ mod test {
                 ))),
                 expect_model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                        commands_list_state: ListState::with_selected(
+                            ListState::default(),
+                            Some(0),
+                        ),
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('a')));
@@ -894,7 +921,7 @@ mod test {
                 model: {
                     let mut m = Model {
                         app_state: AppState::SelectTarget(SelectTargetState {
-                            targets_list_state: ListState::with_selected(
+                            commands_list_state: ListState::with_selected(
                                 ListState::default(),
                                 None,
                             ),
@@ -913,7 +940,7 @@ mod test {
                 message: Some(Message::NextTarget),
                 expect_model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), None),
+                        commands_list_state: ListState::with_selected(ListState::default(), None),
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('w')));
@@ -928,7 +955,7 @@ mod test {
                 model: {
                     let mut m = Model {
                         app_state: AppState::SelectTarget(SelectTargetState {
-                            targets_list_state: ListState::with_selected(
+                            commands_list_state: ListState::with_selected(
                                 ListState::default(),
                                 None,
                             ),
@@ -947,7 +974,7 @@ mod test {
                 message: Some(Message::PreviousTarget),
                 expect_model: Model {
                     app_state: AppState::SelectTarget(SelectTargetState {
-                        targets_list_state: ListState::with_selected(ListState::default(), None),
+                        commands_list_state: ListState::with_selected(ListState::default(), None),
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('w')));

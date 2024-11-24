@@ -68,7 +68,7 @@ fn render_preview_block(model: &SelectTargetState, f: &mut Frame, chunk: ratatui
     let narrow_down_targets = model.narrow_down_targets();
 
     let selecting_command =
-        narrow_down_targets.get(model.targets_list_state.selected().unwrap_or(0));
+        narrow_down_targets.get(model.commands_list_state.selected().unwrap_or(0));
 
     let (fg_color_, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
@@ -172,7 +172,7 @@ fn render_targets_block(
         ),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
-        &mut model.targets_list_state,
+        &mut model.commands_list_state,
     );
 }
 
@@ -211,7 +211,7 @@ fn render_history_block(
         ),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
-        &mut model.histories_list_state,
+        &mut model.history_list_state,
     );
 }
 
