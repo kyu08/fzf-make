@@ -30,7 +30,7 @@ USAGE:
 
 SUBCOMMANDS:
     repeat, --repeat, -r
-        Execute the last executed make target.
+        Execute the last executed command.
     history, --history, -h
         Launch fzf-make with the history pane focused.
     help, --help, -h
