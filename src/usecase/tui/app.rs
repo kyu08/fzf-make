@@ -306,12 +306,12 @@ pub struct SelectCommandState<'a> {
 
 impl PartialEq for SelectCommandState<'_> {
     fn eq(&self, other: &Self) -> bool {
-        let without_runners = self.current_pane == other.current_pane
+        let other_than_runners = self.current_pane == other.current_pane
             && self.search_text_area == other.search_text_area
             && self.commands_list_state == other.commands_list_state
             && self.history == other.history
             && self.history_list_state == other.history_list_state;
-        if !without_runners {
+        if !other_than_runners {
             return false; // Early return for performance
         }
 
