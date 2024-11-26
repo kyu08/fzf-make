@@ -1,6 +1,10 @@
 export
 RUST_BACKTRACE=full
 
+.PHONY: run2
+run2:
+	cd test_data && cargo run
+
 .PHONY: ci
 ci: # Checks same as CI
 	@make test-ci; \

@@ -1,6 +1,5 @@
 use super::command;
-use anyhow::Result;
-use std::{path::PathBuf, process};
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pnpm {
@@ -15,10 +14,8 @@ impl Pnpm {
         format!("pnpm run {}", command.name)
     }
 
-    pub fn new(current_dir: PathBuf) -> Result<Pnpm> {
-        // TODO: ここ実装する
-        // TODO: package.jsonのパース処理は共通化したほうがよさそう
-        todo!("implement")
+    pub fn new(path: PathBuf, commands: Vec<command::Command>) -> Pnpm {
+        Pnpm { path, commands }
     }
 
     // // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
