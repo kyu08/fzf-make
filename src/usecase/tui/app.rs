@@ -106,25 +106,28 @@ impl Model<'_> {
         history_commands: Vec<histories::HistoryCommand>,
         runners: &Vec<runner::Runner>,
     ) -> Vec<command::Command> {
-        // TODO: Make this more readable and more performant.
+        // make a hashmap in order to search commands by O(1).
+        let command_hash_map: HashMap<runner_type::RunnerType, HashMap<String, command::Command>> = {
+            let mut map: HashMap<runner_type::RunnerType, HashMap<String, command::Command>> =
+                HashMap::new();
+            for runner in runners {
+                let mut inner_map = HashMap::new();
+                for c in runner.list_commands() {
+                    inner_map.insert(c.name.clone(), c);
+                }
+                map.insert(runner_type::RunnerType::from(runner), inner_map);
+            }
+
+            map
+        };
+
         let mut commands: Vec<command::Command> = Vec::new();
         for history_command in history_commands {
-            match history_command.runner_type {
-                runner_type::RunnerType::Make => {
-                    for runner in runners {
-                        if let runner::Runner::MakeCommand(make) = runner {
-                            // PERF: This method is called every time. Memoize should be considered.
-                            for c in make.to_commands() {
-                                if c.name == history_command.name {
-                                    commands.push(c);
-                                    break;
-                                }
-                            }
-                        }
-                    }
+            if let Some(inner_map) = command_hash_map.get(&history_command.runner_type) {
+                if let Some(c) = inner_map.get(&history_command.name) {
+                    commands.push(c.clone());
                 }
-                runner_type::RunnerType::Pnpm => todo!(),
-            };
+            }
         }
         commands
     }
