@@ -24,6 +24,7 @@
 - Execute the last executed target(By running `fzf-make --repeat`.)
 - Command history
 - Support `include` directive
+- **(Scheduled to be developed)** Support pnpm, yarn, npm, etc.
 - **(Scheduled to be developed)** Support config file
 
 # 👓 Prerequisites
