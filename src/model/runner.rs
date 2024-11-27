@@ -41,7 +41,7 @@ impl Runner {
     pub fn execute(&self, command: &command::Command) -> Result<()> {
         match self {
             Runner::MakeCommand(make) => make.execute(command),
-            Runner::PnpmCommand(_) => todo!(),
+            Runner::PnpmCommand(pnpm) => pnpm.execute(command),
         }
     }
 }
