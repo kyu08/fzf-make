@@ -55,3 +55,22 @@ fn parse_package_json(content: String) -> Vec<command::Command> {
 
     result
 }
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_parse_package_json() {
+        todo!("write ut");
+        // let content = r#"{
+        //     "name": "test",
+        //     "version": "1.0.0",
+        //     "scripts": {
+        //         "test": "echo \"Error: no test specified\" && exit 1"
+        //     }
+        // }"#;
+        // let commands = parse_package_json(content.to_string());
+        // assert_eq!(commands.len(), 1);
+        // assert_eq!(commands[0].name, "test");
+        // assert_eq!(commands[0].line_number, 4);
+    }
+}
