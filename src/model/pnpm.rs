@@ -1,4 +1,5 @@
 use super::command;
+use anyhow::{anyhow, Result};
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -7,15 +8,28 @@ pub struct Pnpm {
     commands: Vec<command::Command>,
 }
 
-// JSの各パッケージマネージャ用に初期化コードをかくというよりは
-// どのパッケージマネージャを使っているのか判定してそれをrunnerにappendするのがいいか？
 impl Pnpm {
-    pub fn command_to_run(command: &command::Command) -> String {
-        format!("pnpm run {}", command.name)
+    pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
+        // To ensure that the command exists, it is necessary to check the command name.
+        // If implementation is wrong, developers can notice it here.
+        let command = match self.get_command(command.clone()) {
+            Some(c) => c,
+            None => return Err(anyhow!("command not found")),
+        };
+
+        Ok(format!("pnpm run {}", command.name))
+    }
+
+    pub fn to_commands(&self) -> Vec<command::Command> {
+        self.commands.clone()
     }
 
     pub fn new(path: PathBuf, commands: Vec<command::Command>) -> Pnpm {
         Pnpm { path, commands }
+    }
+
+    fn get_command(&self, command: command::Command) -> Option<&command::Command> {
+        self.commands.iter().find(|c| **c == command)
     }
 
     // // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).

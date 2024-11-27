@@ -102,6 +102,7 @@ impl Model<'_> {
         result
     }
 
+    /// get command from history and filter commands that no longer exist.
     fn get_commands_from_history(
         history_commands: Vec<histories::HistoryCommand>,
         runners: &Vec<runner::Runner>,
