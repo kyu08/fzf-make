@@ -24,6 +24,7 @@
 - Execute last executed target(By running `fzf-make --repeat` without any arguments.)
 - Command-Verlauf / History
 - Unterstützt `include` directive
+- **(In Entwicklung)** Support pnpm, yarn, npm, etc.
 - **(In Entwicklung)** Unterstützt Konfigurations-Dateien
 
 # 👓 Voraussetzungen

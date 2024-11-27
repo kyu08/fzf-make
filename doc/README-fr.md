@@ -24,6 +24,7 @@
 - Execute last executed target(By running `fzf-make --repeat` without any arguments.)
 - Historique des commandes
 - Supporte les instructions `include`
+- **(dévelopement planifié)** Support pnpm, yarn, npm, etc.
 - **(dévelopement planifié)** Supporte un fichier de configuration
 
 # 👓 Pré-requis
