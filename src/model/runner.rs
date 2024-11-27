@@ -26,11 +26,15 @@ impl Runner {
     }
 
     pub fn show_command(&self, command: &command::Command) {
-        let command_to_run = match self {
-            Runner::MakeCommand(_) => make::Make::command_to_run(command),
+        let command_or_error_message = match self {
+            Runner::MakeCommand(make) => match make.command_to_run(command) {
+                Ok(command) => command,
+                Err(e) => e.to_string(), // Should not happen
+            },
             Runner::PnpmCommand(_) => todo!(),
         };
-        println!("{}", (command_to_run).truecolor(161, 220, 156));
+
+        println!("{}", command_or_error_message.truecolor(161, 220, 156));
     }
 
     pub fn execute(&self, command: &command::Command) -> Result<()> {
