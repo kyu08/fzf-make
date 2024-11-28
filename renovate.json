@@ -6,6 +6,14 @@
   "schedule": [
     "before 4am on the first day of the month"
   ],
+  "packageRules": [
+    {
+      "groupName": "all-dependencies",
+      "matchPackageNames": ["*"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupSlug": "all-deps"
+    }
+  ],
   "reviewers": [
     "kyu08"
   ]
