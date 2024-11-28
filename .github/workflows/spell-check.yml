@@ -12,6 +12,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Spell Check
-      uses: crate-ci/typos@v1.27.0
+      uses: crate-ci/typos@v1.28.1
       with: 
         config: _typos.toml
