@@ -2,34 +2,75 @@ use super::{command, pnpm, runner, runner_type};
 use crate::file::path_to_content;
 use codespan::Files;
 use json_spanned_value::{self as jsv, spanned};
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
-pub fn get_js_package_manager(current_dir: PathBuf) -> runner::Runner {
-    todo!("lockfileの種類に応じて各JSパッケージマネージャの初期化コードを呼び出す");
-    let commands = get_js_commands(current_dir.clone());
-    runner::Runner::PnpmCommand(pnpm::Pnpm::new(
-        current_dir.join(JS_PACKAGE_METADATA_FILE_NAME),
-        commands,
-    ))
+const METADATA_FILE_NAME: &str = "package.json";
+const METADATA_COMMAND_KEY: &str = "scripts";
+const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+enum JsPackageManager {
+    Pnpm,
+    Yarn,
 }
 
-const JS_PACKAGE_METADATA_FILE_NAME: &str = "package.json";
-const JS_PACKAGE_METADATA_COMMAND_KEY: &str = "scripts";
+impl JsPackageManager {
+    fn new(file_names: Vec<String>) -> Option<Self> {
+        for file_name in file_names {
+            if file_name == PNPM_LOCKFILE_NAME {
+                return Some(JsPackageManager::Pnpm);
+            }
+        }
+        None
+    }
 
-fn get_js_commands(_current_dir: PathBuf) -> Vec<command::Command> {
-    match path_to_content::path_to_content(PathBuf::from(JS_PACKAGE_METADATA_FILE_NAME)) {
-        Ok(c) => parse_package_json(&c),
-        Err(_) => vec![],
+    fn to_runner_type(&self) -> runner_type::RunnerType {
+        match self {
+            JsPackageManager::Pnpm => runner_type::RunnerType::Pnpm,
+            JsPackageManager::Yarn => todo!(),
+        }
+    }
+
+    fn to_runner(
+        &self,
+        command_file_path: PathBuf,
+        commands: Vec<command::Command>,
+    ) -> runner::Runner {
+        match self {
+            JsPackageManager::Pnpm => {
+                runner::Runner::PnpmCommand(pnpm::Pnpm::new(command_file_path, commands))
+            }
+            JsPackageManager::Yarn => todo!(),
+        }
+    }
+}
+
+pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<runner::Runner> {
+    let entries = fs::read_dir(current_dir.clone()).unwrap();
+    let file_names = entries
+        .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .collect();
+
+    match JsPackageManager::new(file_names) {
+        Some(js_package_manager) => {
+            let commands = match path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME))
+            {
+                Ok(c) => parse_package_json(&c, &js_package_manager),
+                Err(_) => return None,
+            };
+            Some(js_package_manager.to_runner(current_dir.join(METADATA_FILE_NAME), commands))
+        }
+        None => None,
     }
 }
 
 fn parse_package_json(
     content: &str,
-    runner_type: runner_type::RunnerType,
+    js_package_manager: &JsPackageManager,
 ) -> Vec<command::Command> {
-    // TODO: check runner_type is one of JS package manager
     let mut files = Files::new();
-    let file = files.add(JS_PACKAGE_METADATA_FILE_NAME, content);
+    let file = files.add(METADATA_FILE_NAME, content);
     let json_object: spanned::Object = match jsv::from_str(content) {
         Ok(e) => e,
         Err(_) => return vec![],
@@ -37,7 +78,7 @@ fn parse_package_json(
 
     let mut result = vec![];
     for (k, v) in json_object {
-        if k.as_str() != JS_PACKAGE_METADATA_COMMAND_KEY {
+        if k.as_str() != METADATA_COMMAND_KEY {
             continue;
         }
 
@@ -49,9 +90,9 @@ fn parse_package_json(
                     files.line_index(file, k.start() as u32).number().to_usize() as u32;
 
                 result.push(command::Command {
-                    runner_type: runner_type.clone(),
+                    runner_type: js_package_manager.to_runner_type(),
                     name,
-                    file_name: PathBuf::from(JS_PACKAGE_METADATA_FILE_NAME),
+                    file_name: PathBuf::from(METADATA_FILE_NAME),
                     line_number,
                 });
             }
@@ -133,10 +174,45 @@ mod test {
         for case in cases {
             assert_eq!(
                 case.expected,
-                parse_package_json(case.file_content, runner_type::RunnerType::Pnpm),
+                parse_package_json(case.file_content, &JsPackageManager::Pnpm),
                 "\nfailed: 🚨{:?}🚨\n",
                 case.title,
             );
+        }
+    }
+
+    #[test]
+    fn test_new() {
+        struct Case {
+            title: &'static str,
+            file_names: Vec<String>,
+            expected: Option<JsPackageManager>,
+        }
+
+        let cases = vec![
+            Case {
+                title: "pnpm",
+                file_names: vec![
+                    ".gitignore".to_string(),
+                    "Makefile".to_string(),
+                    "pnpm-lock.yaml".to_string(),
+                ],
+                expected: Some(JsPackageManager::Pnpm),
+            },
+            Case {
+                title: "no js package manager found",
+                file_names: vec![
+                    ".gitignore".to_string(),
+                    "Makefile".to_string(),
+                    "cargo.toml".to_string(),
+                ],
+                expected: None,
+            },
+        ];
+
+        for case in cases {
+            let result = JsPackageManager::new(case.file_names);
+            assert_eq!(case.expected, result, "\nfailed: 🚨{:?}🚨\n", case.title)
         }
     }
 }
