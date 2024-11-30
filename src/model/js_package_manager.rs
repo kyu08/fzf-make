@@ -8,10 +8,11 @@ const METADATA_FILE_NAME: &str = "package.json";
 const METADATA_COMMAND_KEY: &str = "scripts";
 const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
 
+// こいつをrunner_typeのvariantに変更すべきでは？
 #[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
 enum JsPackageManager {
-    Pnpm,
+    Pnpm, // ここに構造体としてPnpmを持つべきかも
     Yarn,
 }
 
@@ -44,8 +45,18 @@ impl JsPackageManager {
             JsPackageManager::Yarn => todo!(),
         }
     }
+
+    fn command_name_to_args(&self, command_name: &str) -> String {
+        match self {
+            // これここに実装すべきなのか...?
+            // pnpm.rsに実装できない？
+            JsPackageManager::Pnpm => ("run".to_string() + command_name).to_string(),
+            JsPackageManager::Yarn => todo!(),
+        }
+    }
 }
 
+// TODO: runnerではなくPnpmを返すのがただしそう（そもそもPnpmではなくJsPackageManagerを返すべきという説も）
 pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<runner::Runner> {
     let entries = fs::read_dir(current_dir.clone()).unwrap();
     let file_names = entries
@@ -65,6 +76,7 @@ pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<runner::Run
     }
 }
 
+// TODO: make this function method
 fn parse_package_json(
     content: &str,
     js_package_manager: &JsPackageManager,
