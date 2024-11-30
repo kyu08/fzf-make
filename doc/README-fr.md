@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
 
-`fzf-make` est un outil en ligne de commmandes qui éxecute des cibles make en utilisant un Fuzzy Finder avec une fenêtre de prévisualisation
+`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting **make**, **pnpm**.
 
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
@@ -20,12 +20,12 @@
 </div>
 
 # 🛠️ Fonctionnalitées
-- Selectionner et éxecuter une cible make avec fuzzy-finder
-- Execute last executed target(By running `fzf-make --repeat` without any arguments.)
-- Historique des commandes
-- Supporte les instructions `include`
-- **(dévelopement planifié)** Support pnpm, yarn, npm, etc.
-- **(dévelopement planifié)** Supporte un fichier de configuration
+- Select and execute a make target or pnpm scripts using fuzzy-finder with a preview window by running `fzf-make`!
+- Execute the last executed command(By running `fzf-make --repeat`.)
+- Command history
+- [make] Support `include` directive
+-Support make, pnpm. **Scheduled to be developed: yarn, npm.** 
+- **(Scheduled to be developed)** Support config file
 
 # 👓 Pré-requis
 - **(If you install fzf-make via a package manager other than Homebrew)** [bat](https://github.com/sharkdp/bat)
@@ -43,7 +43,7 @@ brew install kyu08/tap/fzf-make
 
 ```sh
 # Mise à jour
-brew upgrade fzf-make
+brew update && brew upgrade fzf-make
 ```
 
 ## Arch Linux
@@ -77,25 +77,32 @@ cargo install --locked fzf-make
 
 # 💡 Usage
 ## Run target using fuzzy finder
-1. Exectuez `fzf-make` dans le dossier qui possède un fichier make (le noms doit être l'un des suivant: `GNUmakefile`, `makefile`, `Makefile`)
+1. Execute `fzf-make` in the directory you want to run make target, or pnpm scripts.
 1. Selectionnez la commande à éxecuter. If you type some characters, the list will be filtered.
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-main.png"> 
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-type-characters.png"> 
 
 ## Run target from history
-1. Execute `fzf-make` in the directory include makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile`)
+1. Execute `fzf-make` in the directory you want to run make target, or pnpm scripts.
 1. Press `Tab` to move to the history list
 1. Select make command you want to execute.
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-history.png"> 
 
+## How fzf-make judges which command runner can be used
+### make
+Whether makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile`) is in the current directory.
+
+### pnpm
+Whether `package.json` and `pnpm-lock.yaml` are in the current directory.
+
 ## Commands Supported
-| Command | Description |
-|--------|--------|
-| `fzf-make` | Launch fzf-make |
-| `fzf-make --repeat` / `fzf-make -r` / `fzf-make repeat` |  Execute last executed target |
-| `fzf-make --history` / `fzf-make -h` / `fzf-make history` |  Launch fzf-make with the history pane focused |
-| `fzf-make --help` / `fzf-make help` | Show help |
-| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | Show version |
+| Command                                                   | Description                                   |
+| --------                                                  | --------                                      |
+| `fzf-make`                                                | Launch fzf-make                               |
+| `fzf-make --repeat` / `fzf-make -r` / `fzf-make repeat`   | Execute last executed target                  |
+| `fzf-make --history` / `fzf-make -h` / `fzf-make history` | Launch fzf-make with the history pane focused |
+| `fzf-make --help` / `fzf-make help`                       | Show help                                     |
+| `fzf-make --version` / `fzf-make -v` / `fzf-make version` | Show version                                  |
 
 # 💻 Dévelopment
 1. Clonez ce dépôt
