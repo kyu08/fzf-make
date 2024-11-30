@@ -16,8 +16,18 @@ pub struct Make {
 }
 
 impl Make {
-    pub fn command_to_run(command: &command::Command) -> String {
-        format!("make {}", command.name)
+    /// It is possible to implement this method as an associated function because it takes a
+    /// command as an argument. However, if it is an associated function, it can be called
+    /// from anywhere, so it is better to make it a method to limit the context.
+    pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
+        // To ensure that the command exists, it is necessary to check the command name.
+        // If implementation is wrong, developers can notice it here.
+        let command = match self.get_command(command.clone()) {
+            Some(c) => c,
+            None => return Err(anyhow!("command not found")),
+        };
+
+        Ok(format!("make {}", command.name))
     }
 
     pub fn new(current_dir: PathBuf) -> Result<Make> {
@@ -25,6 +35,40 @@ impl Make {
             return Err(anyhow!("makefile not found.\n"));
         };
         Make::new_internal(Path::new(&makefile_name).to_path_buf())
+    }
+
+    pub fn to_commands(&self) -> Vec<command::Command> {
+        let mut result: Vec<command::Command> = vec![];
+        result.append(&mut self.targets.0.to_vec());
+        for include_file in &self.include_files {
+            Vec::append(&mut result, &mut include_file.to_commands());
+        }
+
+        result
+    }
+
+    pub fn execute(&self, command: &command::Command) -> Result<()> {
+        let command = match self.get_command(command.clone()) {
+            Some(c) => c,
+            None => return Err(anyhow!("command not found")),
+        };
+
+        let child = process::Command::new("make")
+            .stdin(process::Stdio::inherit())
+            .arg(&command.name)
+            .spawn();
+
+        match child {
+            Ok(mut child) => match child.wait() {
+                Ok(_) => Ok(()),
+                Err(e) => Err(anyhow!("failed to run: {}", e)),
+            },
+            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
+        }
+    }
+
+    fn get_command(&self, command: command::Command) -> Option<&command::Command> {
+        self.targets.0.iter().find(|c| **c == command)
     }
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
@@ -44,16 +88,6 @@ impl Make {
             include_files,
             targets: Targets::new(file_content, path),
         })
-    }
-
-    pub fn to_commands(&self) -> Vec<command::Command> {
-        let mut result: Vec<command::Command> = vec![];
-        result.append(&mut self.targets.0.to_vec());
-        for include_file in &self.include_files {
-            Vec::append(&mut result, &mut include_file.to_commands());
-        }
-
-        result
     }
 
     fn specify_makefile_name(current_dir: PathBuf, target_path: String) -> Option<PathBuf> {
@@ -82,17 +116,6 @@ impl Make {
         }
 
         None
-    }
-
-    pub fn execute(&self, command: &command::Command) -> Result<()> {
-        process::Command::new("make")
-            .stdin(process::Stdio::inherit())
-            .arg(&command.name)
-            .spawn()
-            .expect("Failed to execute process")
-            .wait()
-            .expect("Failed to execute process");
-        Ok(())
     }
 
     #[cfg(test)]

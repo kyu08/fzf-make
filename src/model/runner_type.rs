@@ -2,25 +2,29 @@ use super::runner;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Hash, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum RunnerType {
     Make,
     Pnpm,
 }
 
+impl std::cmp::Eq for RunnerType {}
+
 impl RunnerType {
     pub fn to_runner(&self, runners: &Vec<runner::Runner>) -> Option<runner::Runner> {
-        match self {
-            RunnerType::Make => {
-                for r in runners {
-                    if matches!(r, runner::Runner::MakeCommand(_)) {
-                        return Some(r.clone());
-                    }
-                }
-                None
+        for r in runners {
+            if self.clone() == RunnerType::from(r) {
+                return Some(r.clone());
             }
-            RunnerType::Pnpm => todo!("implement and write test"),
+        }
+        None
+    }
+
+    pub fn from(runner: &runner::Runner) -> Self {
+        match runner {
+            runner::Runner::MakeCommand(_) => RunnerType::Make,
+            runner::Runner::PnpmCommand(_) => RunnerType::Pnpm,
         }
     }
 }

@@ -1,6 +1,7 @@
 pub(super) mod command;
 mod file_util;
 pub(crate) mod histories;
+pub(super) mod js_package_manager;
 pub(super) mod make;
 pub(super) mod pnpm;
 pub(super) mod runner;
