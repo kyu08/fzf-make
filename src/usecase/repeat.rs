@@ -24,7 +24,10 @@ impl Usecase for Repeat {
             Ok(model) => match model.app_state {
                 AppState::SelectCommand(state) => match state.get_latest_command() {
                     Some(c) => match state.get_runner(&c.runner_type) {
-                        Some(runner) => runner.execute(c),
+                        Some(runner) => {
+                            runner.show_command(c);
+                            runner.execute(c)
+                        }
                         None => Err(anyhow!("runner not found.")),
                     },
                     None => Err(anyhow!("fzf-make has not been executed in this path yet.")),
