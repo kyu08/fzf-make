@@ -85,13 +85,13 @@ fn parse_package_json(
         // object is the content of "scripts" key
         if let Some(object) = v.as_object() {
             for (k, _) in object {
-                let name = k.to_string();
+                let args = k.to_string();
                 let line_number =
                     files.line_index(file, k.start() as u32).number().to_usize() as u32;
 
                 result.push(command::Command {
                     runner_type: js_package_manager.to_runner_type(),
-                    name,
+                    args,
                     file_name: PathBuf::from(METADATA_FILE_NAME),
                     line_number,
                 });
@@ -141,19 +141,19 @@ mod test {
                 expected: vec![
                     command::Command {
                         runner_type: runner_type::RunnerType::Pnpm,
-                        name: "build".to_string(),
+                        args: "build".to_string(),
                         file_name: "package.json".into(),
                         line_number: 6,
                     },
                     command::Command {
                         runner_type: runner_type::RunnerType::Pnpm,
-                        name: "start".to_string(),
+                        args: "start".to_string(),
                         file_name: "package.json".into(),
                         line_number: 7,
                     },
                     command::Command {
                         runner_type: runner_type::RunnerType::Pnpm,
-                        name: "test".to_string(),
+                        args: "test".to_string(),
                         file_name: "package.json".into(),
                         line_number: 8,
                     },

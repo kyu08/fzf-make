@@ -17,7 +17,7 @@ impl Pnpm {
             None => return Err(anyhow!("command not found")),
         };
 
-        Ok(format!("pnpm run {}", command.name))
+        Ok(format!("pnpm run {}", command.args))
     }
 
     pub fn to_commands(&self) -> Vec<command::Command> {
@@ -41,7 +41,7 @@ impl Pnpm {
         let child = process::Command::new("pnpm")
             .stdin(process::Stdio::inherit())
             .arg("run")
-            .arg(&command.name)
+            .arg(&command.args)
             .spawn();
 
         match child {

@@ -27,7 +27,7 @@ impl Make {
             None => return Err(anyhow!("command not found")),
         };
 
-        Ok(format!("make {}", command.name))
+        Ok(format!("make {}", command.args))
     }
 
     pub fn new(current_dir: PathBuf) -> Result<Make> {
@@ -55,7 +55,7 @@ impl Make {
 
         let child = process::Command::new("make")
             .stdin(process::Stdio::inherit())
-            .arg(&command.name)
+            .arg(&command.args)
             .spawn();
 
         match child {

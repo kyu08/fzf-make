@@ -114,7 +114,7 @@ impl Model<'_> {
             for runner in runners {
                 let mut inner_map = HashMap::new();
                 for c in runner.list_commands() {
-                    inner_map.insert(c.name.clone(), c);
+                    inner_map.insert(c.args.clone(), c);
                 }
                 map.insert(runner_type::RunnerType::from(runner), inner_map);
             }
@@ -125,7 +125,7 @@ impl Model<'_> {
         let mut commands: Vec<command::Command> = Vec::new();
         for history_command in history_commands {
             if let Some(inner_map) = command_hash_map.get(&history_command.runner_type) {
-                if let Some(c) = inner_map.get(&history_command.name) {
+                if let Some(c) = inner_map.get(&history_command.args) {
                     commands.push(c.clone());
                 }
             }
@@ -608,19 +608,19 @@ impl SelectCommandState<'_> {
             history: vec![
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
-                    name: "history0".to_string(),
+                    args: "history0".to_string(),
                     file_name: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
-                    name: "history1".to_string(),
+                    args: "history1".to_string(),
                     file_name: PathBuf::from("Makefile"),
                     line_number: 4,
                 },
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
-                    name: "history2".to_string(),
+                    args: "history2".to_string(),
                     file_name: PathBuf::from("Makefile"),
                     line_number: 7,
                 },
