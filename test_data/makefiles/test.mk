@@ -2,4 +2,3 @@
 .PHONY: echo-test2-test-mk
 echo-test2-test-mk:
 	@echo "test2"
-

@@ -1,10 +1,6 @@
 export
 RUST_BACKTRACE=full
 
-.PHONY: run2
-run2:
-	cd test_data && cargo run
-
 .PHONY: ci
 ci: # Checks same as CI
 	@make test-ci; \
@@ -64,7 +60,7 @@ spell-check: tool-spell-check
 
 .PHONY: run
 run:
-	@cargo run
+	@cargo build && mv ./target/debug/fzf-make ./test_data && cd ./test_data && ./fzf-make
 
 .PHONY: build
 build:
@@ -81,26 +77,3 @@ build:
 .PHONY: build-release
 build-release:
 	@cargo build --verbose --release
-
-# Targets for test
-include ./makefiles/test.mk
-
-.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2
-toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
-	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
-
-
-.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target
-toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target:
-	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
-
-.PHONY: echo-greeting
-echo-greeting:
-	@echo hello fzf-make!
-
-.PHONY: cmd
-cmd:
-	@read -p "Do something? y/n:" ans; \
-	if [ "$$ans" = y ]; then  \
-		echo "Doing something..."; \
-	fi
