@@ -351,11 +351,8 @@ impl SelectCommandState<'_> {
         let runners = {
             let mut runners = vec![];
 
-            match make_main::Make::new(current_dir.clone()) {
-                Err(e) => return Err(e),
-                Ok(f) => {
-                    runners.push(runner::Runner::MakeCommand(f));
-                }
+            if let Ok(f) = make_main::Make::new(current_dir.clone()) {
+                runners.push(runner::Runner::MakeCommand(f));
             };
             if let Some(js_package_manager) =
                 js_package_manager_main::get_js_package_manager_runner(current_dir.clone())
