@@ -3,10 +3,10 @@ name = "fzf-make"
 version = "0.39.0"
 edition = "2021"
 authors = ["kyu08"]
-description = "A command line tool that executes make target using fuzzy finder with preview window."
+description = "A command line tool that executes commands using fuzzy finder with preview window for make, pnpm."
 license = "MIT"
 repository = "https://github.com/kyu08/fzf-make"
-exclude = ["/.git", "/.github", ".gitignore", "Makefile", "/static", "/makefiles", "/doc", "_typos.toml", "renovate.json"]
+exclude = ["/.git", "/.github", ".gitignore", "Makefile", "/static", "/makefiles", "/doc", "_typos.toml", "renovate.json", "test_data"]
 
 [dependencies]
 regex = "1.10.4"
