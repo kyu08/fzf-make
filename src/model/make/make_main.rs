@@ -1,4 +1,5 @@
-use super::{command, file_util, target::*};
+use super::target::*;
+use crate::model::{command, file_util};
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::process;
@@ -120,7 +121,7 @@ impl Make {
 
     #[cfg(test)]
     pub fn new_for_test() -> Make {
-        use super::runner_type;
+        use crate::model::runner_type;
         use std::env;
 
         Make {

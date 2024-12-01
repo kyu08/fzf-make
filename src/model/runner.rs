@@ -1,11 +1,11 @@
-use super::{command, js_package_manager::js_package_manager_main, make};
+use super::{command, js_package_manager::js_package_manager_main, make::make_main};
 use anyhow::Result;
 use colored::Colorize;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Runner {
-    MakeCommand(make::Make),
+    MakeCommand(make_main::Make),
     JsPackageManager(js_package_manager_main::JsPackageManager),
 }
 

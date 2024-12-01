@@ -1,4 +1,4 @@
-use super::{command, runner_type};
+use crate::model::{command, runner_type};
 use regex::Regex;
 use std::path::PathBuf;
 
