@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use std::{fs, path::PathBuf, process};
 
 const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
-const IGNORE_DIR_NAME: &str = "node_modules";
+const IGNORE_DIR_NAMES: [&str; 2] = ["node_modules", ".git"];
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pnpm {
@@ -116,8 +116,12 @@ impl Pnpm {
         // TODO: consider `packages` in pnpm-workspace.yaml.
         // TODO: Add UT. (Use temp dir or fzf-make/test_data. If use temp dir, the test will be
         // robust, but troublesome for now...😇)
-        let skip =
-            |entry: &fs::DirEntry| entry.path().is_file() || entry.file_name() == IGNORE_DIR_NAME;
+        let skip = |entry: &fs::DirEntry| {
+            entry.path().is_file()
+                || IGNORE_DIR_NAMES
+                    .iter()
+                    .any(|name| entry.file_name() == *name)
+        };
         // In above example, entries_cwd: package.json, node_modules, packages/, pnpm-lock.yaml, pnpm-workspace.yaml
         let entries_cwd = fs::read_dir(current_dir.clone()).unwrap();
         entries_cwd.for_each(|entry_cwd| {

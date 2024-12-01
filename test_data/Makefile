@@ -3,7 +3,7 @@ RUST_BACKTRACE=full
 
 .PHONY: run2
 run2:
-	cd test_data && cargo run
+	echo run2!
 
 # Targets for test
 include ./makefiles/test.mk
