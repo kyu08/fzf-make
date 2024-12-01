@@ -1,4 +1,4 @@
-use super::{command, pnpm, runner_type};
+use super::{command, pnpm};
 use crate::file::path_to_content;
 use anyhow::Result;
 use codespan::Files;
@@ -64,24 +64,6 @@ impl JsPackageManager {
             }
         }
         None
-    }
-
-    fn to_runner_type(&self) -> runner_type::RunnerType {
-        match self {
-            JsPackageManager::JsPnpm(_) => {
-                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm)
-            }
-            JsPackageManager::JsYarn => todo!(),
-        }
-    }
-
-    fn command_name_to_args(&self, _command_name: &str) -> String {
-        match self {
-            // TODO: pnpm.rsに実装し、pnpm.command_name_to_args()を呼び出すようにする
-            JsPackageManager::JsPnpm(_) => todo!(),
-            // JsPackageManager::JsPnpm(_) => ("run".to_string() + command_name).to_string(),
-            JsPackageManager::JsYarn => todo!(),
-        }
     }
 
     pub fn parse_package_json(content: &str) -> Option<(String, Vec<(String, String, u32)>)> {
