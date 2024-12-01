@@ -68,8 +68,11 @@ impl Make {
         }
     }
 
-    fn get_command(&self, command: command::Command) -> Option<&command::Command> {
-        self.targets.0.iter().find(|c| **c == command)
+    fn get_command(&self, command: command::Command) -> Option<command::Command> {
+        self.to_commands()
+            .iter()
+            .find(|c| **c == command)
+            .map(|_| command)
     }
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
