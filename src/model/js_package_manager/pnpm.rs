@@ -7,6 +7,7 @@ use anyhow::{anyhow, Result};
 use std::{fs, path::PathBuf, process};
 
 const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
+const IGNORE_DIR_NAME: &str = "node_modules";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pnpm {
@@ -46,6 +47,19 @@ impl Pnpm {
         }
     }
 
+    pub fn new(current_dir: PathBuf, result: Vec<(String, String, u32)>) -> Pnpm {
+        let commands = Pnpm::scripts_to_commands(current_dir.clone(), result);
+
+        Pnpm {
+            path: current_dir,
+            commands,
+        }
+    }
+
+    pub fn use_pnpm(file_name: String) -> bool {
+        file_name == PNPM_LOCKFILE_NAME
+    }
+
     pub fn to_commands(&self) -> Vec<command::Command> {
         self.commands.clone()
     }
@@ -54,70 +68,76 @@ impl Pnpm {
         self.commands.iter().find(|c| **c == command)
     }
 
-    pub fn new(path: PathBuf, commands: Vec<command::Command>) -> Pnpm {
-        Pnpm { path, commands }
-    }
-
-    pub fn use_pnpm(file_name: String) -> bool {
-        file_name == PNPM_LOCKFILE_NAME
-    }
-
-    pub fn scripts_to_commands(
+    fn scripts_to_commands(
         current_dir: PathBuf,
-        scripts_parsing_result: (String, Vec<(String, String, u32)>),
+        parsed_scripts_part_of_package_json: Vec<(String, String, u32)>,
     ) -> Vec<command::Command> {
         let mut result = vec![];
 
-        let (_, object) = scripts_parsing_result;
-        for (key, value, line_number) in object {
+        for (key, value, line_number) in parsed_scripts_part_of_package_json {
             if Pnpm::use_filtering(value.clone()) {
                 continue;
             }
 
-            // MEMO: If needed, -C option may be considered.
-            // ref: https://pnpm.io/pnpm-cli#-c-path---dir-path
-
-            // normal command
+            // scripts defined in package.json in the current directory(which fzf-make is launched)
             result.push(command::Command::new(
                 runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
                 key,
-                current_dir.clone().join("package.json"),
+                current_dir
+                    .clone()
+                    .join(js_package_manager_main::METADATA_FILE_NAME),
                 line_number,
             ));
         }
 
-        // pnpm-workspace.yamlで指定されていた場合はpackages配下が対象になる。指定されていない場合は全てのpackage.jsonが対象になる。
-        // ネストは考慮しなくてよい`./packages/app1/package.json`は見る必要があるが、`./packages/app1/app2/package.json`は見る必要がない。
-        // filteringにかかわらずすべてのpackage.jsonからscriptsを収集する必要がある
-        // `pnpm --filter app1 run`のような形式で実行された場合は`pnpm-workspace.yaml`の`packages`や
-        // `package.json`の`scripts`に`"app1": "pnpm -F \"app1\"", `に指定する必要がないため。
+        /*
+        ## Following is the implementation for collecting all scripts in the workspace.
 
-        // TODO: pnpm-workspace.yamlを考慮しない実装
-        // TODO: node_modules以外のディレクトリを再帰的に検索する(2つしたまででOK)
-        // あとでけすNOTE: ネストは考慮しなくてよい`./packages/app1/package.json`は見る必要があるが、`./packages/app1/app2/package.json`は見る必要がない。
+        - If `packages` in pnpm-workspace.yaml is specified, the target to search is only under the directory defined at `packages`. If not specified, all package.json's are the target.
+        - Nested packages do not need to be considered. `./packages/app1/package.json` needs to be considered, but `./packages/app1/app2/package.json` does not need to be considered.
+        - If the directory structure is as follows, the examples will be shown in `entries_cwd.for_each(...)`.
+            ${CWD}
+            ├── package.json
+            ├── node_modules/
+            ├── packages
+            │   ├── app1
+            │   │   ├── package.json
+            │   │   └── node_modules
+            │   ├── app2
+            │   │   ├── package.json
+            │   │   └── node_modules
+            │   └── app3
+            │       ├── package.json
+            │       └── node_modules
+            ├── pnpm-lock.yaml
+            └── pnpm-workspace.yaml
+        */
+
+        // TODO: consider `packages` in pnpm-workspace.yaml.
+        // TODO: Add UT. (Use temp dir or fzf-make/test_data. If use temp dir, the test will be
+        // robust, but troublesome for now...😇)
         let skip =
-            |entry: &fs::DirEntry| entry.path().is_file() || entry.file_name() == "node_modules";
-
+            |entry: &fs::DirEntry| entry.path().is_file() || entry.file_name() == IGNORE_DIR_NAME;
+        // In above example, entries_cwd: package.json, node_modules, packages/, pnpm-lock.yaml, pnpm-workspace.yaml
         let entries_cwd = fs::read_dir(current_dir.clone()).unwrap();
         entries_cwd.for_each(|entry_cwd| {
             if let Ok(entry_in_cwd) = entry_cwd {
                 if skip(&entry_in_cwd) {
                     return;
                 }
-                // ↑ ./packages
+                // In above example, entries_of_packages: app1, app2, app3.
                 let entries_of_packages = fs::read_dir(entry_in_cwd.path()).unwrap();
                 entries_of_packages.for_each(|entry_package| {
-                    // app1
                     if let Ok(entry_package) = entry_package {
                         if skip(&entry_package) {
                             return;
                         }
 
+                        // In above example, entries_of_each_package: package.json, node_modules.
                         let entries_of_each_package = fs::read_dir(entry_package.path()).unwrap();
-                        // ↑ app1/の中身
                         entries_of_each_package.for_each(|entry_of_each_package| {
                             if let Ok(entry_of_each_package) = entry_of_each_package {
-                                if entry_of_each_package.file_name() != "package.json" {
+                                if entry_of_each_package.file_name() != js_package_manager_main::METADATA_FILE_NAME {
                                     return;
                                 }
                                 if let Ok(c) =
@@ -149,7 +169,6 @@ impl Pnpm {
             }
         });
 
-        // TODO: pnpm-workspace.yamlを考慮した実装
         result
     }
 

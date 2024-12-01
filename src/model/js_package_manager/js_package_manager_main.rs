@@ -6,6 +6,7 @@ use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
 
 pub(super) const METADATA_FILE_NAME: &str = "package.json";
+const METADATA_PACKAGE_NAME_KEY: &str = "name";
 const METADATA_COMMAND_KEY: &str = "scripts";
 
 #[allow(dead_code)]
@@ -46,7 +47,7 @@ impl JsPackageManager {
                     if let Some(result) = JsPackageManager::parse_package_json(&c) {
                         return Some(JsPackageManager::JsPnpm(pnpm::Pnpm::new(
                             current_dir,
-                            result,
+                            result.1,
                         )));
                     }
                 }
@@ -67,7 +68,7 @@ impl JsPackageManager {
         let mut name = "".to_string();
         let mut result = vec![];
         for (k, v) in json_object {
-            if k.as_str() == "name" && v.as_string().is_some() {
+            if k.as_str() == METADATA_PACKAGE_NAME_KEY && v.as_string().is_some() {
                 name = v.as_string().unwrap().to_string();
             }
             if k.as_str() != METADATA_COMMAND_KEY {
