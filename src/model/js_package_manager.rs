@@ -66,6 +66,7 @@ impl JsPackageManager {
         None
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn parse_package_json(content: &str) -> Option<(String, Vec<(String, String, u32)>)> {
         let mut files = Files::new();
         let file = files.add(METADATA_FILE_NAME, content);
@@ -121,6 +122,7 @@ mod test {
         struct Case {
             title: &'static str,
             file_content: &'static str,
+            #[allow(clippy::type_complexity)]
             expected: Option<(String, Vec<(String, String, u32)>)>,
         }
 
