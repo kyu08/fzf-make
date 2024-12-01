@@ -5,7 +5,7 @@ use codespan::Files;
 use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
 
-pub const METADATA_FILE_NAME: &str = "package.json";
+pub(super) const METADATA_FILE_NAME: &str = "package.json";
 const METADATA_COMMAND_KEY: &str = "scripts";
 
 #[allow(dead_code)]
@@ -42,20 +42,14 @@ impl JsPackageManager {
     fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
         for file_name in file_names {
             if pnpm::Pnpm::use_pnpm(file_name) {
-                let commands =
-                    match path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME)) {
-                        Ok(c) => match JsPackageManager::parse_package_json(&c) {
-                            // TODO: ここで呼ぶべきじゃないかも
-                            Some(result) => {
-                                pnpm::Pnpm::scripts_to_commands(current_dir.clone(), result)
-                            }
-                            None => return None,
-                        },
-                        Err(_) => return None,
-                    };
-                let pnpm = pnpm::Pnpm::new(current_dir.join(METADATA_FILE_NAME), commands);
-
-                return Some(JsPackageManager::JsPnpm(pnpm));
+                if let Ok(c) = path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME)) {
+                    if let Some(result) = JsPackageManager::parse_package_json(&c) {
+                        return Some(JsPackageManager::JsPnpm(pnpm::Pnpm::new(
+                            current_dir,
+                            result,
+                        )));
+                    }
+                }
             }
         }
         None
