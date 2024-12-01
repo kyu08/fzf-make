@@ -5,8 +5,8 @@ use crate::{
     model::{
         command,
         histories::{self},
-        js_package_manager::get_js_package_manager_runner,
-        make::Make,
+        js_package_manager::js_package_manager_main,
+        make::make_main,
         runner, runner_type,
     },
 };
@@ -114,7 +114,7 @@ impl Model<'_> {
             for runner in runners {
                 let mut inner_map = HashMap::new();
                 for c in runner.list_commands() {
-                    inner_map.insert(c.name.clone(), c);
+                    inner_map.insert(c.args.clone(), c);
                 }
                 map.insert(runner_type::RunnerType::from(runner), inner_map);
             }
@@ -125,7 +125,7 @@ impl Model<'_> {
         let mut commands: Vec<command::Command> = Vec::new();
         for history_command in history_commands {
             if let Some(inner_map) = command_hash_map.get(&history_command.runner_type) {
-                if let Some(c) = inner_map.get(&history_command.name) {
+                if let Some(c) = inner_map.get(&history_command.args) {
                     commands.push(c.clone());
                 }
             }
@@ -351,15 +351,18 @@ impl SelectCommandState<'_> {
         let runners = {
             let mut runners = vec![];
 
-            match Make::new(current_dir.clone()) {
+            match make_main::Make::new(current_dir.clone()) {
                 Err(e) => return Err(e),
                 Ok(f) => {
                     runners.push(runner::Runner::MakeCommand(f));
                 }
             };
-            if let Some(js_package_manager) = get_js_package_manager_runner(current_dir.clone()) {
-                runners.push(js_package_manager);
+            if let Some(js_package_manager) =
+                js_package_manager_main::get_js_package_manager_runner(current_dir.clone())
+            {
+                runners.push(runner::Runner::JsPackageManager(js_package_manager));
             };
+
             runners
         };
 
@@ -586,9 +589,17 @@ impl SelectCommandState<'_> {
                 (runner_type::RunnerType::Make, runner::Runner::MakeCommand(_)) => {
                     return Some(runner.clone());
                 }
-                (runner_type::RunnerType::Pnpm, runner::Runner::PnpmCommand(_)) => {
-                    return Some(runner.clone());
-                }
+                (
+                    runner_type::RunnerType::JsPackageManager(runner_type_js),
+                    runner::Runner::JsPackageManager(runner_js),
+                ) => match (runner_type_js, runner_js) {
+                    (
+                        runner_type::JsPackageManager::Pnpm,
+                        js_package_manager_main::JsPackageManager::JsPnpm(_),
+                    ) => {
+                        return Some(runner.clone());
+                    }
+                },
                 _ => continue,
             }
         }
@@ -602,25 +613,25 @@ impl SelectCommandState<'_> {
         SelectCommandState {
             current_dir: env::current_dir().unwrap(),
             current_pane: CurrentPane::Main,
-            runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
+            runners: vec![runner::Runner::MakeCommand(make_main::Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
             commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
             history: vec![
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
-                    name: "history0".to_string(),
+                    args: "history0".to_string(),
                     file_name: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
-                    name: "history1".to_string(),
+                    args: "history1".to_string(),
                     file_name: PathBuf::from("Makefile"),
                     line_number: 4,
                 },
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
-                    name: "history2".to_string(),
+                    args: "history2".to_string(),
                     file_name: PathBuf::from("Makefile"),
                     line_number: 7,
                 },
@@ -869,7 +880,7 @@ mod test {
                 message: Some(Message::ExecuteCommand),
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
-                        runner::Runner::MakeCommand(Make::new_for_test()),
+                        runner::Runner::MakeCommand(make_main::Make::new_for_test()),
                         command::Command::new(
                             runner_type::RunnerType::Make,
                             "target0".to_string(),
@@ -891,7 +902,7 @@ mod test {
                 message: Some(Message::ExecuteCommand),
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
-                        runner::Runner::MakeCommand(Make::new_for_test()),
+                        runner::Runner::MakeCommand(make_main::Make::new_for_test()),
                         command::Command::new(
                             runner_type::RunnerType::Make,
                             "history1".to_string(),

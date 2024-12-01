@@ -1,33 +1,33 @@
-use super::{command, make, pnpm};
+use super::{command, js_package_manager::js_package_manager_main, make::make_main};
 use anyhow::Result;
 use colored::Colorize;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Runner {
-    MakeCommand(make::Make),
-    PnpmCommand(pnpm::Pnpm),
+    MakeCommand(make_main::Make),
+    JsPackageManager(js_package_manager_main::JsPackageManager),
 }
 
 impl Runner {
     pub fn list_commands(&self) -> Vec<command::Command> {
         match self {
             Runner::MakeCommand(make) => make.to_commands(),
-            Runner::PnpmCommand(pnpm) => pnpm.to_commands(),
+            Runner::JsPackageManager(js) => js.to_commands(),
         }
     }
 
     pub fn path(&self) -> PathBuf {
         match self {
             Runner::MakeCommand(make) => make.path.clone(),
-            Runner::PnpmCommand(pnpm) => pnpm.path.clone(),
+            Runner::JsPackageManager(js) => js.path(),
         }
     }
 
     pub fn show_command(&self, command: &command::Command) {
         let command_or_error_message = match self {
             Runner::MakeCommand(make) => make.command_to_run(command),
-            Runner::PnpmCommand(pnpm) => pnpm.command_to_run(command),
+            Runner::JsPackageManager(js) => js.command_to_run(command),
         };
 
         println!(
@@ -41,7 +41,7 @@ impl Runner {
     pub fn execute(&self, command: &command::Command) -> Result<()> {
         match self {
             Runner::MakeCommand(make) => make.execute(command),
-            Runner::PnpmCommand(pnpm) => pnpm.execute(command),
+            Runner::JsPackageManager(js) => js.execute(command),
         }
     }
 }

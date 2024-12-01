@@ -1,4 +1,5 @@
-use super::{command, file_util, target::*};
+use super::target::*;
+use crate::model::{command, file_util};
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::process;
@@ -27,7 +28,7 @@ impl Make {
             None => return Err(anyhow!("command not found")),
         };
 
-        Ok(format!("make {}", command.name))
+        Ok(format!("make {}", command.args))
     }
 
     pub fn new(current_dir: PathBuf) -> Result<Make> {
@@ -55,7 +56,7 @@ impl Make {
 
         let child = process::Command::new("make")
             .stdin(process::Stdio::inherit())
-            .arg(&command.name)
+            .arg(&command.args)
             .spawn();
 
         match child {
@@ -67,8 +68,11 @@ impl Make {
         }
     }
 
-    fn get_command(&self, command: command::Command) -> Option<&command::Command> {
-        self.targets.0.iter().find(|c| **c == command)
+    fn get_command(&self, command: command::Command) -> Option<command::Command> {
+        self.to_commands()
+            .iter()
+            .find(|c| **c == command)
+            .map(|_| command)
     }
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
@@ -120,7 +124,7 @@ impl Make {
 
     #[cfg(test)]
     pub fn new_for_test() -> Make {
-        use super::runner_type;
+        use crate::model::runner_type;
         use std::env;
 
         Make {

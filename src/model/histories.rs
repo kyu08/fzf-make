@@ -76,14 +76,14 @@ impl History {
 #[derive(PartialEq, Clone, Debug)]
 pub struct HistoryCommand {
     pub runner_type: runner_type::RunnerType,
-    pub name: String,
+    pub args: String,
 }
 
 impl HistoryCommand {
     pub fn from(command: command::Command) -> Self {
         Self {
             runner_type: command.runner_type,
-            name: command.name,
+            args: command.args,
         }
     }
 }
@@ -115,21 +115,21 @@ mod test {
                             path: PathBuf::from("/Users/user/code/rustc".to_string()),
                             commands: vec![HistoryCommand {
                                 runner_type: runner_type::RunnerType::Make,
-                                name: "history0".to_string(),
+                                args: "history0".to_string(),
                             }],
                         },
                         History {
                             path: path_to_append.clone(),
                             commands: vec![HistoryCommand {
                                 runner_type: runner_type::RunnerType::Make,
-                                name: "history0".to_string(),
+                                args: "history0".to_string(),
                             }],
                         },
                     ],
                 },
                 command_to_append: command::Command {
                     runner_type: runner_type::RunnerType::Make,
-                    name: "append".to_string(),
+                    args: "append".to_string(),
                     file_name: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
@@ -139,7 +139,7 @@ mod test {
                             path: PathBuf::from("/Users/user/code/rustc".to_string()),
                             commands: vec![HistoryCommand {
                                 runner_type: runner_type::RunnerType::Make,
-                                name: "history0".to_string(),
+                                args: "history0".to_string(),
                             }],
                         },
                         History {
@@ -147,11 +147,11 @@ mod test {
                             commands: vec![
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "append".to_string(),
+                                    args: "append".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "history0".to_string(),
+                                    args: "history0".to_string(),
                                 },
                             ],
                         },
@@ -165,13 +165,13 @@ mod test {
                         path: PathBuf::from("/Users/user/code/rustc".to_string()),
                         commands: vec![HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history0".to_string(),
+                            args: "history0".to_string(),
                         }],
                     }],
                 },
                 command_to_append: command::Command {
                     runner_type: runner_type::RunnerType::Make,
-                    name: "append".to_string(),
+                    args: "append".to_string(),
                     file_name: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
@@ -181,14 +181,14 @@ mod test {
                             path: path_to_append.clone(),
                             commands: vec![HistoryCommand {
                                 runner_type: runner_type::RunnerType::Make,
-                                name: "append".to_string(),
+                                args: "append".to_string(),
                             }],
                         },
                         History {
                             path: PathBuf::from("/Users/user/code/rustc".to_string()),
                             commands: vec![HistoryCommand {
                                 runner_type: runner_type::RunnerType::Make,
-                                name: "history0".to_string(),
+                                args: "history0".to_string(),
                             }],
                         },
                     ],
@@ -224,11 +224,11 @@ mod test {
                     commands: vec![
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history0".to_string(),
+                            args: "history0".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history1".to_string(),
+                            args: "history1".to_string(),
                         },
                     ],
                 },
@@ -243,15 +243,15 @@ mod test {
                     commands: vec![
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history2".to_string(),
+                            args: "history2".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history0".to_string(),
+                            args: "history0".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history1".to_string(),
+                            args: "history1".to_string(),
                         },
                     ],
                 },
@@ -272,7 +272,7 @@ mod test {
                     path: path.clone(),
                     commands: vec![HistoryCommand {
                         runner_type: runner_type::RunnerType::Make,
-                        name: "history0".to_string(),
+                        args: "history0".to_string(),
                     }],
                 },
             },
@@ -283,15 +283,15 @@ mod test {
                     commands: vec![
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history0".to_string(),
+                            args: "history0".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history1".to_string(),
+                            args: "history1".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history2".to_string(),
+                            args: "history2".to_string(),
                         },
                     ],
                 },
@@ -306,15 +306,15 @@ mod test {
                     commands: vec![
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history2".to_string(),
+                            args: "history2".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history0".to_string(),
+                            args: "history0".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history1".to_string(),
+                            args: "history1".to_string(),
                         },
                     ],
                 },
@@ -326,43 +326,43 @@ mod test {
                     commands: vec![
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history0".to_string(),
+                            args: "history0".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history1".to_string(),
+                            args: "history1".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history2".to_string(),
+                            args: "history2".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history3".to_string(),
+                            args: "history3".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history4".to_string(),
+                            args: "history4".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history5".to_string(),
+                            args: "history5".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history6".to_string(),
+                            args: "history6".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history7".to_string(),
+                            args: "history7".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history8".to_string(),
+                            args: "history8".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history9".to_string(),
+                            args: "history9".to_string(),
                         },
                     ],
                 },
@@ -377,43 +377,43 @@ mod test {
                     commands: vec![
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history10".to_string(),
+                            args: "history10".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history0".to_string(),
+                            args: "history0".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history1".to_string(),
+                            args: "history1".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history2".to_string(),
+                            args: "history2".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history3".to_string(),
+                            args: "history3".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history4".to_string(),
+                            args: "history4".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history5".to_string(),
+                            args: "history5".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history6".to_string(),
+                            args: "history6".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history7".to_string(),
+                            args: "history7".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            name: "history8".to_string(),
+                            args: "history8".to_string(),
                         },
                     ],
                 },

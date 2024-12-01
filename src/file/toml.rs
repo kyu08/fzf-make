@@ -102,25 +102,25 @@ impl History {
 #[serde(rename_all = "kebab-case")]
 pub struct HistoryCommand {
     runner_type: runner_type::RunnerType,
-    name: String,
+    args: String,
 }
 
 impl HistoryCommand {
-    pub fn new(runner_type: runner_type::RunnerType, name: String) -> Self {
-        Self { runner_type, name }
+    pub fn new(runner_type: runner_type::RunnerType, args: String) -> Self {
+        Self { runner_type, args }
     }
 
     fn from(command: histories::HistoryCommand) -> Self {
         Self {
             runner_type: command.runner_type,
-            name: command.name.clone(),
+            args: command.args.clone(),
         }
     }
 
     fn into(self) -> histories::HistoryCommand {
         histories::HistoryCommand {
             runner_type: self.runner_type,
-            name: self.name,
+            args: self.args,
         }
     }
 }
@@ -178,6 +178,10 @@ mod test {
     use anyhow::Result;
     use pretty_assertions::assert_eq;
 
+    // TODO: test serialize
+    #[test]
+    fn serialize_test() {}
+
     #[test]
     fn parse_history_test() {
         struct Case {
@@ -194,26 +198,26 @@ path = "/Users/user/code/fzf-make"
 
 [[histories.commands]]
 runner-type = "make"
-name = "test"
+args = "test"
 
 [[histories.commands]]
 runner-type = "make"
-name = "check"
+args = "check"
 
 [[histories.commands]]
 runner-type = "make"
-name = "spell-check"
+args = "spell-check"
 
 [[histories]]
-path = "/Users/user/code/golang/go-playground"
+path = "/Users/user/code/react"
 
 [[histories.commands]]
-runner-type = "make"
-name = "run"
+runner-type = "pnpm"
+args = "test"
 
 [[histories.commands]]
-runner-type = "make"
-name = "echo1"
+runner-type = "pnpm"
+args = "app1 build"
                 "#
                 .to_string(),
                 expect: Ok(Histories {
@@ -223,28 +227,32 @@ name = "echo1"
                             commands: vec![
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "test".to_string(),
+                                    args: "test".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "check".to_string(),
+                                    args: "check".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "spell-check".to_string(),
+                                    args: "spell-check".to_string(),
                                 },
                             ],
                         },
                         History {
-                            path: PathBuf::from("/Users/user/code/golang/go-playground"),
+                            path: PathBuf::from("/Users/user/code/react"),
                             commands: vec![
                                 HistoryCommand {
-                                    runner_type: runner_type::RunnerType::Make,
-                                    name: "run".to_string(),
+                                    runner_type: runner_type::RunnerType::JsPackageManager(
+                                        runner_type::JsPackageManager::Pnpm,
+                                    ),
+                                    args: "test".to_string(),
                                 },
                                 HistoryCommand {
-                                    runner_type: runner_type::RunnerType::Make,
-                                    name: "echo1".to_string(),
+                                    runner_type: runner_type::RunnerType::JsPackageManager(
+                                        runner_type::JsPackageManager::Pnpm,
+                                    ),
+                                    args: "app1 build".to_string(),
                                 },
                             ],
                         },
@@ -294,26 +302,26 @@ path = "/Users/user/code/fzf-make"
 
 [[histories.commands]]
 runner-type = "make"
-name = "test"
+args = "test"
 
 [[histories.commands]]
 runner-type = "make"
-name = "check"
+args = "check"
 
 [[histories.commands]]
 runner-type = "make"
-name = "spell-check"
+args = "spell-check"
 
 [[histories]]
 path = "/Users/user/code/golang/go-playground"
 
 [[histories.commands]]
 runner-type = "make"
-name = "run"
+args = "run"
 
 [[histories.commands]]
 runner-type = "make"
-name = "echo1"
+args = "echo1"
                 "#
                 .to_string(),
                 expect: Histories {
@@ -323,15 +331,15 @@ name = "echo1"
                             commands: vec![
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "test".to_string(),
+                                    args: "test".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "check".to_string(),
+                                    args: "check".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "spell-check".to_string(),
+                                    args: "spell-check".to_string(),
                                 },
                             ],
                         },
@@ -340,11 +348,11 @@ name = "echo1"
                             commands: vec![
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "run".to_string(),
+                                    args: "run".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "echo1".to_string(),
+                                    args: "echo1".to_string(),
                                 },
                             ],
                         },
@@ -370,15 +378,15 @@ executed-targets = ["run", "echo1"]
                             commands: vec![
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "test".to_string(),
+                                    args: "test".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "check".to_string(),
+                                    args: "check".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "spell-check".to_string(),
+                                    args: "spell-check".to_string(),
                                 },
                             ],
                         },
@@ -387,11 +395,11 @@ executed-targets = ["run", "echo1"]
                             commands: vec![
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "run".to_string(),
+                                    args: "run".to_string(),
                                 },
                                 HistoryCommand {
                                     runner_type: runner_type::RunnerType::Make,
-                                    name: "echo1".to_string(),
+                                    args: "echo1".to_string(),
                                 },
                             ],
                         },
