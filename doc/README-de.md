@@ -23,8 +23,9 @@
 - Select and execute a make target or pnpm scripts using fuzzy-finder with a preview window by running `fzf-make`!
 - Execute the last executed command(By running `fzf-make --repeat`.)
 - Command history
+- Support make, pnpm. **Scheduled to be developed: yarn, npm.** 
 - [make] Support `include` directive
--Support make, pnpm. **Scheduled to be developed: yarn, npm.** 
+- [pnpm] Support workspace(collect scripts all of `package.json` in the directory where fzf-make is launched.)
 - **(Scheduled to be developed)** Support config file
 
 # 👓 Voraussetzungen
