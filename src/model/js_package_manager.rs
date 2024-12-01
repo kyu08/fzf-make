@@ -1,26 +1,63 @@
-use super::{command, pnpm, runner, runner_type};
+use super::{command, pnpm, runner_type};
 use crate::file::path_to_content;
+use anyhow::Result;
 use codespan::Files;
 use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
 
 const METADATA_FILE_NAME: &str = "package.json";
 const METADATA_COMMAND_KEY: &str = "scripts";
-const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
+const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml"; // TODO: pnpm.rsに移動したい
 
 // こいつをrunner_typeのvariantに変更すべきでは？
 #[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
-enum JsPackageManager {
-    Pnpm, // ここに構造体としてPnpmを持つべきかも
-    Yarn,
+pub enum JsPackageManager {
+    JsPnpm(pnpm::Pnpm),
+    JsYarn,
 }
 
 impl JsPackageManager {
-    fn new(file_names: Vec<String>) -> Option<Self> {
+    pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
+        match self {
+            JsPackageManager::JsPnpm(pnpm) => pnpm.command_to_run(command),
+            JsPackageManager::JsYarn => todo!(),
+        }
+    }
+
+    pub fn to_commands(&self) -> Vec<command::Command> {
+        match self {
+            JsPackageManager::JsPnpm(pnpm) => pnpm.to_commands(),
+            JsPackageManager::JsYarn => todo!(),
+        }
+    }
+
+    pub fn execute(&self, command: &command::Command) -> Result<()> {
+        match self {
+            JsPackageManager::JsPnpm(pnpm) => pnpm.execute(command),
+            JsPackageManager::JsYarn => todo!(),
+        }
+    }
+
+    pub fn path(&self) -> PathBuf {
+        match self {
+            JsPackageManager::JsPnpm(pnpm) => pnpm.path.clone(),
+            JsPackageManager::JsYarn => todo!(),
+        }
+    }
+
+    fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
         for file_name in file_names {
+            // TODO: ここのロジックもpnpm側に持っていったほうがよさそう
             if file_name == PNPM_LOCKFILE_NAME {
-                return Some(JsPackageManager::Pnpm);
+                let commands =
+                    match path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME)) {
+                        Ok(c) => parse_package_json(&c, runner_type::RunnerType::Pnpm),
+                        Err(_) => return None,
+                    };
+                let pnpm = pnpm::Pnpm::new(current_dir.join(METADATA_FILE_NAME), commands);
+
+                return Some(JsPackageManager::JsPnpm(pnpm));
             }
         }
         None
@@ -28,58 +65,35 @@ impl JsPackageManager {
 
     fn to_runner_type(&self) -> runner_type::RunnerType {
         match self {
-            JsPackageManager::Pnpm => runner_type::RunnerType::Pnpm,
-            JsPackageManager::Yarn => todo!(),
-        }
-    }
-
-    fn to_runner(
-        &self,
-        command_file_path: PathBuf,
-        commands: Vec<command::Command>,
-    ) -> runner::Runner {
-        match self {
-            JsPackageManager::Pnpm => {
-                runner::Runner::PnpmCommand(pnpm::Pnpm::new(command_file_path, commands))
-            }
-            JsPackageManager::Yarn => todo!(),
+            JsPackageManager::JsPnpm(_) => runner_type::RunnerType::Pnpm,
+            JsPackageManager::JsYarn => todo!(),
         }
     }
 
     fn command_name_to_args(&self, command_name: &str) -> String {
         match self {
             // これここに実装すべきなのか...?
-            // pnpm.rsに実装できない？
-            JsPackageManager::Pnpm => ("run".to_string() + command_name).to_string(),
-            JsPackageManager::Yarn => todo!(),
+            // TODO: pnpm.rsに実装したい
+            JsPackageManager::JsPnpm(_) => ("run".to_string() + command_name).to_string(),
+            JsPackageManager::JsYarn => todo!(),
         }
     }
 }
 
 // TODO: runnerではなくPnpmを返すのがただしそう（そもそもPnpmではなくJsPackageManagerを返すべきという説も）
-pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<runner::Runner> {
+pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<JsPackageManager> {
     let entries = fs::read_dir(current_dir.clone()).unwrap();
     let file_names = entries
         .map(|e| e.unwrap().file_name().into_string().unwrap())
         .collect();
 
-    match JsPackageManager::new(file_names) {
-        Some(js_package_manager) => {
-            let commands = match path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME))
-            {
-                Ok(c) => parse_package_json(&c, &js_package_manager),
-                Err(_) => return None,
-            };
-            Some(js_package_manager.to_runner(current_dir.join(METADATA_FILE_NAME), commands))
-        }
-        None => None,
-    }
+    JsPackageManager::new(current_dir, file_names)
 }
 
 // TODO: make this function method
 fn parse_package_json(
     content: &str,
-    js_package_manager: &JsPackageManager,
+    runner_type: runner_type::RunnerType,
 ) -> Vec<command::Command> {
     let mut files = Files::new();
     let file = files.add(METADATA_FILE_NAME, content);
@@ -102,7 +116,7 @@ fn parse_package_json(
                     files.line_index(file, k.start() as u32).number().to_usize() as u32;
 
                 result.push(command::Command {
-                    runner_type: js_package_manager.to_runner_type(),
+                    runner_type: runner_type.clone(),
                     args,
                     file_name: PathBuf::from(METADATA_FILE_NAME),
                     line_number,
@@ -186,45 +200,10 @@ mod test {
         for case in cases {
             assert_eq!(
                 case.expected,
-                parse_package_json(case.file_content, &JsPackageManager::Pnpm),
+                parse_package_json(case.file_content, runner_type::RunnerType::Pnpm),
                 "\nfailed: 🚨{:?}🚨\n",
                 case.title,
             );
-        }
-    }
-
-    #[test]
-    fn test_new() {
-        struct Case {
-            title: &'static str,
-            file_names: Vec<String>,
-            expected: Option<JsPackageManager>,
-        }
-
-        let cases = vec![
-            Case {
-                title: "pnpm",
-                file_names: vec![
-                    ".gitignore".to_string(),
-                    "Makefile".to_string(),
-                    "pnpm-lock.yaml".to_string(),
-                ],
-                expected: Some(JsPackageManager::Pnpm),
-            },
-            Case {
-                title: "no js package manager found",
-                file_names: vec![
-                    ".gitignore".to_string(),
-                    "Makefile".to_string(),
-                    "cargo.toml".to_string(),
-                ],
-                expected: None,
-            },
-        ];
-
-        for case in cases {
-            let result = JsPackageManager::new(case.file_names);
-            assert_eq!(case.expected, result, "\nfailed: 🚨{:?}🚨\n", case.title)
         }
     }
 }

@@ -7,6 +7,12 @@ use std::fmt;
 pub enum RunnerType {
     Make,
     Pnpm,
+    // TODO: ↓こっちに変更する
+    // JsPackageManager(JsPackageManager),
+}
+
+pub enum JsPackageManager {
+    Pnpm,
 }
 
 impl std::cmp::Eq for RunnerType {}
@@ -24,7 +30,7 @@ impl RunnerType {
     pub fn from(runner: &runner::Runner) -> Self {
         match runner {
             runner::Runner::MakeCommand(_) => RunnerType::Make,
-            runner::Runner::PnpmCommand(_) => RunnerType::Pnpm,
+            runner::Runner::JsPackageManager(_) => RunnerType::Pnpm,
         }
     }
 }

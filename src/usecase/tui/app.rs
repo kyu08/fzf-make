@@ -586,7 +586,7 @@ impl SelectCommandState<'_> {
                 (runner_type::RunnerType::Make, runner::Runner::MakeCommand(_)) => {
                     return Some(runner.clone());
                 }
-                (runner_type::RunnerType::Pnpm, runner::Runner::PnpmCommand(_)) => {
+                (runner_type::RunnerType::Pnpm, runner::Runner::JsPackageManager(_)) => {
                     return Some(runner.clone());
                 }
                 _ => continue,
