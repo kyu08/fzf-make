@@ -3,19 +3,17 @@ use serde::de::{self};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
-#[derive(Hash, PartialEq, Debug, Clone)]
+#[derive(Hash, PartialEq, Debug, Clone, Eq)]
 pub enum RunnerType {
     Make,
     JsPackageManager(JsPackageManager),
 }
 
-#[derive(Hash, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Hash, PartialEq, Debug, Clone, Serialize, Deserialize, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum JsPackageManager {
     Pnpm,
 }
-
-impl std::cmp::Eq for RunnerType {}
 
 impl RunnerType {
     pub fn to_runner(&self, runners: &Vec<runner::Runner>) -> Option<runner::Runner> {
