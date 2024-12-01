@@ -157,13 +157,17 @@ impl Pnpm {
     // ref: https://pnpm.io/filtering
     fn use_filtering(value: String) -> bool {
         let args = value.split_whitespace().collect::<Vec<&str>>();
-        match (
-            args.iter().enumerate().find(|(_, e)| **e == "-F"),
-            args.iter().enumerate().find(|(_, e)| **e == "--filter"),
-        ) {
-            (Some((index, _)), _) | (_, Some((index, _))) => args.get(index + 1).is_some(),
-            _ => false,
-        }
+        // [including following options -F, --filter, -C, --dir] && [there is an argument after the option]
+        args.iter()
+            .enumerate()
+            .find(|(_, argument)| {
+                **argument == "-F"
+                    || **argument == "--filter"
+                    || **argument == "-C"
+                    || **argument == "--dir"
+            })
+            .map(|(index, _)| args.get(index + 1).is_some())
+            .unwrap_or(false)
     }
 }
 
@@ -179,6 +183,14 @@ mod test {
         assert_eq!(
             true,
             Pnpm::use_filtering("pnpm -r --filter app3".to_string())
+        );
+        assert_eq!(
+            true,
+            Pnpm::use_filtering("pnpm -C packages/app3".to_string())
+        );
+        assert_eq!(
+            true,
+            Pnpm::use_filtering("pnpm --dir packages/app3".to_string())
         );
         assert_eq!(false, Pnpm::use_filtering("pnpm --filter".to_string()));
         assert_eq!(false, Pnpm::use_filtering("pnpm -F".to_string()));
