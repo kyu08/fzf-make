@@ -5,11 +5,9 @@ use codespan::Files;
 use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
 
-const METADATA_FILE_NAME: &str = "package.json";
+pub const METADATA_FILE_NAME: &str = "package.json";
 const METADATA_COMMAND_KEY: &str = "scripts";
-const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml"; // TODO: pnpm.rsに移動したい
 
-// こいつをrunner_typeのvariantに変更すべきでは？
 #[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum JsPackageManager {
@@ -48,11 +46,16 @@ impl JsPackageManager {
 
     fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
         for file_name in file_names {
-            // TODO: ここのロジックもpnpm側に持っていったほうがよさそう
-            if file_name == PNPM_LOCKFILE_NAME {
+            if pnpm::Pnpm::use_pnpm(file_name) {
                 let commands =
                     match path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME)) {
-                        Ok(c) => parse_package_json(&c, runner_type::RunnerType::Pnpm),
+                        // TODO: ここで呼ぶべきじゃないかも
+                        Ok(c) => match JsPackageManager::parse_package_json(&c) {
+                            Some(result) => {
+                                pnpm::Pnpm::scripts_to_commands(current_dir.clone(), result)
+                            }
+                            None => return None,
+                        },
                         Err(_) => return None,
                     };
                 let pnpm = pnpm::Pnpm::new(current_dir.join(METADATA_FILE_NAME), commands);
@@ -65,22 +68,58 @@ impl JsPackageManager {
 
     fn to_runner_type(&self) -> runner_type::RunnerType {
         match self {
-            JsPackageManager::JsPnpm(_) => runner_type::RunnerType::Pnpm,
+            JsPackageManager::JsPnpm(_) => {
+                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm)
+            }
             JsPackageManager::JsYarn => todo!(),
         }
     }
 
-    fn command_name_to_args(&self, command_name: &str) -> String {
+    fn command_name_to_args(&self, _command_name: &str) -> String {
         match self {
-            // これここに実装すべきなのか...?
-            // TODO: pnpm.rsに実装したい
-            JsPackageManager::JsPnpm(_) => ("run".to_string() + command_name).to_string(),
+            // TODO: pnpm.rsに実装し、pnpm.command_name_to_args()を呼び出すようにする
+            JsPackageManager::JsPnpm(_) => todo!(),
+            // JsPackageManager::JsPnpm(_) => ("run".to_string() + command_name).to_string(),
             JsPackageManager::JsYarn => todo!(),
         }
+    }
+
+    pub fn parse_package_json(content: &str) -> Option<(String, Vec<(String, String, u32)>)> {
+        let mut files = Files::new();
+        let file = files.add(METADATA_FILE_NAME, content);
+        let json_object: spanned::Object = match jsv::from_str(content) {
+            Ok(e) => e,
+            Err(_) => return None,
+        };
+
+        let mut name = "".to_string();
+        let mut result = vec![];
+        for (k, v) in json_object {
+            if k.as_str() == "name" && v.as_string().is_some() {
+                name = v.as_string().unwrap().to_string();
+            }
+            if k.as_str() != METADATA_COMMAND_KEY {
+                continue;
+            }
+
+            // object is the content of "scripts" key
+            if let Some(object) = v.as_object() {
+                for (k, v) in object {
+                    let args = k.to_string();
+                    let line_number =
+                        files.line_index(file, k.start() as u32).number().to_usize() as u32;
+                    if let Some(v) = v.as_string() {
+                        result.push((args, v.to_string(), line_number));
+                    }
+                }
+            };
+            break;
+        }
+
+        Some((name, result))
     }
 }
 
-// TODO: runnerではなくPnpmを返すのがただしそう（そもそもPnpmではなくJsPackageManagerを返すべきという説も）
 pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<JsPackageManager> {
     let entries = fs::read_dir(current_dir.clone()).unwrap();
     let file_names = entries
@@ -90,117 +129,64 @@ pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<JsPackageMa
     JsPackageManager::new(current_dir, file_names)
 }
 
-// TODO: make this function method
-fn parse_package_json(
-    content: &str,
-    runner_type: runner_type::RunnerType,
-) -> Vec<command::Command> {
-    let mut files = Files::new();
-    let file = files.add(METADATA_FILE_NAME, content);
-    let json_object: spanned::Object = match jsv::from_str(content) {
-        Ok(e) => e,
-        Err(_) => return vec![],
-    };
-
-    let mut result = vec![];
-    for (k, v) in json_object {
-        if k.as_str() != METADATA_COMMAND_KEY {
-            continue;
-        }
-
-        // object is the content of "scripts" key
-        if let Some(object) = v.as_object() {
-            for (k, _) in object {
-                let args = k.to_string();
-                let line_number =
-                    files.line_index(file, k.start() as u32).number().to_usize() as u32;
-
-                result.push(command::Command {
-                    runner_type: runner_type.clone(),
-                    args,
-                    file_name: PathBuf::from(METADATA_FILE_NAME),
-                    line_number,
-                });
-            }
-        };
-        break;
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod test {
-    use crate::model::runner_type;
-    use pretty_assertions::assert_eq;
-
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_parse_package_json() {
         struct Case {
             title: &'static str,
             file_content: &'static str,
-            expected: Vec<command::Command>,
+            expected: Option<(String, Vec<(String, String, u32)>)>,
         }
 
         let cases = vec![
             Case {
                 title: "valid json can be parsed successfully",
                 file_content: r#"{
-  "name": "project",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "build": "echo build",
-    "start": "echo start",
-    "test": "echo test"
-  },
-  "devDependencies": {
-    "@babel/cli": "7.12.10"
-  },
-  "dependencies": {
-    "firebase": "^8.6.8"
-  }
-}
-                    "#,
-                expected: vec![
-                    command::Command {
-                        runner_type: runner_type::RunnerType::Pnpm,
-                        args: "build".to_string(),
-                        file_name: "package.json".into(),
-                        line_number: 6,
-                    },
-                    command::Command {
-                        runner_type: runner_type::RunnerType::Pnpm,
-                        args: "start".to_string(),
-                        file_name: "package.json".into(),
-                        line_number: 7,
-                    },
-                    command::Command {
-                        runner_type: runner_type::RunnerType::Pnpm,
-                        args: "test".to_string(),
-                        file_name: "package.json".into(),
-                        line_number: 8,
-                    },
-                ],
+      "name": "project",
+      "version": "1.0.0",
+      "private": true,
+      "scripts": {
+        "build": "echo build",
+        "start": "echo start",
+        "test": "echo test"
+      },
+      "devDependencies": {
+        "@babel/cli": "7.12.10"
+      },
+      "dependencies": {
+        "firebase": "^8.6.8"
+      }
+    }
+                        "#,
+                expected: Some((
+                    "project".to_string(),
+                    vec![
+                        ("build".to_string(), "echo build".to_string(), 6),
+                        ("start".to_string(), "echo start".to_string(), 7),
+                        ("test".to_string(), "echo test".to_string(), 8),
+                    ],
+                )),
             },
             Case {
                 title: "empty vec(empty string)",
                 file_content: "",
-                expected: vec![],
+                expected: None,
             },
             Case {
                 title: "empty vec(invalid json)",
                 file_content: "not a json format",
-                expected: vec![],
+                expected: None,
             },
         ];
 
         for case in cases {
             assert_eq!(
                 case.expected,
-                parse_package_json(case.file_content, runner_type::RunnerType::Pnpm),
+                JsPackageManager::parse_package_json(case.file_content),
                 "\nfailed: 🚨{:?}🚨\n",
                 case.title,
             );

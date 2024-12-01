@@ -1,4 +1,4 @@
-use super::runner;
+use super::{js_package_manager, runner};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -6,11 +6,11 @@ use std::fmt;
 #[serde(rename_all = "kebab-case")]
 pub enum RunnerType {
     Make,
-    Pnpm,
-    // TODO: ↓こっちに変更する
-    // JsPackageManager(JsPackageManager),
+    JsPackageManager(JsPackageManager), // tomlの構造は変えたくないな...
 }
 
+#[derive(Hash, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum JsPackageManager {
     Pnpm,
 }
@@ -30,7 +30,12 @@ impl RunnerType {
     pub fn from(runner: &runner::Runner) -> Self {
         match runner {
             runner::Runner::MakeCommand(_) => RunnerType::Make,
-            runner::Runner::JsPackageManager(_) => RunnerType::Pnpm,
+            runner::Runner::JsPackageManager(js) => match js {
+                js_package_manager::JsPackageManager::JsPnpm(_) => {
+                    RunnerType::JsPackageManager(JsPackageManager::Pnpm)
+                }
+                js_package_manager::JsPackageManager::JsYarn => todo!(),
+            },
         }
     }
 }
@@ -39,7 +44,9 @@ impl fmt::Display for RunnerType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let name = match self {
             RunnerType::Make => "make",
-            RunnerType::Pnpm => "pnpm",
+            RunnerType::JsPackageManager(js) => match js {
+                JsPackageManager::Pnpm => "pnpm",
+            },
         };
         write!(f, "{}", name)
     }

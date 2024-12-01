@@ -5,7 +5,7 @@ use crate::{
     model::{
         command,
         histories::{self},
-        js_package_manager::get_js_package_manager_runner,
+        js_package_manager::{self, get_js_package_manager_runner},
         make::Make,
         runner, runner_type,
     },
@@ -358,7 +358,7 @@ impl SelectCommandState<'_> {
                 }
             };
             if let Some(js_package_manager) = get_js_package_manager_runner(current_dir.clone()) {
-                runners.push(js_package_manager);
+                runners.push(runner::Runner::JsPackageManager(js_package_manager));
             };
             runners
         };
@@ -586,9 +586,18 @@ impl SelectCommandState<'_> {
                 (runner_type::RunnerType::Make, runner::Runner::MakeCommand(_)) => {
                     return Some(runner.clone());
                 }
-                (runner_type::RunnerType::Pnpm, runner::Runner::JsPackageManager(_)) => {
-                    return Some(runner.clone());
-                }
+                (
+                    runner_type::RunnerType::JsPackageManager(runner_type_js),
+                    runner::Runner::JsPackageManager(runner_js),
+                ) => match (runner_type_js, runner_js) {
+                    (
+                        runner_type::JsPackageManager::Pnpm,
+                        js_package_manager::JsPackageManager::JsPnpm(_),
+                    ) => {
+                        return Some(runner.clone());
+                    }
+                    _ => continue,
+                },
                 _ => continue,
             }
         }
