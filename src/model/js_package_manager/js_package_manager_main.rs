@@ -1,5 +1,5 @@
-use super::{command, pnpm};
-use crate::file::path_to_content;
+use super::pnpm;
+use crate::{file::path_to_content, model::command};
 use anyhow::Result;
 use codespan::Files;
 use json_spanned_value::{self as jsv, spanned};
@@ -44,8 +44,8 @@ impl JsPackageManager {
             if pnpm::Pnpm::use_pnpm(file_name) {
                 let commands =
                     match path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME)) {
-                        // TODO: ここで呼ぶべきじゃないかも
                         Ok(c) => match JsPackageManager::parse_package_json(&c) {
+                            // TODO: ここで呼ぶべきじゃないかも
                             Some(result) => {
                                 pnpm::Pnpm::scripts_to_commands(current_dir.clone(), result)
                             }

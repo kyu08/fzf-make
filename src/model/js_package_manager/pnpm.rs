@@ -1,6 +1,8 @@
-use crate::file::path_to_content;
-
-use super::{command, js_package_manager, runner_type};
+use super::js_package_manager_main;
+use crate::{
+    file::path_to_content,
+    model::{command, runner_type},
+};
 use anyhow::{anyhow, Result};
 use std::{fs, path::PathBuf, process};
 
@@ -122,7 +124,7 @@ impl Pnpm {
                                     path_to_content::path_to_content(entry_of_each_package.path())
                                 {
                                     if let Some((name, parsing_result)) =
-                                        js_package_manager::JsPackageManager::parse_package_json(&c)
+                                        js_package_manager_main::JsPackageManager::parse_package_json(&c)
                                     {
                                         for (key, _, line_number) in parsing_result {
                                             result.push(command::Command::new(

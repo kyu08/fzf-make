@@ -1,4 +1,4 @@
-use super::{js_package_manager, runner};
+use super::{js_package_manager::js_package_manager_main, runner};
 use serde::de::{self};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
@@ -29,7 +29,7 @@ impl RunnerType {
         match runner {
             runner::Runner::MakeCommand(_) => RunnerType::Make,
             runner::Runner::JsPackageManager(js) => match js {
-                js_package_manager::JsPackageManager::JsPnpm(_) => {
+                js_package_manager_main::JsPackageManager::JsPnpm(_) => {
                     RunnerType::JsPackageManager(JsPackageManager::Pnpm)
                 }
             },
