@@ -9,6 +9,7 @@
   "packageRules": [
     {
       "groupName": "all-dependencies",
+      "matchManagers": ["cargo", "github-actions"],
       "matchPackageNames": ["*"],
       "matchUpdateTypes": ["patch", "minor"],
       "groupSlug": "all-deps"
