@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use std::{fs, path::PathBuf, process};
 
 const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
-const IGNORE_DIR_NAMES: [&str; 2] = ["node_modules", ".git"];
+const IGNORE_DIR_NAMES: [&str; 4] = ["node_modules", ".git", ".cache", ".next"];
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pnpm {
