@@ -11,6 +11,6 @@
     "@babel/cli": "7.12.10"
   },
   "dependencies": {
-    "firebase": "^8.6.8"
+    "firebase": "^11.0.0"
   }
 }
