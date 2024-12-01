@@ -178,6 +178,10 @@ mod test {
     use anyhow::Result;
     use pretty_assertions::assert_eq;
 
+    // TODO: test serialize
+    #[test]
+    fn serialize_test() {}
+
     #[test]
     fn parse_history_test() {
         struct Case {
@@ -205,15 +209,15 @@ runner-type = "make"
 args = "spell-check"
 
 [[histories]]
-path = "/Users/user/code/golang/go-playground"
+path = "/Users/user/code/react"
 
 [[histories.commands]]
-runner-type = "make"
-args = "run"
+runner-type = "pnpm"
+args = "test"
 
 [[histories.commands]]
-runner-type = "make"
-args = "echo1"
+runner-type = "pnpm"
+args = "app1 build"
                 "#
                 .to_string(),
                 expect: Ok(Histories {
@@ -236,15 +240,19 @@ args = "echo1"
                             ],
                         },
                         History {
-                            path: PathBuf::from("/Users/user/code/golang/go-playground"),
+                            path: PathBuf::from("/Users/user/code/react"),
                             commands: vec![
                                 HistoryCommand {
-                                    runner_type: runner_type::RunnerType::Make,
-                                    args: "run".to_string(),
+                                    runner_type: runner_type::RunnerType::JsPackageManager(
+                                        runner_type::JsPackageManager::Pnpm,
+                                    ),
+                                    args: "test".to_string(),
                                 },
                                 HistoryCommand {
-                                    runner_type: runner_type::RunnerType::Make,
-                                    args: "echo1".to_string(),
+                                    runner_type: runner_type::RunnerType::JsPackageManager(
+                                        runner_type::JsPackageManager::Pnpm,
+                                    ),
+                                    args: "app1 build".to_string(),
                                 },
                             ],
                         },
