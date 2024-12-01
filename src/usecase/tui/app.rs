@@ -362,6 +362,7 @@ impl SelectCommandState<'_> {
             {
                 runners.push(runner::Runner::JsPackageManager(js_package_manager));
             };
+
             runners
         };
 
