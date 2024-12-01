@@ -12,35 +12,30 @@ const METADATA_COMMAND_KEY: &str = "scripts";
 #[derive(Clone, Debug, PartialEq)]
 pub enum JsPackageManager {
     JsPnpm(pnpm::Pnpm),
-    JsYarn,
 }
 
 impl JsPackageManager {
     pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.command_to_run(command),
-            JsPackageManager::JsYarn => todo!(),
         }
     }
 
     pub fn to_commands(&self) -> Vec<command::Command> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.to_commands(),
-            JsPackageManager::JsYarn => todo!(),
         }
     }
 
     pub fn execute(&self, command: &command::Command) -> Result<()> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.execute(command),
-            JsPackageManager::JsYarn => todo!(),
         }
     }
 
     pub fn path(&self) -> PathBuf {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.path.clone(),
-            JsPackageManager::JsYarn => todo!(),
         }
     }
 

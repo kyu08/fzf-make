@@ -32,7 +32,6 @@ impl RunnerType {
                 js_package_manager::JsPackageManager::JsPnpm(_) => {
                     RunnerType::JsPackageManager(JsPackageManager::Pnpm)
                 }
-                js_package_manager::JsPackageManager::JsYarn => todo!(),
             },
         }
     }

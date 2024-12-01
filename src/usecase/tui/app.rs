@@ -596,7 +596,6 @@ impl SelectCommandState<'_> {
                     ) => {
                         return Some(runner.clone());
                     }
-                    _ => continue,
                 },
                 _ => continue,
             }
