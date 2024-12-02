@@ -363,15 +363,19 @@ impl SelectCommandState<'_> {
             runners
         };
 
-        Ok(SelectCommandState {
-            current_dir: current_dir.clone(),
-            current_pane,
-            runners: runners.clone(),
-            search_text_area: TextArea_(TextArea::default()),
-            commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            history: Model::get_histories(current_dir, runners),
-            history_list_state: ListState::with_selected(ListState::default(), Some(0)),
-        })
+        if runners.is_empty() {
+            Err(anyhow!("No task runner found.\nRun following command to see usage.\nopen \"https://github.com/kyu08/fzf-make?tab=readme-ov-file#-usage\""))
+        } else {
+            Ok(SelectCommandState {
+                current_dir: current_dir.clone(),
+                current_pane,
+                runners: runners.clone(),
+                search_text_area: TextArea_(TextArea::default()),
+                commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                history: Model::get_histories(current_dir, runners),
+                history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            })
+        }
     }
 
     fn get_selected_command(&self) -> Option<command::Command> {
