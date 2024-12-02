@@ -33,7 +33,7 @@ SUBCOMMANDS:
         Execute the last executed command.
     history, --history, -h
         Launch fzf-make with the history pane focused.
-    help, --help, -h
+    help, --help
         Prints help message.
     version, --version, -v
         Prints version information.
