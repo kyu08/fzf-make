@@ -180,17 +180,14 @@ impl Pnpm {
     // ref: https://pnpm.io/filtering
     fn use_filtering(value: String) -> bool {
         let args = value.split_whitespace().collect::<Vec<&str>>();
-        // [including following options -F, --filter, -C, --dir] && [there is an argument after the option]
-        args.iter()
-            .enumerate()
-            .find(|(_, argument)| {
-                **argument == "-F"
-                    || **argument == "--filter"
-                    || **argument == "-C"
-                    || **argument == "--dir"
-            })
-            .map(|(index, _)| args.get(index + 1).is_some())
-            .unwrap_or(false)
+
+        let start_with_pnpm = args.first().map(|arg| *arg == "pnpm").unwrap_or(false);
+        let has_filtering_or_dir_option = args
+            .iter()
+            .any(|arg| *arg == "-F" || *arg == "--filter" || *arg == "-C" || *arg == "--dir");
+        let has_run = args.iter().any(|arg| *arg == "run");
+
+        start_with_pnpm && has_filtering_or_dir_option && !has_run
     }
 }
 
@@ -215,10 +212,22 @@ mod test {
             true,
             Pnpm::use_filtering("pnpm --dir packages/app3".to_string())
         );
-        assert_eq!(false, Pnpm::use_filtering("pnpm --filter".to_string()));
-        assert_eq!(false, Pnpm::use_filtering("pnpm -F".to_string()));
+        assert_eq!(true, Pnpm::use_filtering("pnpm -F".to_string()));
+        assert_eq!(true, Pnpm::use_filtering("pnpm --filter".to_string()));
+        assert_eq!(
+            false,
+            Pnpm::use_filtering("pnpm -C packages/app1 run test".to_string())
+        );
+        assert_eq!(
+            false,
+            Pnpm::use_filtering("pnpm --filter app1 run test".to_string())
+        );
         assert_eq!(false, Pnpm::use_filtering("yarn run".to_string()));
         assert_eq!(false, Pnpm::use_filtering("pnpm run".to_string()));
         assert_eq!(false, Pnpm::use_filtering("pnpm -r hoge".to_string()));
+        assert_eq!(
+            false,
+            Pnpm::use_filtering("yarn -r --filter app3".to_string())
+        );
     }
 }
