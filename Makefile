@@ -58,9 +58,20 @@ bump-fzf-make-version: tool-bump-version
 spell-check: tool-spell-check
 	typos
 
-.PHONY: run
-run:
-	@cargo build && mv ./target/debug/fzf-make ./test_data && cd ./test_data && ./fzf-make
+DEBUG_EXECUTABLE = ./target/debug/fzf-make
+TEST_DIR = ./test_data
+
+.PHONY: run-make
+run-make: build
+	@mv $(DEBUG_EXECUTABLE) $(TEST_DIR)/make && cd $(TEST_DIR)/make && ./fzf-make
+
+.PHONY: run-pnpm
+run-pnpm: build
+	@mv $(DEBUG_EXECUTABLE) $(TEST_DIR)/pnpm && cd $(TEST_DIR)/pnpm && ./fzf-make
+
+.PHONY: run-pnpm-monorepo
+run-pnpm-monorepo: build
+	@mv $(DEBUG_EXECUTABLE) $(TEST_DIR)/pnpm_monorepo && cd $(TEST_DIR)/pnpm_monorepo && ./fzf-make
 
 .PHONY: build
 build:
