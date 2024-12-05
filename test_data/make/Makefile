@@ -1,25 +1,8 @@
-export
-RUST_BACKTRACE=full
+.PHONY: run
+run:
+	echo "run"
 
-.PHONY: run2
-run2:
-	echo run2!
-
-# Targets for test
 include ./makefiles/test.mk
-
-.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2
-toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target2:
-	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
-
-
-.PHONY: toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target
-toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target:
-	@echo "this is toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo-long-target."
-
-.PHONY: echo-greeting
-echo-greeting:
-	@echo hello fzf-make!
 
 .PHONY: cmd
 cmd:
