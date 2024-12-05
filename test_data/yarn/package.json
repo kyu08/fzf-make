@@ -1,0 +1,20 @@
+{
+  "name": "project",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo build",
+    "start": "echo start",
+    "lint": "echo lint",
+    "test-unit-tests": "echo test-unit-tests",
+    "test-storybook": "echo test-storybook",
+    "test-integration": "echo integration",
+    "test-e2e": "echo test-e2e"
+  },
+  "devDependencies": {
+    "@babel/cli": "7.12.10"
+  },
+  "dependencies": {
+    "firebase": "^8.6.8"
+  }
+}
