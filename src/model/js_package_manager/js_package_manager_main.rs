@@ -6,6 +6,7 @@ use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
 
 pub(super) const METADATA_FILE_NAME: &str = "package.json";
+pub(super) const IGNORE_DIR_NAMES: [&str; 4] = ["node_modules", ".git", ".cache", ".next"];
 const METADATA_PACKAGE_NAME_KEY: &str = "name";
 const METADATA_COMMAND_KEY: &str = "scripts";
 

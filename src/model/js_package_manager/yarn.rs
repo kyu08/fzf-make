@@ -6,15 +6,15 @@ use crate::{
 use anyhow::{anyhow, Result};
 use std::{fs, path::PathBuf, process};
 
-const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
+const YARN_LOCKFILE_NAME: &str = "yarn.lock";
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Pnpm {
+pub struct Yarn {
     pub path: PathBuf,
     commands: Vec<command::Command>,
 }
 
-impl Pnpm {
+impl Yarn {
     pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
         // To ensure that the command exists, it is necessary to check the command name.
         // If implementation is wrong, developers can notice it here.
@@ -23,7 +23,7 @@ impl Pnpm {
             None => return Err(anyhow!("command not found")),
         };
 
-        Ok(format!("pnpm {}", command.args))
+        Ok(format!("yarn {}", command.args))
     }
 
     pub fn execute(&self, command: &command::Command) -> Result<()> {
@@ -32,7 +32,7 @@ impl Pnpm {
             None => return Err(anyhow!("command not found")),
         };
 
-        let child = process::Command::new("pnpm")
+        let child = process::Command::new("yarn")
             .stdin(process::Stdio::inherit())
             .args(command.args.split_whitespace().collect::<Vec<&str>>())
             .spawn();
@@ -46,17 +46,17 @@ impl Pnpm {
         }
     }
 
-    pub fn new(current_dir: PathBuf, result: Vec<(String, String, u32)>) -> Pnpm {
-        let commands = Pnpm::scripts_to_commands(current_dir.clone(), result);
+    pub fn new(current_dir: PathBuf, result: Vec<(String, String, u32)>) -> Yarn {
+        let commands = Yarn::scripts_to_commands(current_dir.clone(), result);
 
-        Pnpm {
+        Yarn {
             path: current_dir,
             commands,
         }
     }
 
-    pub fn use_pnpm(file_name: String) -> bool {
-        file_name == PNPM_LOCKFILE_NAME
+    pub fn use_yarn(file_name: String) -> bool {
+        file_name == YARN_LOCKFILE_NAME
     }
 
     pub fn to_commands(&self) -> Vec<command::Command> {
@@ -74,13 +74,13 @@ impl Pnpm {
         let mut result = vec![];
 
         for (key, value, line_number) in parsed_scripts_part_of_package_json {
-            if Pnpm::use_filtering(value.clone()) {
+            if Yarn::use_filtering(value.clone()) {
                 continue;
             }
 
             // scripts defined in package.json in the current directory(which fzf-make is launched)
             result.push(command::Command::new(
-                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
+                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
                 key,
                 current_dir
                     .clone()
@@ -92,7 +92,7 @@ impl Pnpm {
         /*
         ## Following is the implementation for collecting all scripts in the workspace.
 
-        - If `packages` in pnpm-workspace.yaml is specified, the target to search is only under the directory defined at `packages`. If not specified, all package.json's are the target.
+        - If `packages` in yarn-workspace.yaml is specified, the target to search is only under the directory defined at `packages`. If not specified, all package.json's are the target.
         - Nested packages do not need to be considered. `./packages/app1/package.json` needs to be considered, but `./packages/app1/app2/package.json` does not need to be considered.
         - If the directory structure is as follows, the examples will be shown in `entries_cwd.for_each(...)`.
             ${CWD}
@@ -108,11 +108,11 @@ impl Pnpm {
             │   └── app3
             │       ├── package.json
             │       └── node_modules
-            ├── pnpm-lock.yaml
-            └── pnpm-workspace.yaml
+            ├── yarn-lock.yaml
+            └── yarn-workspace.yaml
         */
 
-        // TODO: consider `packages` in pnpm-workspace.yaml.
+        // TODO: consider `packages` in yarn-workspace.yaml.
         // TODO: Add UT. (Use temp dir or fzf-make/test_data. If use temp dir, the test will be
         // robust, but troublesome for now...😇)
         let skip = |entry: &fs::DirEntry| {
@@ -121,7 +121,7 @@ impl Pnpm {
                     .iter()
                     .any(|name| entry.file_name() == *name)
         };
-        // In above example, entries_cwd: package.json, node_modules, packages/, pnpm-lock.yaml, pnpm-workspace.yaml
+        // In above example, entries_cwd: package.json, node_modules, packages/, yarn-lock.yaml, yarn-workspace.yaml
         let entries_cwd = fs::read_dir(current_dir.clone()).unwrap();
         entries_cwd.for_each(|entry_cwd| {
             if let Ok(entry_in_cwd) = entry_cwd {
@@ -152,7 +152,7 @@ impl Pnpm {
                                         for (key, _, line_number) in parsing_result {
                                             result.push(command::Command::new(
                                                 runner_type::RunnerType::JsPackageManager(
-                                                    runner_type::JsPackageManager::Pnpm,
+                                                    runner_type::JsPackageManager::Yarn,
                                                 ),
                                                 format!(
                                                     "--filter {} {}",
@@ -176,17 +176,17 @@ impl Pnpm {
     }
 
     // is filtering used
-    // ref: https://pnpm.io/filtering
+    // ref: https://yarn.io/filtering
     fn use_filtering(value: String) -> bool {
         let args = value.split_whitespace().collect::<Vec<&str>>();
 
-        let start_with_pnpm = args.first().map(|arg| *arg == "pnpm").unwrap_or(false);
+        let start_with_yarn = args.first().map(|arg| *arg == "yarn").unwrap_or(false);
         let has_filtering_or_dir_option = args
             .iter()
             .any(|arg| *arg == "-F" || *arg == "--filter" || *arg == "-C" || *arg == "--dir");
         let has_run = args.iter().any(|arg| *arg == "run");
 
-        start_with_pnpm && has_filtering_or_dir_option && !has_run
+        start_with_yarn && has_filtering_or_dir_option && !has_run
     }
 }
 
@@ -197,36 +197,36 @@ mod test {
 
     #[test]
     fn test_is_filtering() {
-        assert_eq!(true, Pnpm::use_filtering("pnpm -F app1".to_string()));
-        assert_eq!(true, Pnpm::use_filtering("pnpm --filter app2".to_string()));
+        assert_eq!(true, Yarn::use_filtering("yarn -F app1".to_string()));
+        assert_eq!(true, Yarn::use_filtering("yarn --filter app2".to_string()));
         assert_eq!(
             true,
-            Pnpm::use_filtering("pnpm -r --filter app3".to_string())
-        );
-        assert_eq!(
-            true,
-            Pnpm::use_filtering("pnpm -C packages/app3".to_string())
+            Yarn::use_filtering("yarn -r --filter app3".to_string())
         );
         assert_eq!(
             true,
-            Pnpm::use_filtering("pnpm --dir packages/app3".to_string())
-        );
-        assert_eq!(true, Pnpm::use_filtering("pnpm -F".to_string()));
-        assert_eq!(true, Pnpm::use_filtering("pnpm --filter".to_string()));
-        assert_eq!(
-            false,
-            Pnpm::use_filtering("pnpm -C packages/app1 run test".to_string())
+            Yarn::use_filtering("yarn -C packages/app3".to_string())
         );
         assert_eq!(
-            false,
-            Pnpm::use_filtering("pnpm --filter app1 run test".to_string())
+            true,
+            Yarn::use_filtering("yarn --dir packages/app3".to_string())
         );
-        assert_eq!(false, Pnpm::use_filtering("yarn run".to_string()));
-        assert_eq!(false, Pnpm::use_filtering("pnpm run".to_string()));
-        assert_eq!(false, Pnpm::use_filtering("pnpm -r hoge".to_string()));
+        assert_eq!(true, Yarn::use_filtering("yarn -F".to_string()));
+        assert_eq!(true, Yarn::use_filtering("yarn --filter".to_string()));
         assert_eq!(
             false,
-            Pnpm::use_filtering("yarn -r --filter app3".to_string())
+            Yarn::use_filtering("yarn -C packages/app1 run test".to_string())
+        );
+        assert_eq!(
+            false,
+            Yarn::use_filtering("yarn --filter app1 run test".to_string())
+        );
+        assert_eq!(false, Yarn::use_filtering("yarn run".to_string()));
+        assert_eq!(false, Yarn::use_filtering("yarn run".to_string()));
+        assert_eq!(false, Yarn::use_filtering("yarn -r hoge".to_string()));
+        assert_eq!(
+            false,
+            Yarn::use_filtering("yarn -r --filter app3".to_string())
         );
     }
 }
