@@ -675,7 +675,7 @@ impl CurrentPane {
 #[derive(Clone, Debug)]
 pub struct TextArea_<'a>(pub TextArea<'a>);
 
-impl<'a> PartialEq for TextArea_<'a> {
+impl PartialEq for TextArea_<'_> {
     // for testing
     fn eq(&self, other: &Self) -> bool {
         self.0.lines().join("") == other.0.lines().join("")
