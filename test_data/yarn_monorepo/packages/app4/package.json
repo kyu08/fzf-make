@@ -1,0 +1,16 @@
+{
+  "name": "app4",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo build app4",
+    "start": "echo start app4",
+    "test": "echo test app4"
+  },
+  "devDependencies": {
+    "@babel/cli": "7.12.10"
+  },
+  "dependencies": {
+    "firebase": "^8.6.8"
+  }
+}
