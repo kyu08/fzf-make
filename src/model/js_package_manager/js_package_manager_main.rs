@@ -47,9 +47,11 @@ impl JsPackageManager {
     }
 
     fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
+        let metadata_file_path = &PathBuf::from(METADATA_FILE_NAME);
+
         for file_name in file_names {
             if pnpm::Pnpm::use_pnpm(&file_name) {
-                if let Ok(c) = path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME)) {
+                if let Ok(c) = path_to_content::path_to_content(metadata_file_path) {
                     if let Some(result) = JsPackageManager::parse_package_json(&c) {
                         return Some(JsPackageManager::JsPnpm(pnpm::Pnpm::new(
                             current_dir,
@@ -59,7 +61,7 @@ impl JsPackageManager {
                 }
             }
             if yarn::Yarn::use_yarn(&file_name) {
-                if let Ok(c) = path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME)) {
+                if let Ok(c) = path_to_content::path_to_content(metadata_file_path) {
                     if let Some(result) = JsPackageManager::parse_package_json(&c) {
                         return Some(JsPackageManager::JsYarn(yarn::Yarn::new(
                             current_dir,

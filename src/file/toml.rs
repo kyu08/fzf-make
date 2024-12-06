@@ -22,7 +22,7 @@ impl Histories {
     pub fn get_history() -> Histories {
         match history_file_path() {
             Some((history_file_dir, history_file_name)) => {
-                match path_to_content::path_to_content(history_file_dir.join(history_file_name)) {
+                match path_to_content::path_to_content(&history_file_dir.join(history_file_name)) {
                     Ok(c) => Histories::parse_history_in_considering_history_file_format_version(c),
                     Err(_) => Histories::default(),
                 }

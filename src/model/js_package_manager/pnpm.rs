@@ -142,7 +142,7 @@ impl Pnpm {
                                     return;
                                 }
                                 if let Ok(c) =
-                                    path_to_content::path_to_content(entry_of_each_package.path())
+                                    path_to_content::path_to_content(&entry_of_each_package.path())
                                 {
                                     if let Some((name, parsing_result)) =
                                         js::JsPackageManager::parse_package_json(&c)
