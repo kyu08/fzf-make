@@ -1,4 +1,4 @@
-use super::js_package_manager_main;
+use super::js_package_manager_main as js;
 use crate::{
     file::path_to_content,
     model::{command, runner_type},
@@ -55,7 +55,7 @@ impl Pnpm {
         }
     }
 
-    pub fn use_pnpm(file_name: String) -> bool {
+    pub fn use_pnpm(file_name: &str) -> bool {
         file_name == PNPM_LOCKFILE_NAME
     }
 
@@ -82,9 +82,7 @@ impl Pnpm {
             result.push(command::Command::new(
                 runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
                 key,
-                current_dir
-                    .clone()
-                    .join(js_package_manager_main::METADATA_FILE_NAME),
+                current_dir.clone().join(js::METADATA_FILE_NAME),
                 line_number,
             ));
         }
@@ -117,7 +115,7 @@ impl Pnpm {
         // robust, but troublesome for now...😇)
         let skip = |entry: &fs::DirEntry| {
             entry.path().is_file()
-                || js_package_manager_main::IGNORE_DIR_NAMES
+                || js::IGNORE_DIR_NAMES
                     .iter()
                     .any(|name| entry.file_name() == *name)
         };
@@ -140,14 +138,14 @@ impl Pnpm {
                         let entries_of_each_package = fs::read_dir(entry_package.path()).unwrap();
                         entries_of_each_package.for_each(|entry_of_each_package| {
                             if let Ok(entry_of_each_package) = entry_of_each_package {
-                                if entry_of_each_package.file_name() != js_package_manager_main::METADATA_FILE_NAME {
+                                if entry_of_each_package.file_name() != js::METADATA_FILE_NAME {
                                     return;
                                 }
                                 if let Ok(c) =
                                     path_to_content::path_to_content(entry_of_each_package.path())
                                 {
                                     if let Some((name, parsing_result)) =
-                                        js_package_manager_main::JsPackageManager::parse_package_json(&c)
+                                        js::JsPackageManager::parse_package_json(&c)
                                     {
                                         for (key, _, line_number) in parsing_result {
                                             result.push(command::Command::new(

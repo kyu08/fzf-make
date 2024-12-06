@@ -1,4 +1,4 @@
-use super::{js_package_manager::js_package_manager_main, runner};
+use super::{js_package_manager::js_package_manager_main as js, runner};
 use serde::de::{self};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
@@ -13,6 +13,7 @@ pub enum RunnerType {
 #[serde(rename_all = "lowercase")]
 pub enum JsPackageManager {
     Pnpm,
+    Yarn,
 }
 
 impl RunnerType {
@@ -29,8 +30,11 @@ impl RunnerType {
         match runner {
             runner::Runner::MakeCommand(_) => RunnerType::Make,
             runner::Runner::JsPackageManager(js) => match js {
-                js_package_manager_main::JsPackageManager::JsPnpm(_) => {
+                js::JsPackageManager::JsPnpm(_) => {
                     RunnerType::JsPackageManager(JsPackageManager::Pnpm)
+                }
+                js::JsPackageManager::JsYarn(_) => {
+                    RunnerType::JsPackageManager(JsPackageManager::Yarn)
                 }
             },
         }
@@ -43,6 +47,7 @@ impl fmt::Display for RunnerType {
             RunnerType::Make => "make",
             RunnerType::JsPackageManager(js) => match js {
                 JsPackageManager::Pnpm => "pnpm",
+                JsPackageManager::Yarn => "yarn",
             },
         };
         write!(f, "{}", name)
@@ -80,6 +85,9 @@ impl Serialize for RunnerType {
             RunnerType::Make => serializer.serialize_str("make"),
             RunnerType::JsPackageManager(JsPackageManager::Pnpm) => {
                 serializer.serialize_str("pnpm")
+            }
+            RunnerType::JsPackageManager(JsPackageManager::Yarn) => {
+                serializer.serialize_str("yarn")
             }
         }
     }

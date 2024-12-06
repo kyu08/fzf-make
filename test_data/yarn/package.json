@@ -16,5 +16,6 @@
   },
   "dependencies": {
     "firebase": "^8.6.8"
-  }
+  },
+  "packageManager": "yarn@4.5.3"
 }
