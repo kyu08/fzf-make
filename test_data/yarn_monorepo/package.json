@@ -1,0 +1,20 @@
+{
+  "name": "project",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build-root": "echo build",
+    "start-root": "echo start",
+    "test-root": "echo test"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@babel/cli": "7.12.10"
+  },
+  "dependencies": {
+    "firebase": "^8.6.8"
+  },
+  "packageManager": "yarn@4.5.3"
+}

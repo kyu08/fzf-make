@@ -1,3 +1,7 @@
 /target
 /test_dir
 fzf-make
+
+# For yarn test
+.yarn
+.pnp.*

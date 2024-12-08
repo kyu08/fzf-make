@@ -1,0 +1,16 @@
+{
+  "name": "app3",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build-app3": "echo build app3",
+    "start-app3": "echo start app3",
+    "test-app3": "echo test app3"
+  },
+  "devDependencies": {
+    "@babel/cli": "7.12.10"
+  },
+  "dependencies": {
+    "firebase": "^8.6.8"
+  }
+}

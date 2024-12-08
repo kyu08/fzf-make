@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
-use std::{fs::read_to_string, path::PathBuf};
+use std::{fs::read_to_string, path::Path};
 
-pub fn path_to_content(path: PathBuf) -> Result<String> {
-    read_to_string(path.as_path()).map_err(|e| anyhow!(e))
+pub fn path_to_content(path: &Path) -> Result<String> {
+    read_to_string(path).map_err(|e| anyhow!(e))
 }

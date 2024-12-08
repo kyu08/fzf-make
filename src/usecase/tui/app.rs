@@ -5,7 +5,7 @@ use crate::{
     model::{
         command,
         histories::{self},
-        js_package_manager::js_package_manager_main,
+        js_package_manager::js_package_manager_main as js,
         make::make_main,
         runner, runner_type,
     },
@@ -90,16 +90,14 @@ impl Model<'_> {
     ) -> Vec<command::Command> {
         let histories = toml::Histories::into(toml::Histories::get_history());
 
-        let mut result: Vec<command::Command> = Vec::new();
         for history in histories.histories {
             if history.path != current_working_directory {
                 continue;
             }
-            result = Self::get_commands_from_history(history.commands, &runners);
-            break;
+            return Self::get_commands_from_history(history.commands, &runners);
         }
 
-        result
+        vec![]
     }
 
     /// get command from history and filter commands that no longer exist.
@@ -354,8 +352,7 @@ impl SelectCommandState<'_> {
             if let Ok(f) = make_main::Make::new(current_dir.clone()) {
                 runners.push(runner::Runner::MakeCommand(f));
             };
-            if let Some(js_package_manager) =
-                js_package_manager_main::get_js_package_manager_runner(current_dir.clone())
+            if let Some(js_package_manager) = js::get_js_package_manager_runner(current_dir.clone())
             {
                 runners.push(runner::Runner::JsPackageManager(js_package_manager));
             };
@@ -594,11 +591,18 @@ impl SelectCommandState<'_> {
                     runner_type::RunnerType::JsPackageManager(runner_type_js),
                     runner::Runner::JsPackageManager(runner_js),
                 ) => match (runner_type_js, runner_js) {
-                    (
-                        runner_type::JsPackageManager::Pnpm,
-                        js_package_manager_main::JsPackageManager::JsPnpm(_),
-                    ) => {
+                    (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsPnpm(_)) => {
                         return Some(runner.clone());
+                    }
+
+                    (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsYarn(_)) => {
+                        return Some(runner.clone());
+                    }
+
+                    // _ patterns. To prevent omission of corrections, _ is not used.
+                    (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsYarn(_))
+                    | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsPnpm(_)) => {
+                        return None
                     }
                 },
                 _ => continue,

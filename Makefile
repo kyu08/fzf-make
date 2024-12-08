@@ -60,18 +60,14 @@ spell-check: tool-spell-check
 
 DEBUG_EXECUTABLE = ./target/debug/fzf-make
 TEST_DIR = ./test_data
-
-.PHONY: run-make
-run-make: build
-	@mv $(DEBUG_EXECUTABLE) $(TEST_DIR)/make && cd $(TEST_DIR)/make && ./fzf-make
-
-.PHONY: run-pnpm
-run-pnpm: build
-	@mv $(DEBUG_EXECUTABLE) $(TEST_DIR)/pnpm && cd $(TEST_DIR)/pnpm && ./fzf-make
-
-.PHONY: run-pnpm-monorepo
-run-pnpm-monorepo: build
-	@mv $(DEBUG_EXECUTABLE) $(TEST_DIR)/pnpm_monorepo && cd $(TEST_DIR)/pnpm_monorepo && ./fzf-make
+.PHONY: run-in-test-data
+run-in-test-data: build
+	@TARGET_DIR=$$(find $(TEST_DIR) -type d -maxdepth 1 | fzf) && \
+	if [ -n "$$TARGET_DIR" ]; then \
+		mv $(DEBUG_EXECUTABLE) "$${TARGET_DIR}" && cd "$${TARGET_DIR}" && ./fzf-make; \
+	else \
+	    echo "No directory selected. Staying in the current directory."; \
+	fi
 
 .PHONY: build
 build:

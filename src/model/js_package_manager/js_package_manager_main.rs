@@ -1,4 +1,4 @@
-use super::pnpm;
+use super::{pnpm, yarn};
 use crate::{file::path_to_content, model::command};
 use anyhow::Result;
 use codespan::Files;
@@ -6,6 +6,7 @@ use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
 
 pub(super) const METADATA_FILE_NAME: &str = "package.json";
+pub(super) const IGNORE_DIR_NAMES: [&str; 5] = ["node_modules", ".git", ".cache", ".next", ".yarn"];
 const METADATA_PACKAGE_NAME_KEY: &str = "name";
 const METADATA_COMMAND_KEY: &str = "scripts";
 
@@ -13,39 +14,56 @@ const METADATA_COMMAND_KEY: &str = "scripts";
 #[derive(Clone, Debug, PartialEq)]
 pub enum JsPackageManager {
     JsPnpm(pnpm::Pnpm),
+    JsYarn(yarn::Yarn),
 }
 
 impl JsPackageManager {
     pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.command_to_run(command),
+            JsPackageManager::JsYarn(yarn) => yarn.command_to_run(command),
         }
     }
 
     pub fn to_commands(&self) -> Vec<command::Command> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.to_commands(),
+            JsPackageManager::JsYarn(yarn) => yarn.to_commands(),
         }
     }
 
     pub fn execute(&self, command: &command::Command) -> Result<()> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.execute(command),
+            JsPackageManager::JsYarn(yarn) => yarn.execute(command),
         }
     }
 
     pub fn path(&self) -> PathBuf {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.path.clone(),
+            JsPackageManager::JsYarn(yarn) => yarn.path.clone(),
         }
     }
 
     fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
+        let metadata_file_path = &PathBuf::from(METADATA_FILE_NAME);
+
         for file_name in file_names {
-            if pnpm::Pnpm::use_pnpm(file_name) {
-                if let Ok(c) = path_to_content::path_to_content(PathBuf::from(METADATA_FILE_NAME)) {
+            if pnpm::Pnpm::use_pnpm(&file_name) {
+                if let Ok(c) = path_to_content::path_to_content(metadata_file_path) {
                     if let Some(result) = JsPackageManager::parse_package_json(&c) {
                         return Some(JsPackageManager::JsPnpm(pnpm::Pnpm::new(
+                            current_dir,
+                            result.1,
+                        )));
+                    }
+                }
+            }
+            if yarn::Yarn::use_yarn(&file_name) {
+                if let Ok(c) = path_to_content::path_to_content(metadata_file_path) {
+                    if let Some(result) = JsPackageManager::parse_package_json(&c) {
+                        return Some(JsPackageManager::JsYarn(yarn::Yarn::new(
                             current_dir,
                             result.1,
                         )));
