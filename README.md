@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
 
-`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting **make**, **pnpm**.
+`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting **make**, **pnpm**, **yarn**.
 
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
@@ -20,12 +20,13 @@
 </div>
 
 # 🛠️ Features
-- Select and execute a make target or pnpm scripts using fuzzy-finder with a preview window by running `fzf-make`!
+- Select and execute a make target or (pnpm | yarn) scripts using fuzzy-finder with a preview window by running `fzf-make`!
 - Execute the last executed command(By running `fzf-make --repeat`.)
 - Command history
-- Support make, pnpm. **Scheduled to be developed: yarn, npm.** 
+- Support make, pnpm, yarn. **Scheduled to be developed: npm.** 
 - [make] Support `include` directive
 - [pnpm] Support workspace(collect scripts all of `package.json` in the directory where fzf-make is launched.)
+- [yarn] Support workspace(collect all scripts which is defined in `workspaces` field in root `package.json`.)
 - **(Scheduled to be developed)** Support config file
 
 # 👓 Prerequisites
@@ -78,13 +79,13 @@ cargo install --locked fzf-make
 
 # 💡 Usage
 ## Run target using fuzzy finder
-1. Execute `fzf-make` in the directory you want to run make target, or pnpm scripts.
+1. Execute `fzf-make` in the directory you want to run make target, or (pnpm | yarn) scripts.
 1. Select command you want to execute. If you type some characters, the list will be filtered.
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-main.png"> 
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-type-characters.png"> 
 
 ## Run target from history
-1. Execute `fzf-make` in the directory you want to run make target, or pnpm scripts.
+1. Execute `fzf-make` in the directory you want to run make target, or (pnpm | yarn) scripts.
 1. Press `Tab` to move to the history pane.
 1. Select command you want to execute.
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-history.png"> 
@@ -95,6 +96,9 @@ Whether makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile
 
 ### pnpm
 Whether `package.json` and `pnpm-lock.yaml` are in the current directory.
+
+### yarn
+Whether `package.json` and `yarn.lock` are in the current directory.
 
 ## Commands Supported
 | Command                                                   | Description                                   |
@@ -128,5 +132,5 @@ nix develop
 
 # 🗒 Related Article(s)
 - [fzf-make - A command runner with fuzzy finder and preview window for make, pnpm - reddit](https://www.reddit.com/r/commandline/comments/1h7btkl/fzfmake_a_command_runner_with_fuzzy_finder_and/)
-- (Japanese)[[make, pnpmに対応]タスクランナーのコマンドをfuzzy finder形式で選択できるCLIツール fzf-makeの紹介](https://zenn.dev/kyu08/articles/974fd8bc25c303)
+- (Japanese)[[make,pnpm,yarnに対応]タスクランナーのコマンドをfuzzy finder形式で選択できるCLIツール fzf-makeの紹介](https://zenn.dev/kyu08/articles/974fd8bc25c303)
 - (Japanese)[Makefileに定義されたtargetをfzfで選択して実行するCLIツールをRustでつくった](https://blog.kyu08.com/posts/fzf-make)
