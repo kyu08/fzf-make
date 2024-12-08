@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "builda-app2": "echo build app4",
-    "start-app2": "echo start app4",
-    "test-app2": "echo test app4"
+    "build-app2": "echo build app2",
+    "start-app2": "echo start app2",
+    "test-app2": "echo test app2"
   },
   "devDependencies": {
     "@babel/cli": "7.12.10"

@@ -669,18 +669,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"app3@workspace:packages/app3":
+"app2@workspace:packages/app2":
   version: 0.0.0-use.local
-  resolution: "app3@workspace:packages/app3"
+  resolution: "app2@workspace:packages/app2"
   dependencies:
     "@babel/cli": "npm:7.12.10"
     firebase: "npm:^8.6.8"
   languageName: unknown
   linkType: soft
 
-"app4@workspace:packages/app4":
+"app3@workspace:packages/app3":
   version: 0.0.0-use.local
-  resolution: "app4@workspace:packages/app4"
+  resolution: "app3@workspace:packages/app3"
   dependencies:
     "@babel/cli": "npm:7.12.10"
     firebase: "npm:^8.6.8"
