@@ -70,6 +70,7 @@ impl<'de> Deserialize<'de> for RunnerType {
         match s.as_str() {
             "make" => Ok(RunnerType::Make),
             "pnpm" => Ok(RunnerType::JsPackageManager(JsPackageManager::Pnpm)),
+            "yarn" => Ok(RunnerType::JsPackageManager(JsPackageManager::Yarn)),
             _ => Err(de::Error::custom(format!("Unknown runner type: {}", s))),
         }
     }

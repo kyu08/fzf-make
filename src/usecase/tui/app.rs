@@ -90,16 +90,14 @@ impl Model<'_> {
     ) -> Vec<command::Command> {
         let histories = toml::Histories::into(toml::Histories::get_history());
 
-        let mut result: Vec<command::Command> = Vec::new();
         for history in histories.histories {
             if history.path != current_working_directory {
                 continue;
             }
-            result = Self::get_commands_from_history(history.commands, &runners);
-            break;
+            return Self::get_commands_from_history(history.commands, &runners);
         }
 
-        result
+        vec![]
     }
 
     /// get command from history and filter commands that no longer exist.
