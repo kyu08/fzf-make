@@ -81,8 +81,10 @@ impl Yarn {
             ));
         }
 
+        Self::collect_all_scripts_in_workspace();
+
         // Collect all scripts in the workspace.
-        if let Ok(workspace_package_paths) = Self::get_workspace_packages() {
+        if let Ok(workspace_package_paths) = Self::get_workspace_packages_for_v2_or_later() {
             for entry_of_each_package in workspace_package_paths {
                 let path = PathBuf::from(entry_of_each_package);
                 if let Ok(c) = path_to_content::path_to_content(&path) {
@@ -109,8 +111,77 @@ impl Yarn {
         result
     }
 
+    fn collect_all_scripts_in_workspace() -> Vec<command::Command> {
+        let mut result = vec![];
+
+        // v1とv2で分岐する
+        let hoge = Self::get_workspace_packages_for_v1();
+        panic!("{:?}", hoge);
+
+        result
+    }
+
     // get_workspaces_list parses the result of `yarn workspaces list --json` and return path of `package.json` of each package.
-    fn get_workspace_packages() -> Result<Vec<String>> {
+    fn get_workspace_packages_for_v1() -> Result<Vec<String>> {
+        let output = process::Command::new("yarn")
+            .arg("workspaces")
+            .arg("info")
+            .arg("--json")
+            .output()?;
+
+        // raw output is like below.
+        // yarn workspaces v1.22.22
+        // {
+        //   "app1": {
+        //     "location": "packages/app",
+        //     "workspaceDependencies": [],
+        //     "mismatchedWorkspaceDependencies": []
+        //   }
+        // }
+        // ✨  Done in 0.02s.
+
+        #[derive(serde::Deserialize, Debug)]
+        struct Workspace {
+            // Relation path to the package
+            location: String,
+        }
+        let mut workspaces: Vec<Workspace> = vec![];
+        // output is like.
+        // "yarn workspaces v1.22.22\n{\n  \"app1\": {\n    \"location\": \"packages/app\",\n    \"workspaceDependencies\": [],\n    \"mismatchedWorkspaceDependencies\": []\n  }\n}\nDone in 0.01s.\n"
+        let output = String::from_utf8(output.stdout)?;
+        let lines = output.split("\n").collect::<Vec<&str>>();
+        let workspaces_json = {
+            // remove the first and last line.
+            match lines.get(1..(lines.len() - 2)) {
+                // Vec<&str> into String
+                Some(lines) => lines.join(""),
+                None => return Err(anyhow!("unexpected output")),
+            }
+        };
+
+        if let Ok(serde_json::Value::Object(map)) =
+            serde_json::from_slice::<serde_json::Value>(workspaces_json.as_bytes())
+        {
+            for (_, value) in map {
+                if let Ok(workspace) = serde_json::from_value(value) {
+                    workspaces.push(workspace)
+                }
+            }
+        }
+
+        Ok(workspaces
+            .iter()
+            .map(|w| {
+                PathBuf::from(w.location.clone())
+                    .join(js::METADATA_FILE_NAME)
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .collect::<Vec<String>>())
+    }
+
+    // get_workspaces_list parses the result of `yarn workspaces list --json` and return path of `package.json` of each package.
+    fn get_workspace_packages_for_v2_or_later() -> Result<Vec<String>> {
         let output = process::Command::new("yarn")
             .arg("workspaces")
             .arg("list")
