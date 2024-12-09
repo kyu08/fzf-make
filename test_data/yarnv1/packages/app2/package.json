@@ -1,0 +1,11 @@
+{
+  "name": "app2",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "inner": "echo inner"
+  },
+  "devDependencies": {
+    "@types/node": "^8.0.28"
+  }
+}
