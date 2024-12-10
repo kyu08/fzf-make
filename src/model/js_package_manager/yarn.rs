@@ -123,12 +123,12 @@ impl Yarn {
             .arg("--version")
             .output()
             .expect("failed to run yarn --version");
-
-        // output is like "1.22.22\n"
         let output = String::from_utf8(output.stdout).expect("failed to convert to string");
-        let version = output.trim();
+        /* output is like:
+        "1.22.22\n"
+        */
 
-        version.starts_with("1.")
+        output.trim().starts_with("1.")
     }
 
     // get_workspaces_list parses the result of `yarn workspaces info --json` and return path of `package.json` of each package.
@@ -138,16 +138,17 @@ impl Yarn {
             .arg("info")
             .arg("--json")
             .output()?;
-        // raw output is like below.
-        // yarn workspaces v1.22.22
-        // {
-        //   "app1": {
-        //     "location": "packages/app",
-        //     "workspaceDependencies": [],
-        //     "mismatchedWorkspaceDependencies": []
-        //   }
-        // }
-        // ✨  Done in 0.02s.
+        /* output is like:
+        yarn workspaces v1.22.22
+        {
+          "app1": {
+            "location": "packages/app",
+            "workspaceDependencies": [],
+            "mismatchedWorkspaceDependencies": []
+          }
+        }
+        ✨  Done in 0.02s.
+         */
 
         #[derive(serde::Deserialize, Debug)]
         struct Workspace {
@@ -155,8 +156,9 @@ impl Yarn {
             location: String,
         }
 
-        // output is like.
-        // "yarn workspaces v1.22.22\n{\n  \"app1\": {\n    \"location\": \"packages/app\",\n    \"workspaceDependencies\": [],\n    \"mismatchedWorkspaceDependencies\": []\n  }\n}\nDone in 0.01s.\n"
+        /* output is like:
+        "yarn workspaces v1.22.22\n{\n  \"app1\": {\n    \"location\": \"packages/app\",\n    \"workspaceDependencies\": [],\n    \"mismatchedWorkspaceDependencies\": []\n  }\n}\nDone in 0.01s.\n"
+        */
         let workspaces_json = {
             let output = String::from_utf8(output.stdout)?;
             // split by newline to remove unnecessary lines.
@@ -201,8 +203,9 @@ impl Yarn {
             location: String,
         }
         let mut workspaces: Vec<Workspace> = vec![];
-        // output is like.
-        // "{\"location\":\".\",\"name\":\"project\"}\n{\"location\":\"packages/app1\",\"name\":\"app1\"}\n"
+        /* output is like:
+        "{\"location\":\".\",\"name\":\"project\"}\n{\"location\":\"packages/app1\",\"name\":\"app1\"}\n"
+         */
         let output = String::from_utf8(output.stdout)?;
 
         for line in output.lines() {
