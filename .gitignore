@@ -5,3 +5,4 @@ fzf-make
 # For yarn test
 .yarn
 .pnp.*
+node_modules

@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "clean": "echo clean"
+  },
+  "devDependencies": {
+    "@types/node": "^8.0.28"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
