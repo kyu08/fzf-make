@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "inner": "echo inner"
+    "inner": "echo inner1"
   },
   "devDependencies": {
     "@types/node": "^8.0.28"
