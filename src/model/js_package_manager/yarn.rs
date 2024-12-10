@@ -65,14 +65,18 @@ impl Yarn {
         self.commands.iter().find(|c| **c == command)
     }
 
+    // scripts_to_commands collects all scripts by following steps:
+    // 1. Collect scripts defined in package.json in the current directory(which fzf-make is launched)
+    // 2. Collect the paths of all `package.json` in the workspace.
+    // 3. Collect all scripts defined in given `package.json` paths.
     fn scripts_to_commands(
         current_dir: PathBuf,
         parsed_scripts_part_of_package_json: Vec<(String, String, u32)>,
     ) -> Vec<command::Command> {
         let mut result = vec![];
 
+        // Collect scripts defined in package.json in the current directory(which fzf-make is launched)
         for (key, _value, line_number) in parsed_scripts_part_of_package_json {
-            // scripts defined in package.json in the current directory(which fzf-make is launched)
             result.push(command::Command::new(
                 runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
                 key,
@@ -81,8 +85,15 @@ impl Yarn {
             ));
         }
 
-        // Collect all scripts in the workspace.
-        if let Ok(workspace_package_json_paths) = Self::collect_package_json_in_workspace() {
+        // Collect the paths of all `package.json` in the workspace.
+        let package_json_in_workspace = if Self::is_yarn_v1() {
+            Self::get_workspace_packages_for_v1()
+        } else {
+            Self::get_workspace_packages_for_v2_or_later()
+        };
+
+        // Collect all scripts defined in given `package.json` paths.
+        if let Ok(workspace_package_json_paths) = package_json_in_workspace {
             for path in workspace_package_json_paths {
                 if let Ok(c) = path_to_content::path_to_content(&path) {
                     if let Some((name, parsing_result)) =
@@ -106,14 +117,6 @@ impl Yarn {
         };
 
         result
-    }
-
-    fn collect_package_json_in_workspace() -> Result<Vec<PathBuf>> {
-        if Self::is_yarn_v1() {
-            Self::get_workspace_packages_for_v1()
-        } else {
-            Self::get_workspace_packages_for_v2_or_later()
-        }
     }
 
     // yarn v1 support `yarn workspaces info --json` instead of `yarn workspaces list --json`.
@@ -156,13 +159,15 @@ impl Yarn {
             location: String,
         }
 
-        /* output is like:
-        "yarn workspaces v1.22.22\n{\n  \"app1\": {\n    \"location\": \"packages/app\",\n    \"workspaceDependencies\": [],\n    \"mismatchedWorkspaceDependencies\": []\n  }\n}\nDone in 0.01s.\n"
-        */
         let workspaces_json = {
             let output = String::from_utf8(output.stdout)?;
+            /* output is like:
+            "yarn workspaces v1.22.22\n{\n  \"app1\": {\n    \"location\": \"packages/app\",\n    \"workspaceDependencies\": [],\n    \"mismatchedWorkspaceDependencies\": []\n  }\n}\nDone in 0.01s.\n"
+            */
+
             // split by newline to remove unnecessary lines.
             let lines = output.split("\n").collect::<Vec<&str>>();
+
             // remove the first and last line and the second line from the end.
             match lines.get(1..(lines.len() - 2)) {
                 Some(lines) => lines.join(""),
