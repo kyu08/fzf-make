@@ -45,14 +45,17 @@ test-watch: tool-test
 
 .PHONY: bump-fzf-make-version
 bump-fzf-make-version: tool-bump-version
-	@git checkout main; \
-	git pull; \
-	cargo set-version --bump minor; \
-	export CURRENT_VERSION=$$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version'); \
-	git add .; \
-	git commit -m "chore(release): bump to v$${CURRENT_VERSION}"; \
-	git push origin HEAD; \
-	gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | sed 's@releases/tag@releases/edit@' | xargs open
+	@read -p "Really bump fzf-make version? y/n:" ans; \
+	if [ "$$ans" = y ]; then  \
+		git checkout main; \
+		git pull; \
+		cargo set-version --bump minor; \
+		export CURRENT_VERSION=$$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version'); \
+		git add .; \
+		git commit -m "chore(release): bump to v$${CURRENT_VERSION}"; \
+		git push origin HEAD; \
+		gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | sed 's@releases/tag@releases/edit@' | xargs open; \
+	fi; \
 
 .PHONY: spell-check
 spell-check: tool-spell-check
