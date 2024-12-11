@@ -14,6 +14,11 @@ pub struct Yarn {
     commands: Vec<command::Command>,
 }
 
+enum YarnVersion {
+    V1,
+    V2OrLater,
+}
+
 impl Yarn {
     pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
         // To ensure that the command exists, it is necessary to check the command name.
@@ -44,17 +49,49 @@ impl Yarn {
         }
     }
 
-    pub fn new(current_dir: PathBuf, result: Vec<(String, String, u32)>) -> Yarn {
-        let commands = Yarn::scripts_to_commands(current_dir.clone(), result);
-
-        Yarn {
-            path: current_dir,
-            commands,
+    pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Yarn> {
+        if Iterator::find(&mut cwd_file_names.iter(), |&f| f == YARN_LOCKFILE_NAME).is_some() {
+            let commands = Yarn::collect_workspace_scripts(current_dir.clone());
+            return Some(Yarn {
+                path: current_dir,
+                commands,
+            });
         }
-    }
 
-    pub fn use_yarn(file_name: &str) -> bool {
-        file_name == YARN_LOCKFILE_NAME
+        // executed in child packages of yarn workspaces || using an other package manager
+        match Self::get_yarn_version() {
+            Some(yarn_version) => {
+                let workspace_output = match yarn_version {
+                    YarnVersion::V1 => process::Command::new("yarn")
+                        .arg("workspaces")
+                        .arg("info")
+                        .arg("--json")
+                        .output(),
+                    YarnVersion::V2OrLater => process::Command::new("yarn")
+                        .arg("workspaces")
+                        .arg("info")
+                        .arg("--json")
+                        .output(),
+                };
+                let workspace_output = match workspace_output {
+                    Ok(output) => output,
+                    Err(_) => return None,
+                };
+
+                if workspace_output.status.code().is_none()
+                // If `yarn workspaces info --json` returns non-zero status code, it means that the current directory is not a yarn workspace.
+                || workspace_output.status.code().unwrap() != 0
+                {
+                    return None;
+                }
+
+                Some(Yarn {
+                    path: current_dir.clone(),
+                    commands: Self::collect_scripts_in_package_json(current_dir),
+                })
+            }
+            None => None, // yarn is not installed
+        }
     }
 
     pub fn to_commands(&self) -> Vec<command::Command> {
@@ -69,27 +106,15 @@ impl Yarn {
     // 1. Collect scripts defined in package.json in the current directory(which fzf-make is launched)
     // 2. Collect the paths of all `package.json` in the workspace.
     // 3. Collect all scripts defined in given `package.json` paths.
-    fn scripts_to_commands(
-        current_dir: PathBuf,
-        parsed_scripts_part_of_package_json: Vec<(String, String, u32)>,
-    ) -> Vec<command::Command> {
-        let mut result = vec![];
-
+    fn collect_workspace_scripts(current_dir: PathBuf) -> Vec<command::Command> {
         // Collect scripts defined in package.json in the current directory(which fzf-make is launched)
-        for (key, _value, line_number) in parsed_scripts_part_of_package_json {
-            result.push(command::Command::new(
-                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
-                key,
-                current_dir.clone().join(js::METADATA_FILE_NAME),
-                line_number,
-            ));
-        }
+        let mut result = Self::collect_scripts_in_package_json(current_dir.clone());
 
         // Collect the paths of all `package.json` in the workspace.
-        let package_json_in_workspace = if Self::is_yarn_v1() {
-            Self::get_workspace_packages_for_v1()
-        } else {
-            Self::get_workspace_packages_for_v2_or_later()
+        let package_json_in_workspace = match Self::get_yarn_version() {
+            Some(YarnVersion::V1) => Self::get_workspace_packages_for_v1(),
+            Some(YarnVersion::V2OrLater) => Self::get_workspace_packages_for_v2_or_later(),
+            None => return vec![],
         };
 
         // Collect all scripts defined in given `package.json` paths.
@@ -119,19 +144,52 @@ impl Yarn {
         result
     }
 
+    fn collect_scripts_in_package_json(current_dir: PathBuf) -> Vec<command::Command> {
+        let parsed_scripts_part_of_package_json =
+            match path_to_content::path_to_content(&current_dir.join(js::METADATA_FILE_NAME)) {
+                Ok(c) => match js::JsPackageManager::parse_package_json(&c) {
+                    Some(result) => result.1,
+                    None => return vec![],
+                },
+                Err(_) => return vec![],
+            };
+
+        let mut result = vec![];
+        for (key, _value, line_number) in parsed_scripts_part_of_package_json {
+            result.push(command::Command::new(
+                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
+                key,
+                current_dir.clone().join(js::METADATA_FILE_NAME),
+                line_number,
+            ));
+        }
+
+        result
+    }
+
     // yarn v1 support `yarn workspaces info --json` instead of `yarn workspaces list --json`.
     //  We need to handle them separately, because their output format is different.
-    fn is_yarn_v1() -> bool {
+    fn get_yarn_version() -> Option<YarnVersion> {
         let output = process::Command::new("yarn")
             .arg("--version")
             .output()
             .expect("failed to run yarn --version");
+
+        // yarn is not installed
+        if output.status.code().is_some() && output.status.code().unwrap() != 0 {
+            return None;
+        }
+
         let output = String::from_utf8(output.stdout).expect("failed to convert to string");
         /* output is like:
         "1.22.22\n"
         */
 
-        output.trim().starts_with("1.")
+        if output.trim().starts_with("1.") {
+            Some(YarnVersion::V1)
+        } else {
+            Some(YarnVersion::V2OrLater)
+        }
     }
 
     // get_workspaces_list parses the result of `yarn workspaces info --json` and return path of `package.json` of each package.
