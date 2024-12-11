@@ -171,30 +171,44 @@ impl Yarn {
             .collect()
     }
 
-    // yarn v1 support `yarn workspaces info --json` instead of `yarn workspaces list --json`.
-    //  We need to handle them separately, because their output format is different.
+    /// Determines the installed Yarn version, if available.
+    /// yarn v1 support `yarn workspaces info --json` instead of `yarn workspaces list --json`.
+    ///  We need to handle them separately, because their output format is different.
+    ///
+    /// # Returns
+    /// - `Some(YarnVersion::V1)` if Yarn v1 is detected.
+    /// - `Some(YarnVersion::V2OrLater)` if Yarn v2 or later is detected.
+    /// - `None` if Yarn is not installed or cannot be executed.
     fn get_yarn_version() -> Option<YarnVersion> {
         let output = process::Command::new("yarn")
             .arg("--version")
-            .output()
-            .expect("failed to run yarn --version");
+            .output();
 
-        if let Some(s) = output.status.code() {
-            // yarn is not installed
-            if s != 0 {
-                return None;
+        match output {
+            Ok(output) => {
+                if !output.status.success() {
+                    eprintln!(
+                        "Warning: Failed to run 'yarn --version'. Exit code: {}",
+                        output.status.code().unwrap_or(-1)
+                    );
+                    return None;
+                }
+
+                let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                /* Example output:
+                "1.22.22\n"
+                */
+
+                if version.starts_with("1.") {
+                    Some(YarnVersion::V1)
+                } else {
+                    Some(YarnVersion::V2OrLater)
+                }
             }
-        }
-
-        let output = String::from_utf8(output.stdout).expect("failed to convert to string");
-        /* output is like:
-        "1.22.22\n"
-        */
-
-        if output.trim().starts_with("1.") {
-            Some(YarnVersion::V1)
-        } else {
-            Some(YarnVersion::V2OrLater)
+            Err(err) => {
+                eprintln!("Warning: 'yarn' is not installed or not found in PATH. Error: {}", err);
+                None
+            }
         }
     }
 
