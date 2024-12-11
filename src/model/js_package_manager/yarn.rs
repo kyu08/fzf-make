@@ -158,17 +158,17 @@ impl Yarn {
                 Err(_) => return vec![],
             };
 
-        let mut result = vec![];
-        for (key, _value, line_number) in parsed_scripts_part_of_package_json {
-            result.push(command::Command::new(
-                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
-                key,
-                current_dir.clone().join(js::METADATA_FILE_NAME),
-                line_number,
-            ));
-        }
-
-        result
+        parsed_scripts_part_of_package_json
+            .iter()
+            .map(|(key, _value, line_number)| {
+                command::Command::new(
+                    runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
+                    key.to_string(),
+                    current_dir.clone().join(js::METADATA_FILE_NAME),
+                    *line_number,
+                )
+            })
+            .collect()
     }
 
     // yarn v1 support `yarn workspaces info --json` instead of `yarn workspaces list --json`.
