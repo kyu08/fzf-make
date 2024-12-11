@@ -51,11 +51,15 @@ impl Yarn {
 
     pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Yarn> {
         if Iterator::find(&mut cwd_file_names.iter(), |&f| f == YARN_LOCKFILE_NAME).is_some() {
-            let commands = Yarn::collect_workspace_scripts(current_dir.clone());
-            return Some(Yarn {
-                path: current_dir,
-                commands,
-            });
+            match Yarn::collect_workspace_scripts(current_dir.clone()) {
+                Some(commands) => {
+                    return Some(Yarn {
+                        path: current_dir,
+                        commands,
+                    })
+                }
+                None => return None,
+            }
         }
 
         // executed in child packages of yarn workspaces || using an other package manager
@@ -69,7 +73,7 @@ impl Yarn {
                         .output(),
                     YarnVersion::V2OrLater => process::Command::new("yarn")
                         .arg("workspaces")
-                        .arg("info")
+                        .arg("list")
                         .arg("--json")
                         .output(),
                 };
@@ -106,7 +110,7 @@ impl Yarn {
     // 1. Collect scripts defined in package.json in the current directory(which fzf-make is launched)
     // 2. Collect the paths of all `package.json` in the workspace.
     // 3. Collect all scripts defined in given `package.json` paths.
-    fn collect_workspace_scripts(current_dir: PathBuf) -> Vec<command::Command> {
+    fn collect_workspace_scripts(current_dir: PathBuf) -> Option<Vec<command::Command>> {
         // Collect scripts defined in package.json in the current directory(which fzf-make is launched)
         let mut result = Self::collect_scripts_in_package_json(current_dir.clone());
 
@@ -114,7 +118,7 @@ impl Yarn {
         let package_json_in_workspace = match Self::get_yarn_version() {
             Some(YarnVersion::V1) => Self::get_workspace_packages_for_v1(),
             Some(YarnVersion::V2OrLater) => Self::get_workspace_packages_for_v2_or_later(),
-            None => return vec![],
+            None => return None,
         };
 
         // Collect all scripts defined in given `package.json` paths.
@@ -141,7 +145,7 @@ impl Yarn {
             }
         };
 
-        result
+        Some(result)
     }
 
     fn collect_scripts_in_package_json(current_dir: PathBuf) -> Vec<command::Command> {
@@ -175,9 +179,11 @@ impl Yarn {
             .output()
             .expect("failed to run yarn --version");
 
-        // yarn is not installed
-        if output.status.code().is_some() && output.status.code().unwrap() != 0 {
-            return None;
+        if let Some(s) = output.status.code() {
+            // yarn is not installed
+            if s != 0 {
+                return None;
+            }
         }
 
         let output = String::from_utf8(output.stdout).expect("failed to convert to string");
