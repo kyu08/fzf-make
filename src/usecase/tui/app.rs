@@ -164,18 +164,13 @@ impl Model<'_> {
 
 pub fn main(config: config::Config) -> Result<()> {
     let result = panic::catch_unwind(|| {
+        let mut model = Model::new(config)?;
+
         enable_raw_mode()?;
         let mut stderr = io::stderr();
         execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
         let backend = CrosstermBackend::new(stderr);
         let mut terminal = Terminal::new(backend)?;
-
-        let model = Model::new(config);
-        if let Err(e) = model {
-            shutdown_terminal(&mut terminal)?;
-            return Err(e);
-        }
-        let mut model = model.unwrap();
 
         let command = match run(&mut terminal, &mut model) {
             Ok(t) => t,
