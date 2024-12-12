@@ -50,6 +50,7 @@ impl Yarn {
     }
 
     pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Yarn> {
+        Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME)?;
         if Iterator::find(&mut cwd_file_names.iter(), |&f| f == YARN_LOCKFILE_NAME).is_some() {
             match Yarn::collect_workspace_scripts(current_dir.clone()) {
                 Some(commands) => {
