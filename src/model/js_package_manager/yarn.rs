@@ -82,16 +82,14 @@ impl Yarn {
                     Err(_) => return None,
                 };
 
-                if workspace_output.status.code().is_none()
-                // If `yarn workspaces info --json` returns non-zero status code, it means that the current directory is not a yarn workspace.
-                || workspace_output.status.code().unwrap() != 0
-                {
+                // If `yarn workspaces (info|list) --json` returns non-zero status code, it means that the current directory is not a yarn workspace.
+                if !workspace_output.status.success() {
                     return None;
                 }
 
-                Some(Yarn {
-                    path: current_dir.clone(),
-                    commands: Self::collect_scripts_in_package_json(current_dir),
+                Self::collect_scripts_in_package_json(current_dir.clone()).map(|commands| Yarn {
+                    path: current_dir,
+                    commands,
                 })
             }
             None => None, // yarn is not installed
@@ -112,7 +110,10 @@ impl Yarn {
     // 3. Collect all scripts defined in given `package.json` paths.
     fn collect_workspace_scripts(current_dir: PathBuf) -> Option<Vec<command::Command>> {
         // Collect scripts defined in package.json in the current directory(which fzf-make is launched)
-        let mut result = Self::collect_scripts_in_package_json(current_dir.clone());
+        let mut result = match Self::collect_scripts_in_package_json(current_dir.clone()) {
+            Some(result) => result,
+            None => return None,
+        };
 
         // Collect the paths of all `package.json` in the workspace.
         let package_json_in_workspace = match Self::get_yarn_version() {
@@ -148,27 +149,31 @@ impl Yarn {
         Some(result)
     }
 
-    fn collect_scripts_in_package_json(current_dir: PathBuf) -> Vec<command::Command> {
+    fn collect_scripts_in_package_json(current_dir: PathBuf) -> Option<Vec<command::Command>> {
         let parsed_scripts_part_of_package_json =
             match path_to_content::path_to_content(&current_dir.join(js::METADATA_FILE_NAME)) {
                 Ok(c) => match js::JsPackageManager::parse_package_json(&c) {
                     Some(result) => result.1,
-                    None => return vec![],
+                    None => return None,
                 },
-                Err(_) => return vec![],
+                Err(_) => return None,
             };
 
-        parsed_scripts_part_of_package_json
-            .iter()
-            .map(|(key, _value, line_number)| {
-                command::Command::new(
-                    runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
-                    key.to_string(),
-                    current_dir.clone().join(js::METADATA_FILE_NAME),
-                    *line_number,
-                )
-            })
-            .collect()
+        Some(
+            parsed_scripts_part_of_package_json
+                .iter()
+                .map(|(key, _value, line_number)| {
+                    command::Command::new(
+                        runner_type::RunnerType::JsPackageManager(
+                            runner_type::JsPackageManager::Yarn,
+                        ),
+                        key.to_string(),
+                        current_dir.clone().join(js::METADATA_FILE_NAME),
+                        *line_number,
+                    )
+                })
+                .collect(),
+        )
     }
 
     /// Determines the installed Yarn version, if available.
