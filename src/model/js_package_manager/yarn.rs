@@ -180,17 +180,11 @@ impl Yarn {
     /// - `Some(YarnVersion::V2OrLater)` if Yarn v2 or later is detected.
     /// - `None` if Yarn is not installed or cannot be executed.
     fn get_yarn_version() -> Option<YarnVersion> {
-        let output = process::Command::new("yarn")
-            .arg("--version")
-            .output();
+        let output = process::Command::new("yarn").arg("--version").output();
 
         match output {
             Ok(output) => {
                 if !output.status.success() {
-                    eprintln!(
-                        "Warning: Failed to run 'yarn --version'. Exit code: {}",
-                        output.status.code().unwrap_or(-1)
-                    );
                     return None;
                 }
 
@@ -205,10 +199,7 @@ impl Yarn {
                     Some(YarnVersion::V2OrLater)
                 }
             }
-            Err(err) => {
-                eprintln!("Warning: 'yarn' is not installed or not found in PATH. Error: {}", err);
-                None
-            }
+            Err(_) => None,
         }
     }
 
