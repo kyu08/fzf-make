@@ -103,21 +103,6 @@ Whether `package.json` and `yarn.lock` are in the current directory.
 | `fzf-make --help` / `fzf-make help`                       | Show help                                     |
 | `fzf-make --version` / `fzf-make -v` / `fzf-make version` | Show version                                  |
 
-# 💻 Development
-1. Clone this repository
-1. Change the codes
-1. Run `make run`
-
-To execute test, run `make test`(needs `nextest`).
-
-## nix
-Or you can use `nix` to create a development shell with the project dependencies.
-
-Within the repo root, execute the following command:
-```nix
-nix develop
-```
-
 ## Example Aliases
 To simplify the usage of `fzf-make`, you can define aliases in your shell configuration. Below is an example configuration that works for most shells (bash, zsh, fish, etc.):
 
@@ -139,6 +124,20 @@ fish: `source ~/.config/fish/config.fish`
 * `fr`: Repeat the last executed command.
 * `fh`: Open fzf-make with the history pane focused.
 
+# 💻 Development
+1. Clone this repository
+1. Change the codes
+1. Run `make run`
+
+To execute test, run `make test`(needs `nextest`).
+
+## nix
+Or you can use `nix` to create a development shell with the project dependencies.
+
+Within the repo root, execute the following command:
+```nix
+nix develop
+```
 
 # 👥 Contribution
 - Contributions are welcome!
