@@ -9,6 +9,12 @@
 [![crates.io](https://img.shields.io/crates/v/fzf-make?style=flatflat-square)](https://crates.io/crates/fzf-make)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/fzf-make)](https://crates.io/crates/fzf-make)
 
+<p align="center">
+    [English]
+    [<a href="doc/README-de.md">Deutsch</a>]
+    [<a href="doc/README-fr.md">Français</a>]
+</p>
+
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.gif" />
 
 </div>
@@ -111,18 +117,6 @@ alias fm='fzf-make'
 alias fr='fzf-make repeat'
 alias fh='fzf-make history'
 ```
-### Setting Up
-1. Add the above lines to your shell's configuration file:
-* For bash: `~/.bashrc`
-* For zsh: `~/.zshrc`
-* For fish: `~/.config/fish/config.fish` (use alias syntax as shown above)
-1. Reload your shell configuration:
-bash/zsh: `source ~/.bashrc` or `source ~/.zshrc`
-fish: `source ~/.config/fish/config.fish`
-### Example Usage
-* `fm`: Launch fzf-make to select and run a target.
-* `fr`: Repeat the last executed command.
-* `fh`: Open fzf-make with the history pane focused.
 
 # 💻 Development
 1. Clone this repository
