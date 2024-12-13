@@ -40,12 +40,12 @@ You don't need to install `bat` because `fzf-make` will install it automatically
 
 ```sh
 # install
-brew install kyu08/tap/fzf-make
+brew install fzf-make
 ```
 
 ```sh
 # update 
-brew update && brew upgrade fzf-make
+brew upgrade fzf-make
 ```
 
 ## Arch Linux
