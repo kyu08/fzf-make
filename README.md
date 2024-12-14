@@ -109,6 +109,15 @@ Whether `package.json` and `yarn.lock` are in the current directory.
 | `fzf-make --help` / `fzf-make help`                       | Show help                                     |
 | `fzf-make --version` / `fzf-make -v` / `fzf-make version` | Show version                                  |
 
+## Example Aliases
+To simplify the usage of `fzf-make`, you can define aliases in your shell configuration. Below is an example configuration that works for most shells (bash, zsh, fish, etc.):
+
+```sh
+alias fm='fzf-make'
+alias fr='fzf-make repeat'
+alias fh='fzf-make history'
+```
+
 # 💻 Development
 1. Clone this repository
 1. Change the codes
