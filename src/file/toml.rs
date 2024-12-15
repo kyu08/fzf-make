@@ -134,7 +134,7 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
             // When testing
             let cwd = env::current_dir().unwrap();
             Some((
-                cwd.join(PathBuf::from("test_dir")),
+                cwd.join(PathBuf::from("test_data/history")),
                 HISTORY_FILE_NAME.to_string(),
             ))
         }

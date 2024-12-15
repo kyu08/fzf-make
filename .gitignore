@@ -1,6 +1,6 @@
 /target
-/test_dir
 fzf-make
+test_data/history/
 
 # For yarn test
 .yarn
