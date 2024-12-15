@@ -1,4 +1,6 @@
-use super::{command, js_package_manager::js_package_manager_main as js, make::make_main};
+use super::{
+    command, js_package_manager::js_package_manager_main as js, just::just, make::make_main,
+};
 use anyhow::Result;
 use colored::Colorize;
 use std::path::PathBuf;
@@ -7,6 +9,7 @@ use std::path::PathBuf;
 pub enum Runner {
     MakeCommand(make_main::Make),
     JsPackageManager(js::JsPackageManager),
+    Just(just::Just),
 }
 
 impl Runner {
@@ -14,6 +17,7 @@ impl Runner {
         match self {
             Runner::MakeCommand(make) => make.to_commands(),
             Runner::JsPackageManager(js) => js.to_commands(),
+            Runner::Just(just) => just.to_commands(),
         }
     }
 
@@ -21,6 +25,7 @@ impl Runner {
         match self {
             Runner::MakeCommand(make) => make.path.clone(),
             Runner::JsPackageManager(js) => js.path(),
+            Runner::Just(just) => just.path(),
         }
     }
 
@@ -28,6 +33,7 @@ impl Runner {
         let command_or_error_message = match self {
             Runner::MakeCommand(make) => make.command_to_run(command),
             Runner::JsPackageManager(js) => js.command_to_run(command),
+            Runner::Just(just) => just.command_to_run(command),
         };
 
         println!(
@@ -42,6 +48,7 @@ impl Runner {
         match self {
             Runner::MakeCommand(make) => make.execute(command),
             Runner::JsPackageManager(js) => js.execute(command),
+            Runner::Just(just) => just.execute(command),
         }
     }
 }
