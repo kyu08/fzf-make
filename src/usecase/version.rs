@@ -1,5 +1,6 @@
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
+use futures::{future::BoxFuture, FutureExt};
 use std::env;
 
 pub struct Version;
@@ -15,9 +16,12 @@ impl Usecase for Version {
         vec!["--version", "-v", "version"]
     }
 
-    fn run(&self) -> Result<()> {
-        println!("v{}", get_version());
-        Ok(())
+    fn run(&self) -> BoxFuture<'_, Result<()>> {
+        async {
+            println!("v{}", get_version());
+            Ok(())
+        }
+        .boxed()
     }
 }
 

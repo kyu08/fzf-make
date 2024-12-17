@@ -2,6 +2,8 @@ use super::tui::config;
 use crate::usecase::tui::app;
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
+use futures::future::BoxFuture;
+use futures::FutureExt;
 
 pub struct FzfMake;
 
@@ -19,7 +21,7 @@ impl Usecase for FzfMake {
         vec![]
     }
 
-    async fn run(&self) -> Result<()> {
-        app::main(config::Config::default()).await
+    fn run(&self) -> BoxFuture<'_, Result<()>> {
+        async { app::main(config::Config::default()).await }.boxed()
     }
 }

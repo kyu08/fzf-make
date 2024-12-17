@@ -1,9 +1,7 @@
-use std::future::Future;
-
 use anyhow::Result;
+use futures::future::BoxFuture;
 
-pub trait Usecase {
+pub trait Usecase: Send + Sync {
     fn command_str(&self) -> Vec<&'static str>;
-    fn run(&self) -> Result<(), anyhow::Error>;
-    // impl Future<Output = Result<(), anyhow::Error>>
+    fn run(&self) -> BoxFuture<'_, Result<()>>;
 }

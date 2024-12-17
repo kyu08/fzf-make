@@ -1,5 +1,4 @@
 use crate::usecase::fzf_make::FzfMake;
-use crate::usecase::usecase_main::Usecase;
 use crate::usecase::{fzf_make, help, history, invalid_arg, repeat, usecase_main, version};
 use colored::Colorize;
 use std::sync::Arc;
@@ -9,7 +8,7 @@ pub async fn run() {
     let command_line_args: Vec<_> = env::args().collect();
     let usecase = args_to_usecase(command_line_args);
 
-    match usecase.run() {
+    match usecase.run().await {
         Err(e) => {
             print_error(&e);
             std::process::exit(1);

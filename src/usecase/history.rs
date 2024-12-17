@@ -1,6 +1,7 @@
 use super::tui::{app, config};
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
+use futures::{future::BoxFuture, FutureExt};
 
 pub struct History;
 
@@ -15,7 +16,7 @@ impl Usecase for History {
         vec!["--history", "-h", "history"]
     }
 
-    fn run(&self) -> Result<()> {
-        app::main(config::Config::new(true)).await
+    fn run(&self) -> BoxFuture<'_, Result<()>> {
+        async { app::main(config::Config::new(true)).await }.boxed()
     }
 }
