@@ -1,5 +1,5 @@
 use crate::model::command;
-use anyhow::anyhow;
+use anyhow::{anyhow, bail, Result};
 use std::{path::PathBuf, process};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -9,18 +9,28 @@ pub struct Just {
 }
 impl Just {
     // TODO: add new
-    pub(crate) fn to_commands(&self) -> Vec<command::Command> {
+    pub fn new(current_dir: PathBuf) -> Result<Just> {
+        // TODO: justではjustfileの子ディレクトリでもjust testのように実行できる。
+        // 子ディレクトリでもfzf-makeを実行できるためにはjustfileのパスを取得する必要がある。
+        // 現状justコマンドでこれをする方法が見つからなかったため、親方向にgit rootまで調べるくらいしか方法がないかもしれない。(git管理されてなかったらエラーにする)
+        //
+        // あとはひとまずjustfileが存在するディレクトリでの実行だけをサポートして、それから子ディレクトリでの実行をサポートするという手があるかも知れない。
+        //
+        // just --dumpでjustfileの内容を取得
+        // tree-sitterを使ってパースしつつ行番号を取得
+        // tmp_fileに保存してそのpathをcommandに格納する
+        bail!("not implemented")
+    }
+
+    pub fn to_commands(&self) -> Vec<command::Command> {
         self.commands.clone()
     }
 
-    pub(crate) fn path(&self) -> PathBuf {
+    pub fn path(&self) -> PathBuf {
         self.path.clone()
     }
 
-    pub(crate) fn command_to_run(
-        &self,
-        command: &command::Command,
-    ) -> Result<String, anyhow::Error> {
+    pub fn command_to_run(&self, command: &command::Command) -> Result<String, anyhow::Error> {
         let command = match self.get_command(command.clone()) {
             Some(c) => c,
             None => return Err(anyhow!("command not found")),
@@ -29,7 +39,7 @@ impl Just {
         Ok(format!("just {}", command.args))
     }
 
-    pub(crate) fn execute(&self, command: &command::Command) -> Result<(), anyhow::Error> {
+    pub fn execute(&self, command: &command::Command) -> Result<(), anyhow::Error> {
         let command = match self.get_command(command.clone()) {
             Some(c) => c,
             None => return Err(anyhow!("command not found")),
@@ -54,5 +64,10 @@ impl Just {
             .iter()
             .find(|c| **c == command)
             .map(|_| command)
+    }
+
+    fn find_justfile(current_dir: PathBuf) -> Result<PathBuf> {
+        // current_dirの親ディレクトリを取得
+        // justfileが見つかるまで子 -> 親方向に走査
     }
 }
