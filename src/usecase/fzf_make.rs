@@ -16,7 +16,7 @@ impl Usecase for FzfMake {
         vec![]
     }
 
-    fn run(&self) -> Result<()> {
-        app::main(config::Config::default())
+    async fn run(&self) -> Result<()> {
+        app::main(config::Config::default()).await
     }
 }

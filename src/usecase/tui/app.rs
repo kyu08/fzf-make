@@ -22,6 +22,7 @@ use ratatui::{
     widgets::ListState,
     Terminal,
 };
+use std::time::Duration;
 use std::{
     collections::HashMap,
     env,
@@ -29,8 +30,10 @@ use std::{
     panic,
     path::PathBuf,
     process,
+    sync::{Arc, Mutex},
 };
 use tui_textarea::TextArea;
+use update_informer::{registry, Check};
 
 // AppState represents the state of the application.
 // "Making impossible states impossible"
@@ -162,38 +165,40 @@ impl Model<'_> {
     }
 }
 
-pub fn main(config: config::Config) -> Result<()> {
+pub async fn main(config: config::Config) -> Result<()> {
     let result = panic::catch_unwind(|| {
-        let mut model = Model::new(config)?;
+        async {
+            let mut model = Model::new(config)?;
 
-        enable_raw_mode()?;
-        let mut stderr = io::stderr();
-        execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-        let backend = CrosstermBackend::new(stderr);
-        let mut terminal = Terminal::new(backend)?;
+            enable_raw_mode()?;
+            let mut stderr = io::stderr();
+            execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
+            let backend = CrosstermBackend::new(stderr);
+            let mut terminal = Terminal::new(backend)?;
 
-        let command = match run(&mut terminal, &mut model) {
-            Ok(t) => t,
-            Err(e) => {
-                shutdown_terminal(&mut terminal)?;
-                return Err(e);
+            let command = match run(&mut terminal, &mut model).await {
+                Ok(t) => t,
+                Err(e) => {
+                    shutdown_terminal(&mut terminal)?;
+                    return Err(e);
+                }
+            };
+
+            shutdown_terminal(&mut terminal)?;
+
+            match command {
+                Some((runner, command)) => {
+                    runner.show_command(&command);
+                    let _ = runner.execute(&command); // TODO: handle error
+                    Ok(())
+                }
+                None => Ok(()),
             }
-        };
-
-        shutdown_terminal(&mut terminal)?;
-
-        match command {
-            Some((runner, command)) => {
-                runner.show_command(&command);
-                let _ = runner.execute(&command); // TODO: handle error
-                Ok(())
-            }
-            None => Ok(()),
         }
     });
 
     match result {
-        Ok(usecase_result) => usecase_result,
+        Ok(usecase_result) => usecase_result.await,
         Err(e) => {
             disable_raw_mode()?;
             execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
@@ -203,11 +208,35 @@ pub fn main(config: config::Config) -> Result<()> {
     }
 }
 
-fn run<'a, B: Backend>(
+const VERSION_KEY: &str = "version";
+async fn run<'a, B: Backend>(
     terminal: &mut Terminal<B>,
     model: &'a mut Model<'a>,
 ) -> Result<Option<(runner::Runner, command::Command)>> {
+    let data = Arc::new(Mutex::new(HashMap::new()));
+
+    let data_clone = data.clone();
+    tokio::spawn(async move {
+        let pkg_name = "kyu08/fzf-make";
+        // TODO: get from env vars
+        let current_version = "0.44.0";
+        let informer = update_informer::new(registry::GitHub, pkg_name, current_version)
+            .interval(Duration::ZERO); // TODO: fix duration
+        if let Ok(Some(new_version)) = informer.check_version() {
+            let mut data = data_clone.lock().unwrap();
+            data.insert(VERSION_KEY.to_string(), new_version.clone());
+        }
+    });
+
     loop {
+        // TODO: 判定していれる
+        if let AppState::SelectCommand(s) = &mut model.app_state {
+            if s.has_update.is_none() {
+                if let Some(new_version) = data.lock().unwrap().get(VERSION_KEY) {
+                    s.has_update = Some(new_version.to_string());
+                }
+            }
+        }
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
             return Err(anyhow!(e));
         }
@@ -301,6 +330,7 @@ pub struct SelectCommandState<'a> {
     /// or hiding commands that existed at the time of execution but no longer exist.
     pub history: Vec<command::Command>,
     pub history_list_state: ListState,
+    pub has_update: Option<String>,
 }
 
 impl PartialEq for SelectCommandState<'_> {
@@ -366,6 +396,7 @@ impl SelectCommandState<'_> {
                 commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                 history: Model::get_histories(current_dir, runners),
                 history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                has_update: None,
             })
         }
     }

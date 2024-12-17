@@ -5,7 +5,8 @@ mod model;
 mod usecase;
 use std::panic;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let result = panic::catch_unwind(|| {
         controller::controller_main::run();
     });

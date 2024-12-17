@@ -15,7 +15,7 @@ impl Usecase for History {
         vec!["--history", "-h", "history"]
     }
 
-    fn run(&self) -> Result<()> {
-        app::main(config::Config::new(true))
+    async fn run(&self) -> Result<()> {
+        app::main(config::Config::new(true)).await
     }
 }
