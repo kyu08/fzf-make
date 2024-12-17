@@ -6,6 +6,7 @@ use crate::{
         command,
         histories::{self},
         js_package_manager::js_package_manager_main as js,
+        just::just,
         make::make_main,
         runner, runner_type,
     },
@@ -374,6 +375,7 @@ impl SelectCommandState<'_> {
             CurrentPane::Main
         };
 
+        just::Just::new(current_dir.clone());
         let runners = {
             let mut runners = vec![];
 
