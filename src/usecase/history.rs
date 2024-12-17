@@ -16,7 +16,6 @@ impl Usecase for History {
     }
 
     fn run(&self) -> Result<()> {
-        Ok(())
-        // app::main(config::Config::new(true)).await
+        app::main(config::Config::new(true)).await
     }
 }
