@@ -229,14 +229,15 @@ async fn run<'a, B: Backend>(
     });
 
     loop {
-        // TODO: 判定していれる
         if let AppState::SelectCommand(s) = &mut model.app_state {
             if s.has_update.is_none() {
                 if let Some(new_version) = data.lock().unwrap().get(VERSION_KEY) {
+                    println!("New version is available: {}", new_version);
                     s.has_update = Some(new_version.to_string());
                 }
             }
         }
+
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
             return Err(anyhow!(e));
         }
@@ -637,39 +638,39 @@ impl SelectCommandState<'_> {
         None
     }
 
-    #[cfg(test)]
-    fn new_for_test() -> Self {
-        use crate::model::runner_type;
-
-        SelectCommandState {
-            current_dir: env::current_dir().unwrap(),
-            current_pane: CurrentPane::Main,
-            runners: vec![runner::Runner::MakeCommand(make_main::Make::new_for_test())],
-            search_text_area: TextArea_(TextArea::default()),
-            commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            history: vec![
-                command::Command {
-                    runner_type: runner_type::RunnerType::Make,
-                    args: "history0".to_string(),
-                    file_name: PathBuf::from("Makefile"),
-                    line_number: 1,
-                },
-                command::Command {
-                    runner_type: runner_type::RunnerType::Make,
-                    args: "history1".to_string(),
-                    file_name: PathBuf::from("Makefile"),
-                    line_number: 4,
-                },
-                command::Command {
-                    runner_type: runner_type::RunnerType::Make,
-                    args: "history2".to_string(),
-                    file_name: PathBuf::from("Makefile"),
-                    line_number: 7,
-                },
-            ],
-            history_list_state: ListState::with_selected(ListState::default(), Some(0)),
-        }
-    }
+    // #[cfg(test)]
+    // fn new_for_test() -> Self {
+    //     use crate::model::runner_type;
+    //
+    //     SelectCommandState {
+    //         current_dir: env::current_dir().unwrap(),
+    //         current_pane: CurrentPane::Main,
+    //         runners: vec![runner::Runner::MakeCommand(make_main::Make::new_for_test())],
+    //         search_text_area: TextArea_(TextArea::default()),
+    //         commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
+    //         history: vec![
+    //             command::Command {
+    //                 runner_type: runner_type::RunnerType::Make,
+    //                 args: "history0".to_string(),
+    //                 file_name: PathBuf::from("Makefile"),
+    //                 line_number: 1,
+    //             },
+    //             command::Command {
+    //                 runner_type: runner_type::RunnerType::Make,
+    //                 args: "history1".to_string(),
+    //                 file_name: PathBuf::from("Makefile"),
+    //                 line_number: 4,
+    //             },
+    //             command::Command {
+    //                 runner_type: runner_type::RunnerType::Make,
+    //                 args: "history2".to_string(),
+    //                 file_name: PathBuf::from("Makefile"),
+    //                 line_number: 7,
+    //             },
+    //         ],
+    //         history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug, PartialEq)]
