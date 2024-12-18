@@ -27,7 +27,6 @@ use std::{
     collections::HashMap,
     env,
     io::{self, Stderr},
-    panic,
     path::PathBuf,
     process,
     sync::{Arc, Mutex},
@@ -222,7 +221,6 @@ async fn run<'a, B: Backend>(
         let current_version = "0.46.0"; // TODO: get from env vars
         let informer = update_informer::new(registry::GitHub, pkg_name, current_version)
             .interval(Duration::ZERO); // TODO: fix duration
-                                       // panic!("{:?} is available", "0000 ");
         let version_result =
             task::spawn_blocking(|| informer.check_version().map_err(|e| e.to_string()))
                 .await

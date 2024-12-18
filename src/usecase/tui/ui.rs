@@ -222,6 +222,7 @@ fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratat
             "Execute the selected command: <enter> | Select command: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
         }
     };
+    // 別UIに表示するようにする
     match &model.has_update {
         Some(has_update) => {
             hint_text = has_update.as_str();
