@@ -213,28 +213,16 @@ async fn run<'a, B: Backend>(
     terminal: &mut Terminal<B>,
     model: &'a mut Model<'a>,
 ) -> Result<Option<(runner::Runner, command::Command)>> {
-    let data = Arc::new(Mutex::new(HashMap::new()));
-    let data_clone = data.clone();
+    let shared_version_hash_map = Arc::new(Mutex::new(HashMap::new()));
 
-    tokio::spawn(async move {
-        let pkg_name = "kyu08/fzf-make";
-        let current_version = "0.46.0"; // TODO: get from env vars
-        let informer = update_informer::new(registry::GitHub, pkg_name, current_version)
-            .interval(Duration::ZERO); // TODO: fix duration
-        let version_result =
-            task::spawn_blocking(|| informer.check_version().map_err(|e| e.to_string()))
-                .await
-                .unwrap();
-        if let Ok(Some(new_version)) = version_result {
-            let mut data = data_clone.lock().unwrap();
-            data.insert(VERSION_KEY.to_string(), new_version.clone());
-        }
-    });
+    let cloned_hash_map = shared_version_hash_map.clone();
+    tokio::spawn(get_latest_version(cloned_hash_map));
 
     loop {
         if let AppState::SelectCommand(s) = &mut model.app_state {
             if s.has_update.is_none() {
-                if let Some(new_version) = data.lock().unwrap().get(VERSION_KEY) {
+                if let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY)
+                {
                     s.has_update = Some(new_version.to_string());
                 }
             }
@@ -272,6 +260,21 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
     }
 
     Ok(())
+}
+
+async fn get_latest_version(share_clone: Arc<Mutex<HashMap<String, String>>>) {
+    let pkg_name = "kyu08/fzf-make";
+    let current_version = "0.45.0"; // TODO: get from env vars
+    let informer = update_informer::new(registry::GitHub, pkg_name, current_version)
+        .interval(Duration::from_secs(60 * 60 * 24)); // check version once a day
+    let version_result =
+        task::spawn_blocking(|| informer.check_version().map_err(|e| e.to_string()))
+            .await
+            .unwrap();
+    if let Ok(Some(new_version)) = version_result {
+        let mut data = share_clone.lock().unwrap();
+        data.insert(VERSION_KEY.to_string(), new_version.to_string().clone());
+    };
 }
 
 enum Message {
