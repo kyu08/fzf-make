@@ -214,7 +214,7 @@ fn render_history_block(
 }
 
 fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let hint_text = match model.current_pane {
+    let mut hint_text = match model.current_pane {
         CurrentPane::Main => {
             "Execute the selected command: <enter> | Select command: ↑/↓ | Narrow down command: (type any character) | Move to next tab: <tab> | Quit: <esc>"
         }
@@ -222,6 +222,14 @@ fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratat
             "Execute the selected command: <enter> | Select command: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
         }
     };
+    match &model.has_update {
+        Some(has_update) => {
+            hint_text = has_update.as_str();
+        }
+        None => {
+            hint_text = "none";
+        }
+    }
     let hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 
     let block = Block::default().padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
