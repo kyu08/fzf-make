@@ -174,7 +174,13 @@ pub async fn main(config: config::Config) -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let result = AssertUnwindSafe(async {
-        let mut model = Model::new(config)?;
+        let mut model = match Model::new(config) {
+            Ok(m) => m,
+            Err(e) => {
+                shutdown_terminal(&mut terminal)?;
+                return Err(e);
+            }
+        };
 
         let command = match run(&mut terminal, &mut model).await {
             Ok(t) => t,
