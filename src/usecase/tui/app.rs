@@ -220,10 +220,10 @@ async fn run<'a, B: Backend>(
 
     loop {
         if let AppState::SelectCommand(s) = &mut model.app_state {
-            if s.has_update.is_none() {
+            if s.latest_version.is_none() {
                 if let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY)
                 {
-                    s.has_update = Some(new_version.to_string());
+                    s.latest_version = Some(new_version.to_string());
                 }
             }
         }
@@ -264,7 +264,7 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
 
 async fn get_latest_version(share_clone: Arc<Mutex<HashMap<String, String>>>) {
     let pkg_name = "kyu08/fzf-make";
-    let current_version = "0.45.0"; // TODO: get from env vars
+    let current_version = env!("CARGO_PKG_VERSION").to_string();
     let informer = update_informer::new(registry::GitHub, pkg_name, current_version)
         .interval(Duration::from_secs(60 * 60 * 24)); // check version once a day
     let version_result =
@@ -336,7 +336,7 @@ pub struct SelectCommandState<'a> {
     /// or hiding commands that existed at the time of execution but no longer exist.
     pub history: Vec<command::Command>,
     pub history_list_state: ListState,
-    pub has_update: Option<String>,
+    pub latest_version: Option<String>,
 }
 
 impl PartialEq for SelectCommandState<'_> {
@@ -402,7 +402,7 @@ impl SelectCommandState<'_> {
                 commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                 history: Model::get_histories(current_dir, runners),
                 history_list_state: ListState::with_selected(ListState::default(), Some(0)),
-                has_update: None,
+                latest_version: None,
             })
         }
     }
@@ -674,7 +674,7 @@ impl SelectCommandState<'_> {
                 },
             ],
             history_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            has_update: None,
+            latest_version: None,
         }
     }
 }

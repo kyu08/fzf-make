@@ -26,7 +26,19 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(main_and_key_bindings[0]);
-        render_input_block(model, f, main[1]);
+
+        let input_and_notification = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(main[1]);
+        render_input_block(model, f, input_and_notification[0]);
+
+        let notification_and_current_version = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(100), Constraint::Length(9)])
+            .split(input_and_notification[1]);
+        render_notification_block(model, f, notification_and_current_version[0]);
+        render_current_version_block(f, notification_and_current_version[1]);
 
         let preview_and_commands = Layout::default()
             .direction(Direction::Vertical)
@@ -36,7 +48,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
 
         let commands = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(preview_and_commands[1]);
         render_commands_block(model, f, commands[0]);
         render_history_block(model, f, commands[1]);
@@ -196,6 +208,50 @@ fn render_input_block(model: &mut SelectCommandState, f: &mut Frame, chunk: rata
     f.render_widget(&model.search_text_area.0, chunk);
 }
 
+fn render_notification_block(
+    model: &mut SelectCommandState,
+    f: &mut Frame,
+    chunk: ratatui::layout::Rect,
+) {
+    let text = match &model.latest_version {
+        Some(has_update) => {
+            if format!("v{}", env!("CARGO_PKG_VERSION")) != *has_update {
+                format!(
+                    "📦️ A new release is available! v{} → {}.",
+                    env!("CARGO_PKG_VERSION"),
+                    has_update.as_str()
+                )
+            } else {
+                "".to_string()
+            }
+        }
+        None => "".to_string(),
+    };
+    let notification = Span::styled(text, Style::default());
+
+    let block = Block::default()
+        .padding(ratatui::widgets::Padding::new(1, 0, 1, 1))
+        .style(Style::new().add_modifier(Modifier::BOLD).fg(Color::Yellow));
+
+    let key_notes_footer = Paragraph::new(notification)
+        .wrap(Wrap { trim: true })
+        .block(block);
+    f.render_widget(key_notes_footer, chunk);
+}
+
+fn render_current_version_block(f: &mut Frame, chunk: ratatui::layout::Rect) {
+    let text = format!("v{}", env!("CARGO_PKG_VERSION"));
+    let notification = Span::styled(text, Style::default());
+
+    let block = Block::default().padding(ratatui::widgets::Padding::new(0, 1, 2, 0));
+    let key_notes_footer = Paragraph::new(notification)
+        .block(block)
+        .right_aligned()
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(key_notes_footer, chunk);
+}
+
 fn render_history_block(
     model: &mut SelectCommandState,
     f: &mut Frame,
@@ -214,7 +270,7 @@ fn render_history_block(
 }
 
 fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let mut hint_text = match model.current_pane {
+    let  hint_text = match model.current_pane {
         CurrentPane::Main => {
             "Execute the selected command: <enter> | Select command: ↑/↓ | Narrow down command: (type any character) | Move to next tab: <tab> | Quit: <esc>"
         }
@@ -222,15 +278,6 @@ fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratat
             "Execute the selected command: <enter> | Select command: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
         }
     };
-    // 別UIに表示するようにする
-    match &model.has_update {
-        Some(has_update) => {
-            hint_text = has_update.as_str();
-        }
-        None => {
-            hint_text = "none";
-        }
-    }
     let hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 
     let block = Block::default().padding(ratatui::widgets::Padding::new(2, 2, 0, 0));
