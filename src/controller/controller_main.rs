@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::{collections::HashMap, env};
 
 pub async fn run() {
-    let command_line_args: Vec<_> = env::args().collect();
+    let command_line_args = env::args().collect();
     let usecase = args_to_usecase(command_line_args);
 
     match usecase.run().await {
