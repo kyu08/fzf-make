@@ -262,11 +262,11 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
     Ok(())
 }
 
+const PKG_NAME: &str = "kyu08/fzf-make";
 async fn get_latest_version(share_clone: Arc<Mutex<HashMap<String, String>>>) {
-    let pkg_name = "kyu08/fzf-make";
     let current_version = env!("CARGO_PKG_VERSION").to_string();
     let informer =
-        update_informer::new(registry::GitHub, pkg_name, current_version).interval(Duration::ZERO); // check version once a day
+        update_informer::new(registry::GitHub, PKG_NAME, current_version).interval(Duration::ZERO); // check version once a day
                                                                                                     // .interval(Duration::from_secs(60 * 60 * 24)); // check version once a day
     let version_result =
         task::spawn_blocking(|| informer.check_version().map_err(|e| e.to_string()))
