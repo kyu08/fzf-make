@@ -4,11 +4,11 @@ use colored::Colorize;
 use std::sync::Arc;
 use std::{collections::HashMap, env};
 
-pub fn run() {
+pub async fn run() {
     let command_line_args = env::args().collect();
     let usecase = args_to_usecase(command_line_args);
 
-    match usecase.run() {
+    match usecase.run().await {
         Err(e) => {
             print_error(&e);
             std::process::exit(1);

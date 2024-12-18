@@ -1,5 +1,6 @@
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
+use futures::{future::BoxFuture, FutureExt};
 
 pub struct Help;
 
@@ -14,9 +15,12 @@ impl Usecase for Help {
         vec!["--help", "help"]
     }
 
-    fn run(&self) -> Result<()> {
-        println!("{}", get_help());
-        Ok(())
+    fn run(&self) -> BoxFuture<'_, Result<()>> {
+        async {
+            println!("{}", get_help());
+            Ok(())
+        }
+        .boxed()
     }
 }
 

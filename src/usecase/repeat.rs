@@ -4,6 +4,7 @@ use super::tui::{
 };
 use crate::usecase::usecase_main::Usecase;
 use anyhow::{anyhow, Result};
+use futures::{future::BoxFuture, FutureExt};
 
 pub struct Repeat;
 
@@ -18,22 +19,25 @@ impl Usecase for Repeat {
         vec!["--repeat", "-r", "repeat"]
     }
 
-    fn run(&self) -> Result<()> {
-        match Model::new(config::Config::default()) {
-            Err(e) => Err(e),
-            Ok(model) => match model.app_state {
-                AppState::SelectCommand(state) => match state.get_latest_command() {
-                    Some(c) => match state.get_runner(&c.runner_type) {
-                        Some(runner) => {
-                            runner.show_command(c);
-                            runner.execute(c)
-                        }
-                        None => Err(anyhow!("runner not found.")),
+    fn run(&self) -> BoxFuture<'_, Result<()>> {
+        async move {
+            match Model::new(config::Config::default()) {
+                Err(e) => Err(e),
+                Ok(model) => match model.app_state {
+                    AppState::SelectCommand(state) => match state.get_latest_command() {
+                        Some(c) => match state.get_runner(&c.runner_type) {
+                            Some(runner) => {
+                                runner.show_command(c);
+                                runner.execute(c)
+                            }
+                            None => Err(anyhow!("runner not found.")),
+                        },
+                        None => Err(anyhow!("fzf-make has not been executed in this path yet.")),
                     },
-                    None => Err(anyhow!("fzf-make has not been executed in this path yet.")),
+                    _ => Err(anyhow!("Invalid state")),
                 },
-                _ => Err(anyhow!("Invalid state")),
-            },
+            }
         }
+        .boxed()
     }
 }

@@ -16,6 +16,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use futures::FutureExt;
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -26,11 +27,14 @@ use std::{
     collections::HashMap,
     env,
     io::{self, Stderr},
-    panic,
     path::PathBuf,
     process,
+    sync::{Arc, Mutex},
 };
+use std::{panic::AssertUnwindSafe, time::Duration};
+use tokio::task;
 use tui_textarea::TextArea;
+use update_informer::{registry, Check};
 
 // AppState represents the state of the application.
 // "Making impossible states impossible"
@@ -162,17 +166,17 @@ impl Model<'_> {
     }
 }
 
-pub fn main(config: config::Config) -> Result<()> {
-    let result = panic::catch_unwind(|| {
+pub async fn main(config: config::Config) -> Result<()> {
+    enable_raw_mode()?;
+    let mut stderr = io::stderr();
+    execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stderr);
+    let mut terminal = Terminal::new(backend)?;
+
+    let result = AssertUnwindSafe(async {
         let mut model = Model::new(config)?;
 
-        enable_raw_mode()?;
-        let mut stderr = io::stderr();
-        execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-        let backend = CrosstermBackend::new(stderr);
-        let mut terminal = Terminal::new(backend)?;
-
-        let command = match run(&mut terminal, &mut model) {
+        let command = match run(&mut terminal, &mut model).await {
             Ok(t) => t,
             Err(e) => {
                 shutdown_terminal(&mut terminal)?;
@@ -190,24 +194,40 @@ pub fn main(config: config::Config) -> Result<()> {
             }
             None => Ok(()),
         }
-    });
+    })
+    .catch_unwind()
+    .await;
 
     match result {
         Ok(usecase_result) => usecase_result,
         Err(e) => {
-            disable_raw_mode()?;
-            execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+            shutdown_terminal(&mut terminal)?;
             println!("{}", any_to_string::any_to_string(&*e));
             process::exit(1);
         }
     }
 }
 
-fn run<'a, B: Backend>(
+const VERSION_KEY: &str = "version";
+async fn run<'a, B: Backend>(
     terminal: &mut Terminal<B>,
     model: &'a mut Model<'a>,
 ) -> Result<Option<(runner::Runner, command::Command)>> {
+    let shared_version_hash_map = Arc::new(Mutex::new(HashMap::new()));
+
+    let cloned_hash_map = shared_version_hash_map.clone();
+    tokio::spawn(get_latest_version(cloned_hash_map));
+
     loop {
+        if let AppState::SelectCommand(s) = &mut model.app_state {
+            if s.latest_version.is_none() {
+                if let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY)
+                {
+                    s.latest_version = Some(new_version.to_string());
+                }
+            }
+        }
+
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
             return Err(anyhow!(e));
         }
@@ -240,6 +260,22 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
     }
 
     Ok(())
+}
+
+const PKG_NAME: &str = "kyu08/fzf-make";
+async fn get_latest_version(share_clone: Arc<Mutex<HashMap<String, String>>>) {
+    let current_version = env!("CARGO_PKG_VERSION").to_string();
+    let informer =
+        update_informer::new(registry::GitHub, PKG_NAME, current_version).interval(Duration::ZERO); // check version once a day
+                                                                                                    // .interval(Duration::from_secs(60 * 60 * 24)); // check version once a day
+    let version_result =
+        task::spawn_blocking(|| informer.check_version().map_err(|e| e.to_string()))
+            .await
+            .unwrap();
+    if let Ok(Some(new_version)) = version_result {
+        let mut data = share_clone.lock().unwrap();
+        data.insert(VERSION_KEY.to_string(), new_version.to_string().clone());
+    };
 }
 
 enum Message {
@@ -301,6 +337,7 @@ pub struct SelectCommandState<'a> {
     /// or hiding commands that existed at the time of execution but no longer exist.
     pub history: Vec<command::Command>,
     pub history_list_state: ListState,
+    pub latest_version: Option<String>,
 }
 
 impl PartialEq for SelectCommandState<'_> {
@@ -366,6 +403,7 @@ impl SelectCommandState<'_> {
                 commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                 history: Model::get_histories(current_dir, runners),
                 history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                latest_version: None,
             })
         }
     }
@@ -637,6 +675,7 @@ impl SelectCommandState<'_> {
                 },
             ],
             history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            latest_version: None,
         }
     }
 }
