@@ -16,13 +16,13 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use futures::FutureExt;
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     widgets::ListState,
     Terminal,
 };
-use std::time::Duration;
 use std::{
     collections::HashMap,
     env,
@@ -32,7 +32,8 @@ use std::{
     process,
     sync::{Arc, Mutex},
 };
-use tokio::{task, time::sleep};
+use std::{panic::AssertUnwindSafe, time::Duration};
+use tokio::task;
 use tui_textarea::TextArea;
 use update_informer::{registry, Check};
 
@@ -167,42 +168,41 @@ impl Model<'_> {
 }
 
 pub async fn main(config: config::Config) -> Result<()> {
-    let result = panic::catch_unwind(|| {
-        async {
-            let mut model = Model::new(config)?;
+    enable_raw_mode()?;
+    let mut stderr = io::stderr();
+    execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stderr);
+    let mut terminal = Terminal::new(backend)?;
 
-            enable_raw_mode()?;
-            let mut stderr = io::stderr();
-            execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-            let backend = CrosstermBackend::new(stderr);
-            let mut terminal = Terminal::new(backend)?;
+    let result = AssertUnwindSafe(async {
+        let mut model = Model::new(config)?;
 
-            let command = match run(&mut terminal, &mut model).await {
-                Ok(t) => t,
-                Err(e) => {
-                    shutdown_terminal(&mut terminal)?;
-                    return Err(e);
-                }
-            };
-
-            shutdown_terminal(&mut terminal)?;
-
-            match command {
-                Some((runner, command)) => {
-                    runner.show_command(&command);
-                    let _ = runner.execute(&command); // TODO: handle error
-                    Ok(())
-                }
-                None => Ok(()),
+        let command = match run(&mut terminal, &mut model).await {
+            Ok(t) => t,
+            Err(e) => {
+                shutdown_terminal(&mut terminal)?;
+                return Err(e);
             }
+        };
+
+        shutdown_terminal(&mut terminal)?;
+
+        match command {
+            Some((runner, command)) => {
+                runner.show_command(&command);
+                let _ = runner.execute(&command); // TODO: handle error
+                Ok(())
+            }
+            None => Ok(()),
         }
-    });
+    })
+    .catch_unwind()
+    .await;
 
     match result {
-        Ok(usecase_result) => usecase_result.await,
+        Ok(usecase_result) => usecase_result,
         Err(e) => {
-            disable_raw_mode()?;
-            execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+            shutdown_terminal(&mut terminal)?;
             println!("{}", any_to_string::any_to_string(&*e));
             process::exit(1);
         }
@@ -219,7 +219,7 @@ async fn run<'a, B: Backend>(
 
     tokio::spawn(async move {
         let pkg_name = "kyu08/fzf-make";
-        let current_version = "0.44.0"; // TODO: get from env vars
+        let current_version = "0.46.0"; // TODO: get from env vars
         let informer = update_informer::new(registry::GitHub, pkg_name, current_version)
             .interval(Duration::ZERO); // TODO: fix duration
                                        // panic!("{:?} is available", "0000 ");

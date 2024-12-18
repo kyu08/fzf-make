@@ -1,17 +1,19 @@
 mod controller;
+use futures::FutureExt;
+use std::panic::AssertUnwindSafe;
 mod err;
 mod file;
 mod model;
 mod usecase;
-use std::panic;
 
 #[tokio::main]
 async fn main() {
-    controller::controller_main::run().await;
-    // let result =
-    //     panic::catch_unwind(|| tokio::spawn(async { controller::controller_main::run().await }));
-    // if let Err(e) = result {
-    //     println!("{}", err::any_to_string::any_to_string(&*e));
-    //     std::process::exit(1);
-    // }
+    let result = controller::controller_main::run();
+    // ref: https://zenn.dev/techno_tanoc/articles/4c207397df3ab0#assertunwindsafe
+    let res = AssertUnwindSafe(result).catch_unwind().await;
+
+    if let Err(e) = res {
+        println!("{}", err::any_to_string::any_to_string(&*e));
+        std::process::exit(1);
+    }
 }

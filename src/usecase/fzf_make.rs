@@ -11,9 +11,6 @@ impl FzfMake {
     pub fn new() -> Self {
         Self {}
     }
-    // pub async fn run(&self) -> Result<()> {
-    //     app::main(config::Config::default()).await
-    // }
 }
 
 impl Usecase for FzfMake {
