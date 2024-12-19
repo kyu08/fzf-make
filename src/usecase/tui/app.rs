@@ -28,7 +28,6 @@ use std::{
     env,
     io::{self, Stderr},
     path::PathBuf,
-    process,
     sync::{Arc, Mutex},
 };
 use std::{panic::AssertUnwindSafe, time::Duration};
@@ -174,43 +173,34 @@ pub async fn main(config: config::Config) -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let result = AssertUnwindSafe(async {
-        let mut model = match Model::new(config) {
-            Ok(m) => m,
-            Err(e) => {
-                shutdown_terminal(&mut terminal)?;
-                return Err(e);
+        match Model::new(config) {
+            Ok(mut m) => {
+                match run(&mut terminal, &mut m).await {
+                    // If async closure will be stabilized, use map instead of match
+                    Ok(command) => match command {
+                        Some((runner, command)) => {
+                            shutdown_terminal(&mut terminal)?;
+                            runner.show_command(&command);
+                            runner.execute(&command)
+                        }
+                        None => Ok(()), // If no command selected, show nothing.
+                    },
+                    Err(e) => Err(e),
+                }
             }
-        };
-
-        let command = match run(&mut terminal, &mut model).await {
-            Ok(t) => t,
-            Err(e) => {
-                shutdown_terminal(&mut terminal)?;
-                return Err(e);
-            }
-        };
-
-        shutdown_terminal(&mut terminal)?;
-
-        match command {
-            Some((runner, command)) => {
-                runner.show_command(&command);
-                let _ = runner.execute(&command); // TODO: handle error
-                Ok(())
-            }
-            None => Ok(()),
+            Err(e) => Err(e),
         }
     })
     .catch_unwind()
     .await;
 
+    // NOTE: Strictly, if result is Ok, shutdown_terminal is called twice.
+    // But to prevent forgetting to call when result is Err, it is called here intentionally.
+    shutdown_terminal(&mut terminal)?;
+
     match result {
         Ok(usecase_result) => usecase_result,
-        Err(e) => {
-            shutdown_terminal(&mut terminal)?;
-            println!("{}", any_to_string::any_to_string(&*e));
-            process::exit(1);
-        }
+        Err(e) => Err(anyhow!(any_to_string::any_to_string(&*e))),
     }
 }
 
