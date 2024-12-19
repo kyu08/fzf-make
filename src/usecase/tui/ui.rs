@@ -5,12 +5,11 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 use std::fs::File;
-use std::io::{self, BufRead, BufReader};
-use std::path::Path;
+use std::io::{BufRead, BufReader};
 use std::{
     path::PathBuf,
     sync::{Arc, RwLock},
@@ -18,7 +17,6 @@ use std::{
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color as SColor, ThemeSet};
 use syntect::parsing::SyntaxSet;
-use syntect::util::LinesWithEndings;
 use syntect_tui::into_span;
 use tui_term::widget::PseudoTerminal;
 
@@ -161,36 +159,32 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
 }
 
 fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    //     const EXAMPLE: &str = r#"{
-    //   "name": "project",
-    //   "version": "1.0.0",
-    //   "private": true,
-    //   "scripts": {
-    //     "build": "echo build",
-    //     "start": "echo start",
-    //     "lint": "echo lint",
-    //     "test-unit-tests": "echo test-unit-tests",
-    //     "test-storybook": "echo test-storybook",
-    //     "test-integration": "echo integration",
-    //     "test-e2e": "echo test-e2e"
-    //   },
-    //   "devDependencies": {
-    //     "@babel/cli": "7.12.10"
-    //   },
-    //   "dependencies": {
-    //     "firebase": "^8.6.8"
-    //   }
-    // }
-    // "#;
-    let lines = {
-        // 枠線も含めた行数なので実際に表示できる行数はここから2行引いた数値
-        let row_count = chunk.rows().count();
-        // TODO: row numberを指定する必要がある
-        // commandの情報からファイルの一部を抜いてくる
-        let narrow_down_commands = model.narrow_down_commands();
-        let selecting_command =
-            narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
+    f.render_widget(Clear, chunk);
+    // 枠線も含めた行数なので実際に表示できる行数はここから2行引いた数値
+    let row_count = chunk.rows().count();
+    // TODO: row numberを指定する必要がある
+    // commandの情報からファイルの一部を抜いてくる
+    let narrow_down_commands = model.narrow_down_commands();
+    let selecting_command =
+        narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
+    let command = selecting_command.unwrap();
+    let start = command.line_number as usize;
+    let end = start + row_count - 1;
+    let path = command.file_name.clone();
+
+    let file = File::open(path).unwrap(); // TODO: remove unwrap
+    let reader = BufReader::new(file);
+
+    let source_lines: Vec<_> = reader
+        .lines()
+        // TODO: commandのファイルのfile_number行目から(file_number + row_count - 1)行数を取得する
+        .skip(start - 1)
+        .take(end - start + 1)
+        .map(|line| line.unwrap())
+        .collect();
+    // let source_lines = source_lines.join("\n)");
+    let lines = {
         if let Some(command) = selecting_command {
             let ps = SyntaxSet::load_defaults_newlines();
             let ts = ThemeSet::load_defaults();
@@ -198,40 +192,26 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
             let syntax = ps.find_syntax_by_extension("rs").unwrap();
             let theme = &mut ts.themes["base16-ocean.dark"].clone();
 
-            // TODO: commandのファイルのfile_number行目から(file_number + row_count - 1)行数を取得する
-
-            let start = command.line_number as usize;
-            let end = start + row_count - 1;
-            let path = command.file_name.clone();
-
-            let file = File::open(path).unwrap(); // TODO: remove unwrap
-            let reader = BufReader::new(file);
-
-            let source_lines: Vec<_> = reader
-                .lines()
-                .skip(start - 1)
-                .take(end - start + 1)
-                .collect();
-
-            // Vec<Result<String, io::Error>>なので変換する必要がある
-            // for line in source_lines {
-            //     println!("{}", line);
-            // }
-
             theme.settings.background = Some(SColor {
                 r: 0,
                 g: 0,
                 b: 0,
                 a: 0, // To get bg same as ratatui's background, make this transparent.
             });
+            // let fuga = LinesWithEndings::from(&source_lines);
             let mut lines = vec![];
-            for (index, line) in LinesWithEndings::from("").enumerate() {
+            for (index, line) in source_lines.iter().enumerate() {
+                // for (index, line) in fuga.enumerate() {
                 theme.settings.background = Some(SColor {
                     r: 49,
                     g: 49,
                     b: 49,
-                    // TODO: ここを固定ではなくcommandの行にする
-                    a: if index == 1 { 15 } else { 0 }, // To get bg same as ratatui's background, make this transparent.
+                    // To get bg same as ratatui's background, make this transparent.
+                    a: if index == command.line_number as usize {
+                        15
+                    } else {
+                        0
+                    },
                 });
                 let mut h = HighlightLines::new(syntax, theme);
                 // LinesWithEndings enables use of newlines mode
@@ -242,8 +222,7 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
                     .filter_map(|segment| into_span(segment).ok())
                     .collect();
 
-                let line = Line::from(spans);
-                lines.push(line);
+                lines.push(Line::from(spans));
             }
             lines
         } else {
