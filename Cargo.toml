@@ -30,3 +30,5 @@ serde_json = "1.0.133"
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
 update-informer = { version = "1.1", default-features = true, features = ["github"] }
 futures = "0.3"
+syntect-tui = "3.0.5"
+syntect = "5.2.0"
