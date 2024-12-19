@@ -8,12 +8,9 @@ pub async fn run() {
     let command_line_args = env::args().collect();
     let usecase = args_to_usecase(command_line_args);
 
-    match usecase.run().await {
-        Err(e) => {
-            print_error(&e);
-            std::process::exit(1);
-        }
-        Ok(_) => std::process::exit(0),
+    if let Err(e) = usecase.run().await {
+        print_error(&e);
+        std::process::exit(1);
     }
 }
 

@@ -28,7 +28,6 @@ use std::{
     env,
     io::{self, Stderr},
     path::PathBuf,
-    process,
     sync::{Arc, Mutex},
 };
 use std::{panic::AssertUnwindSafe, time::Duration};
@@ -174,43 +173,34 @@ pub async fn main(config: config::Config) -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let result = AssertUnwindSafe(async {
-        let mut model = match Model::new(config) {
-            Ok(m) => m,
-            Err(e) => {
-                shutdown_terminal(&mut terminal)?;
-                return Err(e);
+        match Model::new(config) {
+            Ok(mut m) => {
+                match run(&mut terminal, &mut m).await {
+                    // If async closure will be stabilized, use map instead of match
+                    Ok(command) => match command {
+                        Some((runner, command)) => Ok(Some((runner, command))),
+                        None => Ok(None), // If no command selected, show nothing.
+                    },
+                    Err(e) => Err(e),
+                }
             }
-        };
-
-        let command = match run(&mut terminal, &mut model).await {
-            Ok(t) => t,
-            Err(e) => {
-                shutdown_terminal(&mut terminal)?;
-                return Err(e);
-            }
-        };
-
-        shutdown_terminal(&mut terminal)?;
-
-        match command {
-            Some((runner, command)) => {
-                runner.show_command(&command);
-                let _ = runner.execute(&command); // TODO: handle error
-                Ok(())
-            }
-            None => Ok(()),
+            Err(e) => Err(e),
         }
     })
     .catch_unwind()
     .await;
 
+    shutdown_terminal(&mut terminal)?;
+
     match result {
-        Ok(usecase_result) => usecase_result,
-        Err(e) => {
-            shutdown_terminal(&mut terminal)?;
-            println!("{}", any_to_string::any_to_string(&*e));
-            process::exit(1);
+        // some kind of command was selected
+        Ok(Ok(Some((runner, command)))) => {
+            runner.show_command(&command);
+            runner.execute(&command)
         }
+        Ok(Ok(None)) => Ok(()), // no command was selected
+        Ok(Err(e)) => Err(e),   // Model::new or run returned Err
+        Err(e) => Err(anyhow!(any_to_string::any_to_string(&*e))), // panic occurred
     }
 }
 
