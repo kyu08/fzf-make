@@ -12,6 +12,11 @@ use std::{
     path::PathBuf,
     sync::{Arc, RwLock},
 };
+use syntect::easy::HighlightLines;
+use syntect::highlighting::ThemeSet;
+use syntect::parsing::SyntaxSet;
+use syntect::util::LinesWithEndings;
+use syntect_tui::into_span;
 use tui_term::widget::PseudoTerminal;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
@@ -44,7 +49,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
             .split(main[0]);
-        render_preview_block(model, f, preview_and_commands[0]);
+        render_preview_block2(model, f, preview_and_commands[0]);
 
         let commands = Layout::default()
             .direction(Direction::Horizontal)
@@ -150,6 +155,44 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
             .block(block),
         chunk,
     );
+}
+
+fn render_preview_block2(_model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    const EXAMPLE: &str = "
+pub struct Wow {
+    hi: u64
+}
+fn blah() -> u64 {}
+";
+
+    let ps = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+    let syntax = ps.find_syntax_by_extension("rs").unwrap();
+    let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
+
+    let mut lines = vec![];
+    for line in LinesWithEndings::from(EXAMPLE) {
+        // LinesWithEndings enables use of newlines mode
+        let spans: Vec<Span> = h
+            .highlight_line(line, &ps)
+            .unwrap()
+            .into_iter()
+            .filter_map(|segment| into_span(segment).ok())
+            .collect();
+
+        let line = Line::from(spans);
+        lines.push(line);
+    }
+
+    let notification = lines[1].clone();
+
+    let block = Block::default().title(notification.clone());
+    // .style(Style::new().add_modifier(Modifier::BOLD).fg(Color::Yellow));
+
+    let key_notes_footer = Paragraph::new(notification)
+        .wrap(Wrap { trim: true })
+        .block(block);
+    f.render_widget(key_notes_footer, chunk);
 }
 
 fn preview_command(file_path: PathBuf, line_number: u32) -> CommandBuilder {
