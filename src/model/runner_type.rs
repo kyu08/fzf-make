@@ -7,6 +7,7 @@ use std::fmt;
 pub enum RunnerType {
     Make,
     JsPackageManager(JsPackageManager),
+    Just,
 }
 
 #[derive(Hash, PartialEq, Debug, Clone, Serialize, Deserialize, Eq)]
@@ -37,6 +38,7 @@ impl RunnerType {
                     RunnerType::JsPackageManager(JsPackageManager::Yarn)
                 }
             },
+            runner::Runner::Just(_) => RunnerType::Just,
         }
     }
 }
@@ -49,6 +51,7 @@ impl fmt::Display for RunnerType {
                 JsPackageManager::Pnpm => "pnpm",
                 JsPackageManager::Yarn => "yarn",
             },
+            RunnerType::Just => "just",
         };
         write!(f, "{}", name)
     }
@@ -71,6 +74,7 @@ impl<'de> Deserialize<'de> for RunnerType {
             "make" => Ok(RunnerType::Make),
             "pnpm" => Ok(RunnerType::JsPackageManager(JsPackageManager::Pnpm)),
             "yarn" => Ok(RunnerType::JsPackageManager(JsPackageManager::Yarn)),
+            "just" => Ok(RunnerType::Just),
             _ => Err(de::Error::custom(format!("Unknown runner type: {}", s))),
         }
     }
@@ -90,6 +94,7 @@ impl Serialize for RunnerType {
             RunnerType::JsPackageManager(JsPackageManager::Yarn) => {
                 serializer.serialize_str("yarn")
             }
+            RunnerType::Just => serializer.serialize_str("just"),
         }
     }
 }
