@@ -8,12 +8,15 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
+use std::fs::File;
+use std::io::{self, BufRead, BufReader};
+use std::path::Path;
 use std::{
     path::PathBuf,
     sync::{Arc, RwLock},
 };
 use syntect::easy::HighlightLines;
-use syntect::highlighting::ThemeSet;
+use syntect::highlighting::{Color as SColor, ThemeSet};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 use syntect_tui::into_span;
@@ -157,42 +160,111 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
     );
 }
 
-fn render_preview_block2(_model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    const EXAMPLE: &str = "
-pub struct Wow {
-    hi: u64
-}
-fn blah() -> u64 {}
-";
+fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+    //     const EXAMPLE: &str = r#"{
+    //   "name": "project",
+    //   "version": "1.0.0",
+    //   "private": true,
+    //   "scripts": {
+    //     "build": "echo build",
+    //     "start": "echo start",
+    //     "lint": "echo lint",
+    //     "test-unit-tests": "echo test-unit-tests",
+    //     "test-storybook": "echo test-storybook",
+    //     "test-integration": "echo integration",
+    //     "test-e2e": "echo test-e2e"
+    //   },
+    //   "devDependencies": {
+    //     "@babel/cli": "7.12.10"
+    //   },
+    //   "dependencies": {
+    //     "firebase": "^8.6.8"
+    //   }
+    // }
+    // "#;
+    let lines = {
+        // 枠線も含めた行数なので実際に表示できる行数はここから2行引いた数値
+        let row_count = chunk.rows().count();
+        // TODO: row numberを指定する必要がある
+        // commandの情報からファイルの一部を抜いてくる
+        let narrow_down_commands = model.narrow_down_commands();
+        let selecting_command =
+            narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
-    let ps = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-    let syntax = ps.find_syntax_by_extension("rs").unwrap();
-    let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
+        if let Some(command) = selecting_command {
+            let ps = SyntaxSet::load_defaults_newlines();
+            let ts = ThemeSet::load_defaults();
+            // NOTE: いったんrsで指定してもMakefileやjsonのハイライトはできているのでこれでいく
+            let syntax = ps.find_syntax_by_extension("rs").unwrap();
+            let theme = &mut ts.themes["base16-ocean.dark"].clone();
 
-    let mut lines = vec![];
-    for line in LinesWithEndings::from(EXAMPLE) {
-        // LinesWithEndings enables use of newlines mode
-        let spans: Vec<Span> = h
-            .highlight_line(line, &ps)
-            .unwrap()
-            .into_iter()
-            .filter_map(|segment| into_span(segment).ok())
-            .collect();
+            // TODO: commandのファイルのfile_number行目から(file_number + row_count - 1)行数を取得する
 
-        let line = Line::from(spans);
-        lines.push(line);
-    }
+            let start = command.line_number as usize;
+            let end = start + row_count - 1;
+            let path = command.file_name.clone();
 
-    let notification = lines[1].clone();
+            let file = File::open(path).unwrap(); // TODO: remove unwrap
+            let reader = BufReader::new(file);
 
-    let block = Block::default().title(notification.clone());
-    // .style(Style::new().add_modifier(Modifier::BOLD).fg(Color::Yellow));
+            let source_lines: Vec<_> = reader
+                .lines()
+                .skip(start - 1)
+                .take(end - start + 1)
+                .collect();
 
-    let key_notes_footer = Paragraph::new(notification)
-        .wrap(Wrap { trim: true })
+            // Vec<Result<String, io::Error>>なので変換する必要がある
+            // for line in source_lines {
+            //     println!("{}", line);
+            // }
+
+            theme.settings.background = Some(SColor {
+                r: 0,
+                g: 0,
+                b: 0,
+                a: 0, // To get bg same as ratatui's background, make this transparent.
+            });
+            let mut lines = vec![];
+            for (index, line) in LinesWithEndings::from("").enumerate() {
+                theme.settings.background = Some(SColor {
+                    r: 49,
+                    g: 49,
+                    b: 49,
+                    // TODO: ここを固定ではなくcommandの行にする
+                    a: if index == 1 { 15 } else { 0 }, // To get bg same as ratatui's background, make this transparent.
+                });
+                let mut h = HighlightLines::new(syntax, theme);
+                // LinesWithEndings enables use of newlines mode
+                let spans: Vec<Span> = h
+                    .highlight_line(line, &ps)
+                    .unwrap()
+                    .into_iter()
+                    .filter_map(|segment| into_span(segment).ok())
+                    .collect();
+
+                let line = Line::from(spans);
+                lines.push(line);
+            }
+            lines
+        } else {
+            vec![]
+        }
+    };
+
+    // TODO: nvim外のterminalでも問題なく表示できてそうかチェックする
+    let (fg_color_, border_style) =
+        color_and_border_style_for_selectable(model.current_pane.is_main());
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(border_style)
+        .border_style(Style::default().fg(fg_color_))
+        .title(" ✨ Preview ")
+        .title_style(TITLE_STYLE);
+
+    let preview_widget = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
         .block(block);
-    f.render_widget(key_notes_footer, chunk);
+    f.render_widget(preview_widget, chunk);
 }
 
 fn preview_command(file_path: PathBuf, line_number: u32) -> CommandBuilder {
