@@ -178,12 +178,8 @@ pub async fn main(config: config::Config) -> Result<()> {
                 match run(&mut terminal, &mut m).await {
                     // If async closure will be stabilized, use map instead of match
                     Ok(command) => match command {
-                        Some((runner, command)) => {
-                            shutdown_terminal(&mut terminal)?;
-                            runner.show_command(&command);
-                            runner.execute(&command)
-                        }
-                        None => Ok(()), // If no command selected, show nothing.
+                        Some((runner, command)) => Ok(Some((runner, command))),
+                        None => Ok(None), // If no command selected, show nothing.
                     },
                     Err(e) => Err(e),
                 }
@@ -194,13 +190,17 @@ pub async fn main(config: config::Config) -> Result<()> {
     .catch_unwind()
     .await;
 
-    // NOTE: Strictly, if result is Ok, shutdown_terminal is called twice.
-    // But to prevent forgetting to call when result is Err, it is called here intentionally.
     shutdown_terminal(&mut terminal)?;
 
     match result {
-        Ok(usecase_result) => usecase_result,
-        Err(e) => Err(anyhow!(any_to_string::any_to_string(&*e))),
+        // some kind of command was selected
+        Ok(Ok(Some((runner, command)))) => {
+            runner.show_command(&command);
+            runner.execute(&command)
+        }
+        Ok(Ok(None)) => Ok(()), // no command was selected
+        Ok(Err(e)) => Err(e),   // Model::new or run returned Err
+        Err(e) => Err(anyhow!(any_to_string::any_to_string(&*e))), // panic occurred
     }
 }
 
