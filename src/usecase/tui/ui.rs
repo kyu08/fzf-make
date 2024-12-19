@@ -207,12 +207,12 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
                     g: 49,
                     b: 49,
                     // To get bg same as ratatui's background, make this transparent.
-                    a: if index == command.line_number as usize {
-                        15
-                    } else {
-                        0
-                    },
+                    a: if index == 0_usize { 70 } else { 0 },
                 });
+                // データではなく表示が悪いことまでわかったのでそっちの方面でデバッグする
+                // if command.args == "test" {
+                //     panic!("{:?}", source_lines);
+                // }
                 let mut h = HighlightLines::new(syntax, theme);
                 // LinesWithEndings enables use of newlines mode
                 let spans: Vec<Span> = h
@@ -243,6 +243,7 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
     let preview_widget = Paragraph::new(lines)
         .wrap(Wrap { trim: false })
         .block(block);
+    f.render_widget(Clear, chunk);
     f.render_widget(preview_widget, chunk);
 }
 
