@@ -31,7 +31,7 @@
             nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
             postInstall =
               let
-                runtimeDeps = with pkgs; [ bat gnugrep gnumake ];
+                runtimeDeps = with pkgs; [ gnugrep gnumake ];
               in
               ''
                 wrapProgram $out/bin/fzf-make \

@@ -1,6 +1,5 @@
 use super::app::{AppState, CurrentPane, Model, SelectCommandState};
 use crate::model::command;
-use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -8,11 +7,12 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
-use tui_term::widget::PseudoTerminal;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{Color as SColor, ThemeSet};
+use syntect::parsing::SyntaxSet;
+use syntect_tui::into_span;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectCommand(model) = &mut model.app_state {
@@ -73,100 +73,108 @@ fn color_and_border_style_for_selectable(
     }
 }
 
-// Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
 fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let narrow_down_commands = model.narrow_down_commands();
-
     let selecting_command =
         narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
+    let reader = match selecting_command.map(|c| File::open(c.file_name.clone())) {
+        Some(Ok(file)) => Some(BufReader::new(file)),
+        _ => None,
+    };
+    let command_row_index = selecting_command.map(|c| c.line_number as usize - 1);
+    let row_count = chunk.rows().count() - 2; // NOTE: chunk.rows().count() includes border lines
+    let start_index_and_end_index =
+        command_row_index.map(|c| determine_rendering_position(row_count, c));
+    // NOTE: due to lifetime, source_lines need to be declared outside of `let lines = {/* ... */}`
+    let source_lines: Vec<_> = match (selecting_command, start_index_and_end_index, reader) {
+        (Some(_), Some((start_index, end_index)), Some(reader)) => {
+            reader
+                .lines()
+                .skip(start_index)
+                .take(end_index - start_index + 1)
+                // HACK: workaround for https://github.com/ratatui/ratatui/issues/876
+                .map(|line| line.unwrap().replace("\t", "    "))
+                .collect()
+        }
+        _ => vec![],
+    };
+
+    let lines = {
+        match (
+            selecting_command,
+            start_index_and_end_index,
+            command_row_index,
+        ) {
+            (Some(_), Some((start_index, _)), Some(command_row_index)) => {
+                let ss = SyntaxSet::load_defaults_newlines();
+                // NOTE: extension is `rs` intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
+                let syntax = ss.find_syntax_by_extension("rs").unwrap();
+                let theme = &mut ThemeSet::load_defaults().themes["base16-ocean.dark"].clone();
+
+                let mut lines = vec![];
+                for (index, line) in source_lines.iter().enumerate() {
+                    theme.settings.background = Some(SColor {
+                        r: 94,
+                        g: 120,
+                        b: 200,
+                        // To get bg same as ratatui's background, make the line other than includes command transparent.
+                        a: if (start_index + index) == command_row_index {
+                            50
+                        } else {
+                            0
+                        },
+                    });
+                    let mut h = HighlightLines::new(syntax, theme);
+                    let mut spans: Vec<Span> = h
+                        .highlight_line(line, &ss)
+                        .unwrap()
+                        .into_iter()
+                        .filter_map(|segment| into_span(segment).ok())
+                        .collect();
+
+                    // add row number
+                    spans.insert(
+                        0,
+                        Span::styled(format!("{:5} ", start_index + index + 1), Style::default()),
+                    );
+
+                    lines.push(Line::from(spans));
+                }
+                lines
+            }
+            _ => vec![],
+        }
+    };
+
     let (fg_color_, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
-
-    let title = Line::from(" ✨ Preview ");
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(border_style)
         .border_style(Style::default().fg(fg_color_))
-        .title(title)
+        .title(" ✨ Preview ")
         .title_style(TITLE_STYLE);
-
-    if !model.get_search_area_text().is_empty() && narrow_down_commands.is_empty() {
-        f.render_widget(block, chunk);
-        return;
-    }
-
-    let pty_system = NativePtySystem::default();
-    let cmd = match selecting_command {
-        Some(command) => preview_command(command.file_name.clone(), command.line_number),
-        None => {
-            return;
-        }
-    };
-    let pair = pty_system
-        .openpty(PtySize {
-            rows: 1000,
-            cols: 1000,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .unwrap();
-    let mut child = pair.slave.spawn_command(cmd).unwrap();
-
-    drop(pair.slave);
-
-    let mut reader = pair.master.try_clone_reader().unwrap();
-    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
-
-    {
-        let parser = parser.clone();
-        std::thread::spawn(move || {
-            // Consume the output from the child
-            let mut s = String::new();
-            reader.read_to_string(&mut s).unwrap();
-            if !s.is_empty() {
-                let mut parser = parser.write().unwrap();
-                parser.process(s.as_bytes());
-            }
-        });
-    }
-
-    {
-        // Drop writer on purpose
-        let _writer = pair.master.take_writer().unwrap();
-    }
-
-    // Wait for the child to complete
-    let _child_exit_status = child.wait().unwrap();
-
-    drop(pair.master);
-
-    let binding = parser.read().unwrap();
-    let screen = binding.screen();
-
-    f.render_widget(
-        PseudoTerminal::new(screen)
-            .cursor(tui_term::widget::Cursor::default().symbol(""))
-            .block(block),
-        chunk,
-    );
+    let preview_widget = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .block(block);
+    f.render_widget(preview_widget, chunk);
 }
 
-fn preview_command(file_path: PathBuf, line_number: u32) -> CommandBuilder {
-    let cwd = std::env::current_dir().unwrap();
-    let mut cmd = CommandBuilder::new("bat");
-    cmd.cwd(cwd);
-    cmd.args([
-        file_path.to_string_lossy().to_string().as_str(),
-        "-p",
-        "--style=numbers",
-        "--color=always",
-        "--line-range",
-        (line_number.to_string() + ":").as_str(),
-        "--highlight-line",
-        line_number.to_string().as_str(),
-    ]);
-    cmd
+fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (usize, usize) {
+    let middle_row_index = if row_count % 2 == 0 {
+        row_count / 2 - 1
+    } else {
+        (row_count + 1) / 2 - 1
+    };
+
+    if command_row_index < middle_row_index {
+        (0, row_count - 1)
+    } else {
+        let start_index = command_row_index - middle_row_index;
+        let end_index = start_index + row_count - 1;
+        (start_index, end_index)
+    }
 }
 
 fn render_commands_block(
@@ -312,4 +320,26 @@ fn commands_block(
         )
         .highlight_style(Style::default().fg(FG_COLOR_SELECTED))
         .highlight_symbol("> ")
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_determine_rendering_position() {
+        // start is greater than 0(row_count is odd number)
+        let (start, end) = determine_rendering_position(5, 4);
+        assert_eq!(start, 2);
+        assert_eq!(end, 6);
+
+        // start is greater than 0(row_count is even number)
+        let (start, end) = determine_rendering_position(6, 4);
+        assert_eq!(start, 2);
+        assert_eq!(end, 7);
+
+        // start is 0
+        let (start, end) = determine_rendering_position(10, 1);
+        assert_eq!(start, 0);
+        assert_eq!(end, 9);
+    }
 }

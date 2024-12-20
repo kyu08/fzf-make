@@ -29,15 +29,9 @@
 - [yarn] Support workspace(collect all scripts which is defined in `workspaces` field in root `package.json`.)
 - **(Scheduled to be developed)** Support config file
 
-# 👓 Prerequisites
-- **(If you install fzf-make via a package manager other than Homebrew)** [bat](https://github.com/sharkdp/bat)
-    - In the future, we intend to make it work with `cat` as well, but currently it only works with `bat`.
-
 # 📦 Installation
 ## macOS
 ### Homebrew
-You don't need to install `bat` because `fzf-make` will install it automatically via Homebrew.
-
 ```sh
 # install
 brew install fzf-make
