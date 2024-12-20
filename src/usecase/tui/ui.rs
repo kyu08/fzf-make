@@ -74,8 +74,6 @@ fn color_and_border_style_for_selectable(
 }
 
 fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    // NOTE: chunk.rows().count() includes border lines
-    let row_count = chunk.rows().count() - 2;
     let narrow_down_commands = model.narrow_down_commands();
     let selecting_command =
         narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
@@ -85,8 +83,10 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
         _ => None,
     };
     let command_row_index = selecting_command.map(|c| c.line_number as usize - 1);
+    let row_count = chunk.rows().count() - 2; // NOTE: chunk.rows().count() includes border lines
     let start_index_and_end_index =
         command_row_index.map(|c| determine_rendering_position(row_count, c));
+    // NOTE: due to lifetime, source_lines need to be declared outside of `let lines = {/* ... */}`
     let source_lines: Vec<_> = match (selecting_command, start_index_and_end_index, reader) {
         (Some(_), Some((start_index, end_index)), Some(reader)) => {
             reader
