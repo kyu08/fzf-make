@@ -44,7 +44,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
             .split(main[0]);
-        render_preview_block2(model, f, preview_and_commands[0]);
+        render_preview_block(model, f, preview_and_commands[0]);
 
         let commands = Layout::default()
             .direction(Direction::Horizontal)
@@ -73,7 +73,7 @@ fn color_and_border_style_for_selectable(
     }
 }
 
-fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     // NOTE: chunk.rows().count() includes border lines
     let row_count = chunk.rows().count() - 2;
     let narrow_down_commands = model.narrow_down_commands();
@@ -94,6 +94,7 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
         // HACK: workaround for https://github.com/ratatui/ratatui/issues/876
         .map(|line| line.unwrap().replace("\t", "    "))
         .collect();
+
     let lines = {
         if let Some(_command) = selecting_command {
             let ps = SyntaxSet::load_defaults_newlines();
@@ -105,12 +106,10 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
             let mut lines = vec![];
             for (index, line) in source_lines.iter().enumerate() {
                 theme.settings.background = Some(SColor {
-                    // 0 100 200
-                    // 94 129 172
                     r: 94,
                     g: 120,
                     b: 200,
-                    // To get bg same as ratatui's background, make this transparent.
+                    // To get bg same as ratatui's background, make the line other than includes command transparent.
                     a: if (start_index + index) == command_row_index {
                         50
                     } else {
