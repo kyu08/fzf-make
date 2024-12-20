@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 use std::fs::File;
@@ -74,30 +74,26 @@ fn color_and_border_style_for_selectable(
 }
 
 fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    // 枠線も含めた行数なので実際に表示できる行数はここから2行引いた数値
-    let row_count = chunk.rows().count();
+    // NOTE: chunk.rows().count() includes border lines
+    let row_count = chunk.rows().count() - 2;
     let narrow_down_commands = model.narrow_down_commands();
     let selecting_command =
         narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
-    // TODO: refactor + 行番号で統一する
-    let command = selecting_command.unwrap();
-    let start = command.line_number as usize;
-    let end = start + row_count - 1;
-    let path = command.file_name.clone();
+    let command = selecting_command.unwrap(); // TODO: remove unwrap
 
-    let file = File::open(path).unwrap(); // TODO: remove unwrap
+    let file = File::open(command.file_name.clone()).unwrap(); // TODO: remove unwrap
     let reader = BufReader::new(file);
 
-    // commandのファイルのfile_number行目から(file_number + row_count - 1)行数を取得する
+    let command_row_index = command.line_number as usize - 1;
+    let (start_index, end_index) = determine_rendering_position(row_count, command_row_index);
     let source_lines: Vec<_> = reader
         .lines()
-        // TODO: 可能な限り中央にもってくるようにする
-        .skip(start - 1)
-        .take(end - start + 1)
+        .skip(start_index)
+        .take(end_index - start_index + 1)
+        // HACK: workaround for https://github.com/ratatui/ratatui/issues/876
         .map(|line| line.unwrap().replace("\t", "    "))
         .collect();
-    // let source_lines = source_lines.join("\n)");
     let lines = {
         if let Some(_command) = selecting_command {
             let ps = SyntaxSet::load_defaults_newlines();
@@ -110,14 +106,19 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
             let mut lines = vec![];
             for (index, line) in source_lines.iter().enumerate() {
                 theme.settings.background = Some(SColor {
-                    r: 0,
-                    g: 100,
+                    // 0 100 200
+                    // 94 129 172
+                    r: 94,
+                    g: 120,
                     b: 200,
                     // To get bg same as ratatui's background, make this transparent.
-                    a: if index == 0_usize { 70 } else { 0 },
+                    a: if (start_index + index) == command_row_index {
+                        50
+                    } else {
+                        0
+                    },
                 });
                 let mut h = HighlightLines::new(syntax, theme);
-                // LinesWithEndings enables use of newlines mode
                 let mut spans: Vec<Span> = h
                     .highlight_line(line, &ps)
                     .unwrap()
@@ -127,7 +128,7 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
 
                 spans.insert(
                     0,
-                    Span::styled(format!("{:5} ", start + index), Style::default()),
+                    Span::styled(format!("{:5} ", start_index + index + 1), Style::default()),
                 );
 
                 lines.push(Line::from(spans));
@@ -150,6 +151,22 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
         .wrap(Wrap { trim: false })
         .block(block);
     f.render_widget(preview_widget, chunk);
+}
+
+fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (usize, usize) {
+    let middle_row_index = if row_count % 2 == 0 {
+        row_count / 2 - 1
+    } else {
+        (row_count + 1) / 2 - 1
+    };
+
+    if command_row_index < middle_row_index {
+        (0, row_count - 1)
+    } else {
+        let start_index = command_row_index - middle_row_index;
+        let end_index = start_index + row_count - 1;
+        (start_index, end_index)
+    }
 }
 
 fn render_commands_block(
@@ -295,4 +312,26 @@ fn commands_block(
         )
         .highlight_style(Style::default().fg(FG_COLOR_SELECTED))
         .highlight_symbol("> ")
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_determine_rendering_position() {
+        // start is greater than 0(row_count is odd number)
+        let (start, end) = determine_rendering_position(5, 4);
+        assert_eq!(start, 2);
+        assert_eq!(end, 6);
+
+        // start is greater than 0(row_count is even number)
+        let (start, end) = determine_rendering_position(6, 4);
+        assert_eq!(start, 2);
+        assert_eq!(end, 7);
+
+        // start is 0
+        let (start, end) = determine_rendering_position(10, 1);
+        assert_eq!(start, 0);
+        assert_eq!(end, 9);
+    }
 }
