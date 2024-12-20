@@ -98,8 +98,7 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
         if let Some(_command) = selecting_command {
             let ps = SyntaxSet::load_defaults_newlines();
             let ts = ThemeSet::load_defaults();
-
-            // NOTE: いったんrsで指定してもMakefileやjsonのハイライトはできているのでこれでいく
+            // NOTE: extension is `rs` intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
             let syntax = ps.find_syntax_by_extension("rs").unwrap();
             let theme = &mut ts.themes["base16-ocean.dark"].clone();
 
@@ -126,6 +125,7 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
                     .filter_map(|segment| into_span(segment).ok())
                     .collect();
 
+                // add row number
                 spans.insert(
                     0,
                     Span::styled(format!("{:5} ", start_index + index + 1), Style::default()),
