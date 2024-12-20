@@ -80,61 +80,70 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
     let selecting_command =
         narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
-    let command = selecting_command.unwrap(); // TODO: remove unwrap
-
-    let file = File::open(command.file_name.clone()).unwrap(); // TODO: remove unwrap
-    let reader = BufReader::new(file);
-
-    let command_row_index = command.line_number as usize - 1;
-    let (start_index, end_index) = determine_rendering_position(row_count, command_row_index);
-    let source_lines: Vec<_> = reader
-        .lines()
-        .skip(start_index)
-        .take(end_index - start_index + 1)
-        // HACK: workaround for https://github.com/ratatui/ratatui/issues/876
-        .map(|line| line.unwrap().replace("\t", "    "))
-        .collect();
+    let reader = match selecting_command.map(|c| File::open(c.file_name.clone())) {
+        Some(Ok(file)) => Some(BufReader::new(file)),
+        _ => None,
+    };
+    let command_row_index = selecting_command.map(|c| c.line_number as usize - 1);
+    let start_index_and_end_index =
+        command_row_index.map(|c| determine_rendering_position(row_count, c));
+    let source_lines: Vec<_> = match (selecting_command, start_index_and_end_index, reader) {
+        (Some(_), Some((start_index, end_index)), Some(reader)) => {
+            reader
+                .lines()
+                .skip(start_index)
+                .take(end_index - start_index + 1)
+                // HACK: workaround for https://github.com/ratatui/ratatui/issues/876
+                .map(|line| line.unwrap().replace("\t", "    "))
+                .collect()
+        }
+        _ => vec![],
+    };
 
     let lines = {
-        if let Some(_command) = selecting_command {
-            let ps = SyntaxSet::load_defaults_newlines();
-            let ts = ThemeSet::load_defaults();
-            // NOTE: extension is `rs` intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
-            let syntax = ps.find_syntax_by_extension("rs").unwrap();
-            let theme = &mut ts.themes["base16-ocean.dark"].clone();
+        match (
+            selecting_command,
+            start_index_and_end_index,
+            command_row_index,
+        ) {
+            (Some(_), Some((start_index, _)), Some(command_row_index)) => {
+                let ss = SyntaxSet::load_defaults_newlines();
+                // NOTE: extension is `rs` intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
+                let syntax = ss.find_syntax_by_extension("rs").unwrap();
+                let theme = &mut ThemeSet::load_defaults().themes["base16-ocean.dark"].clone();
 
-            let mut lines = vec![];
-            for (index, line) in source_lines.iter().enumerate() {
-                theme.settings.background = Some(SColor {
-                    r: 94,
-                    g: 120,
-                    b: 200,
-                    // To get bg same as ratatui's background, make the line other than includes command transparent.
-                    a: if (start_index + index) == command_row_index {
-                        50
-                    } else {
-                        0
-                    },
-                });
-                let mut h = HighlightLines::new(syntax, theme);
-                let mut spans: Vec<Span> = h
-                    .highlight_line(line, &ps)
-                    .unwrap()
-                    .into_iter()
-                    .filter_map(|segment| into_span(segment).ok())
-                    .collect();
+                let mut lines = vec![];
+                for (index, line) in source_lines.iter().enumerate() {
+                    theme.settings.background = Some(SColor {
+                        r: 94,
+                        g: 120,
+                        b: 200,
+                        // To get bg same as ratatui's background, make the line other than includes command transparent.
+                        a: if (start_index + index) == command_row_index {
+                            50
+                        } else {
+                            0
+                        },
+                    });
+                    let mut h = HighlightLines::new(syntax, theme);
+                    let mut spans: Vec<Span> = h
+                        .highlight_line(line, &ss)
+                        .unwrap()
+                        .into_iter()
+                        .filter_map(|segment| into_span(segment).ok())
+                        .collect();
 
-                // add row number
-                spans.insert(
-                    0,
-                    Span::styled(format!("{:5} ", start_index + index + 1), Style::default()),
-                );
+                    // add row number
+                    spans.insert(
+                        0,
+                        Span::styled(format!("{:5} ", start_index + index + 1), Style::default()),
+                    );
 
-                lines.push(Line::from(spans));
+                    lines.push(Line::from(spans));
+                }
+                lines
             }
-            lines
-        } else {
-            vec![]
+            _ => vec![],
         }
     };
 
