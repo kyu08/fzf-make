@@ -1,6 +1,5 @@
 use super::app::{AppState, CurrentPane, Model, SelectCommandState};
 use crate::model::command;
-use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -10,15 +9,10 @@ use ratatui::{
 };
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color as SColor, ThemeSet};
 use syntect::parsing::SyntaxSet;
 use syntect_tui::into_span;
-use tui_term::widget::PseudoTerminal;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectCommand(model) = &mut model.app_state {
@@ -79,95 +73,14 @@ fn color_and_border_style_for_selectable(
     }
 }
 
-// Because the setup process of the terminal and render_widget function need to be done in the same scope, the call of the render_widget function is included.
-fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let narrow_down_commands = model.narrow_down_commands();
-
-    let selecting_command =
-        narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
-
-    let (fg_color_, border_style) =
-        color_and_border_style_for_selectable(model.current_pane.is_main());
-
-    let title = Line::from(" ✨ Preview ");
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(border_style)
-        .border_style(Style::default().fg(fg_color_))
-        .title(title)
-        .title_style(TITLE_STYLE);
-
-    if !model.get_search_area_text().is_empty() && narrow_down_commands.is_empty() {
-        f.render_widget(block, chunk);
-        return;
-    }
-
-    let pty_system = NativePtySystem::default();
-    let cmd = match selecting_command {
-        Some(command) => preview_command(command.file_name.clone(), command.line_number),
-        None => {
-            return;
-        }
-    };
-    let pair = pty_system
-        .openpty(PtySize {
-            rows: 1000,
-            cols: 1000,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .unwrap();
-    let mut child = pair.slave.spawn_command(cmd).unwrap();
-
-    drop(pair.slave);
-
-    let mut reader = pair.master.try_clone_reader().unwrap();
-    let parser = Arc::new(RwLock::new(vt100::Parser::new(1000, 1000, 0)));
-
-    {
-        let parser = parser.clone();
-        std::thread::spawn(move || {
-            // Consume the output from the child
-            let mut s = String::new();
-            reader.read_to_string(&mut s).unwrap();
-            if !s.is_empty() {
-                let mut parser = parser.write().unwrap();
-                parser.process(s.as_bytes());
-            }
-        });
-    }
-
-    {
-        // Drop writer on purpose
-        let _writer = pair.master.take_writer().unwrap();
-    }
-
-    // Wait for the child to complete
-    let _child_exit_status = child.wait().unwrap();
-
-    drop(pair.master);
-
-    let binding = parser.read().unwrap();
-    let screen = binding.screen();
-
-    f.render_widget(
-        PseudoTerminal::new(screen)
-            .cursor(tui_term::widget::Cursor::default().symbol(""))
-            .block(block),
-        chunk,
-    );
-}
-
 fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    f.render_widget(Clear, chunk);
     // 枠線も含めた行数なので実際に表示できる行数はここから2行引いた数値
     let row_count = chunk.rows().count();
-    // TODO: row numberを指定する必要がある
-    // commandの情報からファイルの一部を抜いてくる
     let narrow_down_commands = model.narrow_down_commands();
     let selecting_command =
         narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
+    // TODO: refactor
     let command = selecting_command.unwrap();
     let start = command.line_number as usize;
     let end = start + row_count - 1;
@@ -176,18 +89,19 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
     let file = File::open(path).unwrap(); // TODO: remove unwrap
     let reader = BufReader::new(file);
 
+    // TODO: commandのファイルのfile_number行目から(file_number + row_count - 1)行数を取得する
     let source_lines: Vec<_> = reader
         .lines()
-        // TODO: commandのファイルのfile_number行目から(file_number + row_count - 1)行数を取得する
         .skip(start - 1)
         .take(end - start + 1)
-        .map(|line| line.unwrap())
+        .map(|line| line.unwrap().replace("\t", "    "))
         .collect();
     // let source_lines = source_lines.join("\n)");
     let lines = {
-        if let Some(command) = selecting_command {
+        if let Some(_command) = selecting_command {
             let ps = SyntaxSet::load_defaults_newlines();
             let ts = ThemeSet::load_defaults();
+
             // NOTE: いったんrsで指定してもMakefileやjsonのハイライトはできているのでこれでいく
             let syntax = ps.find_syntax_by_extension("rs").unwrap();
             let theme = &mut ts.themes["base16-ocean.dark"].clone();
@@ -198,10 +112,8 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
                 b: 0,
                 a: 0, // To get bg same as ratatui's background, make this transparent.
             });
-            // let fuga = LinesWithEndings::from(&source_lines);
             let mut lines = vec![];
             for (index, line) in source_lines.iter().enumerate() {
-                // for (index, line) in fuga.enumerate() {
                 theme.settings.background = Some(SColor {
                     r: 49,
                     g: 49,
@@ -209,10 +121,6 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
                     // To get bg same as ratatui's background, make this transparent.
                     a: if index == 0_usize { 70 } else { 0 },
                 });
-                // データではなく表示が悪いことまでわかったのでそっちの方面でデバッグする
-                // if command.args == "test" {
-                //     panic!("{:?}", source_lines);
-                // }
                 let mut h = HighlightLines::new(syntax, theme);
                 // LinesWithEndings enables use of newlines mode
                 let spans: Vec<Span> = h
@@ -230,7 +138,6 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
         }
     };
 
-    // TODO: nvim外のterminalでも問題なく表示できてそうかチェックする
     let (fg_color_, border_style) =
         color_and_border_style_for_selectable(model.current_pane.is_main());
     let block = Block::default()
@@ -239,29 +146,10 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
         .border_style(Style::default().fg(fg_color_))
         .title(" ✨ Preview ")
         .title_style(TITLE_STYLE);
-
     let preview_widget = Paragraph::new(lines)
         .wrap(Wrap { trim: false })
         .block(block);
-    f.render_widget(Clear, chunk);
     f.render_widget(preview_widget, chunk);
-}
-
-fn preview_command(file_path: PathBuf, line_number: u32) -> CommandBuilder {
-    let cwd = std::env::current_dir().unwrap();
-    let mut cmd = CommandBuilder::new("bat");
-    cmd.cwd(cwd);
-    cmd.args([
-        file_path.to_string_lossy().to_string().as_str(),
-        "-p",
-        "--style=numbers",
-        "--color=always",
-        "--line-range",
-        (line_number.to_string() + ":").as_str(),
-        "--highlight-line",
-        line_number.to_string().as_str(),
-    ]);
-    cmd
 }
 
 fn render_commands_block(
