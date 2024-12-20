@@ -33,14 +33,15 @@ tool-spell-check:
 test-ci:
 	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo test
 
+TEST_HISTORY_DIR = ./test_data/history
 .PHONY: test
 test: tool-test
-	rm -rf $(TEST_DIR)
+	rm -rf $(TEST_HISTORY_DIR)
 	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo nextest run
 
 .PHONY: test-watch
 test-watch: tool-test
-	rm -rf $(TEST_DIR)
+	rm -rf $(TEST_HISTORY_DIR)
 	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo watch -x "nextest run"
 
 .PHONY: bump-fzf-make-version
@@ -62,7 +63,7 @@ spell-check: tool-spell-check
 	typos
 
 DEBUG_EXECUTABLE = ./target/debug/fzf-make
-TEST_DIR = ./test_data/history
+TEST_DIR = ./test_data
 .PHONY: run-in-test-data
 run-in-test-data: build
 	@TARGET_DIR=$$(find $(TEST_DIR) -type d -maxdepth 1 | fzf) && \
