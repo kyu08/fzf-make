@@ -80,7 +80,7 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
     let selecting_command =
         narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
-    // TODO: refactor
+    // TODO: refactor + 行番号で統一する
     let command = selecting_command.unwrap();
     let start = command.line_number as usize;
     let end = start + row_count - 1;
@@ -89,9 +89,10 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
     let file = File::open(path).unwrap(); // TODO: remove unwrap
     let reader = BufReader::new(file);
 
-    // TODO: commandのファイルのfile_number行目から(file_number + row_count - 1)行数を取得する
+    // commandのファイルのfile_number行目から(file_number + row_count - 1)行数を取得する
     let source_lines: Vec<_> = reader
         .lines()
+        // TODO: 可能な限り中央にもってくるようにする
         .skip(start - 1)
         .take(end - start + 1)
         .map(|line| line.unwrap().replace("\t", "    "))
@@ -106,29 +107,28 @@ fn render_preview_block2(model: &SelectCommandState, f: &mut Frame, chunk: ratat
             let syntax = ps.find_syntax_by_extension("rs").unwrap();
             let theme = &mut ts.themes["base16-ocean.dark"].clone();
 
-            theme.settings.background = Some(SColor {
-                r: 0,
-                g: 0,
-                b: 0,
-                a: 0, // To get bg same as ratatui's background, make this transparent.
-            });
             let mut lines = vec![];
             for (index, line) in source_lines.iter().enumerate() {
                 theme.settings.background = Some(SColor {
-                    r: 49,
-                    g: 49,
-                    b: 49,
+                    r: 0,
+                    g: 100,
+                    b: 200,
                     // To get bg same as ratatui's background, make this transparent.
                     a: if index == 0_usize { 70 } else { 0 },
                 });
                 let mut h = HighlightLines::new(syntax, theme);
                 // LinesWithEndings enables use of newlines mode
-                let spans: Vec<Span> = h
+                let mut spans: Vec<Span> = h
                     .highlight_line(line, &ps)
                     .unwrap()
                     .into_iter()
                     .filter_map(|segment| into_span(segment).ok())
                     .collect();
+
+                spans.insert(
+                    0,
+                    Span::styled(format!("{:5} ", start + index), Style::default()),
+                );
 
                 lines.push(Line::from(spans));
             }
