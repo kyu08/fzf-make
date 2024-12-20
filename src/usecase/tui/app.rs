@@ -602,10 +602,6 @@ impl SelectCommandState<'_> {
         self.commands_list_state.select(Some(0));
     }
 
-    pub fn get_search_area_text(&self) -> String {
-        self.search_text_area.0.lines().join("")
-    }
-
     pub fn get_latest_command(&self) -> Option<&command::Command> {
         self.history.first()
     }
