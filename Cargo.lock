@@ -486,7 +486,6 @@ dependencies = [
  "syntect-tui",
  "tokio",
  "toml",
- "tui-term",
  "tui-textarea",
  "update-informer",
  "uuid",
@@ -1786,16 +1785,6 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
-
-[[package]]
-name = "tui-term"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72af159125ce32b02ceaced6cffae6394b0e6b6dfd4dc164a6c59a2db9b3c0b0"
-dependencies = [
- "ratatui",
- "vt100",
-]
 
 [[package]]
 name = "tui-textarea"
