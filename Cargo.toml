@@ -31,3 +31,4 @@ update-informer = { version = "1.1", default-features = true, features = ["githu
 futures = "0.3"
 syntect-tui = "3.0.5"
 syntect = "5.2.0"
+tempfile = "3.14.0"

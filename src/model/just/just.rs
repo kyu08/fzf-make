@@ -66,8 +66,37 @@ impl Just {
             .map(|_| command)
     }
 
-    fn find_justfile(current_dir: PathBuf) -> Result<PathBuf> {
-        // current_dirの親ディレクトリを取得
-        // justfileが見つかるまで子 -> 親方向に走査
+    fn find_justfile(current_dir: &PathBuf) -> Option<PathBuf> {
+        // TODO: current_dirの親ディレクトリを取得
+        // NOTE: current_dirは絶対パス
+        let parent_dir = current_dir.ancestors()?;
+        // TODO: justfileが見つかるまで子 -> 親方向に走査
+        None
+    }
+}
+
+mod test {
+    use super::*;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_find_justfile() {
+        // cleanup before test
+        let test_root_dir = std::env::temp_dir().join("fzf_make_test");
+        // error will be returned if the directory does not exist.
+        let _ = std::fs::remove_dir_all(&test_root_dir);
+        std::fs::create_dir(&test_root_dir).unwrap();
+
+        // justfile exists in temp_dir
+        {
+            let random_dir_name = Uuid::new_v4().to_string();
+            let test_target_dir = test_root_dir.join(random_dir_name);
+            std::fs::create_dir(&test_target_dir).unwrap();
+
+            let justfile_path = test_target_dir.join("justfile");
+            std::fs::File::create(&justfile_path).unwrap();
+            assert_eq!(Just::find_justfile(&test_target_dir), Some(justfile_path));
+        }
+        let _ = std::fs::remove_dir_all(&test_root_dir);
     }
 }
