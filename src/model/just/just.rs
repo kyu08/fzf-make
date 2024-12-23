@@ -12,7 +12,7 @@ pub struct Just {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // パーサーの設定
     let mut parser = Parser::new();
-    parser.set_language(tree_sitter_just::language())?;
+    parser.set_language(&tree_sitter_just::language())?;
 
     // Justfile の内容を読み込む
     let source_code = fs::read_to_string("Justfile")?;
@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // レシピ定義を検索するクエリ
     let query = Query::new(
-        tree_sitter_just::language(),
+        &tree_sitter_just::language(),
         "(recipe_definition name: (identifier) @recipe_name)",
     )?;
     let mut cursor = QueryCursor::new();

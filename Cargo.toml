@@ -32,5 +32,6 @@ futures = "0.3"
 syntect-tui = "3.0.5"
 syntect = "5.2.0"
 tempfile = "3.14.0"
-tree-sitter-just = "=0.0.1"
-tree-sitter = "=0.19.5"
+tree-sitter = "=0.24.4"
+# The latest tag is 0.1.0 and it is old now. So, I am using the latest commit hash.
+tree-sitter-just = { git = "https://github.com/IndianBoy42/tree-sitter-just.git", rev = "f6d2930" }
