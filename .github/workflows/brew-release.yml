@@ -1,8 +1,8 @@
 name: Brew Release
 on:
   push:
-    tags: 'v*'
-
+    tags: 
+      - 'v*'
 jobs:
   release:
     name: Bump Homebrew formula
@@ -12,7 +12,7 @@ jobs:
         if: ${{ !contains(github.ref, '-') }} # skip prereleases
         with:
           formula-name: fzf-make
-          base-branch: main
+          base-branch: master
           commit-message: |
             {{formulaName}} {{version}}
 
