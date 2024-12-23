@@ -1,12 +1,44 @@
 use crate::model::command;
 use anyhow::{anyhow, bail, Result};
-use std::{path::PathBuf, process};
+use std::{fs, path::PathBuf, process};
+use tree_sitter::{Parser, Query, QueryCursor};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Just {
     path: PathBuf,
     commands: Vec<command::Command>,
 }
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // パーサーの設定
+    let mut parser = Parser::new();
+    parser.set_language(tree_sitter_just::language())?;
+
+    // Justfile の内容を読み込む
+    let source_code = fs::read_to_string("Justfile")?;
+    let tree = parser.parse(&source_code, None).unwrap();
+
+    // レシピ定義を検索するクエリ
+    let query = Query::new(
+        tree_sitter_just::language(),
+        "(recipe_definition name: (identifier) @recipe_name)",
+    )?;
+    let mut cursor = QueryCursor::new();
+
+    // クエリを実行してレシピ名と行番号を取得
+    let matches = cursor.matches(&query, tree.root_node(), source_code.as_bytes());
+    for match_ in matches {
+        for capture in match_.captures {
+            let node = capture.node;
+            let start_line = node.start_position().row + 1;
+            let recipe_name = &source_code[node.byte_range()];
+            println!("Recipe '{}' at line {}", recipe_name, start_line);
+        }
+    }
+
+    Ok(())
+}
+
 impl Just {
     pub fn new(current_dir: PathBuf) -> Result<Just> {
         let justfile_path = match Just::find_justfile(current_dir.clone()) {
