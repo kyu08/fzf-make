@@ -108,8 +108,10 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
         ) {
             (Some(_), Some((start_index, _)), Some(command_row_index)) => {
                 let ss = SyntaxSet::load_defaults_newlines();
-                // NOTE: extension is `rs` intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
-                let syntax = ss.find_syntax_by_extension("rs").unwrap();
+                // HACK: `ml` is specified intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
+                // lua, hs: `-- .*` is highlighted (but URL is highlighted with background color))
+                // md: no background color, but highlighted words are not so many
+                let syntax = ss.find_syntax_by_extension("ml").unwrap();
                 let theme = &mut ThemeSet::load_defaults().themes["base16-ocean.dark"].clone();
 
                 let mut lines = vec![];
