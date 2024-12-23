@@ -1,6 +1,11 @@
 export
 RUST_BACKTRACE=full
 
+.PHONY: curl-test
+curl-test:
+	curl -sSL https://example.com | jq
+
+# https://example.com
 .PHONY: ci
 ci: # Checks same as CI
 	@make test-ci; \
@@ -43,6 +48,11 @@ test: tool-test
 test-watch: tool-test
 	rm -rf $(TEST_HISTORY_DIR)
 	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo watch -x "nextest run"
+
+.PHONY: run-watch
+run-watch:
+	rm -rf $(TEST_HISTORY_DIR)
+	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo watch -x "run"
 
 .PHONY: bump-fzf-make-version
 bump-fzf-make-version: tool-bump-version
