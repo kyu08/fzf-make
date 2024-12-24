@@ -1,6 +1,11 @@
 use crate::model::command;
 use anyhow::{anyhow, bail, Result};
-use std::{fs, path::PathBuf, process};
+use std::{
+    fs::{self, File},
+    io::{BufWriter, Write},
+    path::PathBuf,
+    process,
+};
 use tree_sitter::{Parser, Query, QueryCursor};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -9,43 +14,57 @@ pub struct Just {
     commands: Vec<command::Command>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // パーサーの設定
-    let mut parser = Parser::new();
-    parser.set_language(&tree_sitter_just::language())?;
-
-    // Justfile の内容を読み込む
-    let source_code = fs::read_to_string("Justfile")?;
-    let tree = parser.parse(&source_code, None).unwrap();
-
-    // レシピ定義を検索するクエリ
-    let query = Query::new(
-        &tree_sitter_just::language(),
-        "(recipe_definition name: (identifier) @recipe_name)",
-    )?;
-    let mut cursor = QueryCursor::new();
-
-    // クエリを実行してレシピ名と行番号を取得
-    let matches = cursor.matches(&query, tree.root_node(), source_code.as_bytes());
-    for match_ in matches {
-        for capture in match_.captures {
-            let node = capture.node;
-            let start_line = node.start_position().row + 1;
-            let recipe_name = &source_code[node.byte_range()];
-            println!("Recipe '{}' at line {}", recipe_name, start_line);
-        }
-    }
-
-    Ok(())
-}
-
 impl Just {
     pub fn new(current_dir: PathBuf) -> Result<Just> {
         let justfile_path = match Just::find_justfile(current_dir.clone()) {
             Some(path) => path,
             None => bail!("justfile not found"),
         };
+
         // tree-sitterを使ってパースしつつ行番号を取得
+        let mut parser = Parser::new();
+        parser.set_language(&tree_sitter_just::language())?;
+
+        // Justfile の内容を読み込む
+        let source_code = fs::read_to_string(&justfile_path)?; // justfile_pathを使用
+        let tree = parser.parse(&source_code, None).unwrap();
+
+        // source_file
+        // ├── shebang
+        // │   └── language
+        // └── recipe (複数)
+        //     ├── recipe_header
+        //     │   └── name: identifier
+        //     ├── recipe_body
+        //     │   └── recipe_line
+        //     │       └── text
+        //     └── attribute (オプション)
+        //         ├── identifier
+        //         └── argument: string
+        let mut debug_file = BufWriter::new(File::create("debug.txt")?);
+        for recipes_and_its_siblings in tree.root_node().named_children(&mut tree.walk()) {
+            if recipes_and_its_siblings.kind() == "recipe" {
+                for recipe_child in recipes_and_its_siblings.named_children(&mut tree.walk()) {
+                    if recipe_child.kind() == "recipe_header" {
+                        let recipe_name = &source_code[recipe_child.byte_range()];
+                        let _ = writeln!(
+                            debug_file,
+                            "_{}@{}_",
+                            recipe_name,
+                            recipes_and_its_siblings.start_position().row,
+                        );
+                    } else if recipe_child.kind() == "attribute" {
+                        let attr_name = &source_code[recipe_child.byte_range()];
+                        if attr_name == "[private]\n" {
+                            let _ = write!(debug_file, "{}", attr_name);
+                        }
+                    }
+                }
+            }
+        }
+
+        debug_file.flush()?;
+
         bail!("not implemented")
     }
 
