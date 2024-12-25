@@ -70,7 +70,7 @@ impl History {
 }
 
 /// In the history file, the command has only the name of the command and the runner type though
-/// command::Command has `file_name`, `line_number` as well.
+/// command::Command has `file_path`, `line_number` as well.
 /// Because its file name where it's defined and line number is variable.
 /// So we search them every time fzf-make is launched instead of storing them in the history file.
 #[derive(PartialEq, Clone, Debug)]
@@ -130,7 +130,7 @@ mod test {
                 command_to_append: command::Command {
                     runner_type: runner_type::RunnerType::Make,
                     args: "append".to_string(),
-                    file_name: PathBuf::from("Makefile"),
+                    file_path: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
                 after: Histories {
@@ -172,7 +172,7 @@ mod test {
                 command_to_append: command::Command {
                     runner_type: runner_type::RunnerType::Make,
                     args: "append".to_string(),
-                    file_name: PathBuf::from("Makefile"),
+                    file_path: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
                 after: Histories {

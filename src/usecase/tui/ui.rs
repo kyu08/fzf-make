@@ -78,7 +78,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
     let selecting_command =
         narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
-    let reader = match selecting_command.map(|c| File::open(c.file_name.clone())) {
+    let reader = match selecting_command.map(|c| File::open(c.file_path.clone())) {
         Some(Ok(file)) => Some(BufReader::new(file)),
         _ => None,
     };
