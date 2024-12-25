@@ -52,6 +52,7 @@ impl Yarn {
     pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Yarn> {
         Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME)?;
         if Iterator::find(&mut cwd_file_names.iter(), |&f| f == YARN_LOCKFILE_NAME).is_some() {
+            // package.json and yarn.lock exist
             match Yarn::collect_workspace_scripts(current_dir.clone()) {
                 Some(commands) => {
                     return Some(Yarn {
@@ -62,8 +63,9 @@ impl Yarn {
                 None => return None,
             }
         }
+        // package.json exists, but yarn.lock does not exist
 
-        // executed in child packages of yarn workspaces || using an other package manager
+        // executed in child packages of yarn workspaces || not in yarn workspace (including using an other package manager)
         match Self::get_yarn_version() {
             Some(yarn_version) => {
                 let workspace_output = match yarn_version {
@@ -80,7 +82,7 @@ impl Yarn {
                 };
                 let workspace_output = match workspace_output {
                     Ok(output) => output,
-                    Err(_) => return None,
+                    Err(_) => return None, //  failed to run above command
                 };
 
                 // If `yarn workspaces (info|list) --json` returns non-zero status code, it means that the current directory is not a yarn workspace.
@@ -88,6 +90,7 @@ impl Yarn {
                     return None;
                 }
 
+                // not in yarn workspace, but has a package.json
                 Self::collect_scripts_in_package_json(current_dir.clone()).map(|commands| Yarn {
                     path: current_dir,
                     commands,
