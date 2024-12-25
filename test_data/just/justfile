@@ -5,22 +5,22 @@ test:
 
 [group: 'misc']
 run:
-  cargo run
+  echo run
 
 [group: 'misc']
 build:
-  cargo build
+  echo build
 
 [group: 'misc']
-fmt:
-  cargo fmt --all
+fmt : # https://example.com
+  echo fmt
 
 [group: 'misc']
-[private]
+[private ]
 fmt-private:
-  cargo fmt --all
+  echo fmt
 
 # everyone's favorite animate paper clip
 [group: 'check']
 clippy:
-  cargo clippy --all --all-targets --all-features -- --deny warnings
+  echo clippy
