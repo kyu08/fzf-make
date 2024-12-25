@@ -64,6 +64,8 @@ nix run nixpkgs#fzf-make
 ### Cargo
 ```sh
 cargo install --locked fzf-make
+# Or build from HEAD
+cargo install  --git  https://github.com/kyu08/fzf-make/
 ```
 
 # 💡 Usage
