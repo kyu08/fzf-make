@@ -3,11 +3,13 @@ use crate::{
     err::any_to_string,
     file::toml,
     model::{
-        command,
+        command::{self, Command},
         histories::{self},
         js_package_manager::js_package_manager_main as js,
-        make::make_main,
-        runner, runner_type,
+        just::just_main::Just,
+        make::make_main::Make,
+        runner::{self, Runner},
+        runner_type,
     },
 };
 use anyhow::{anyhow, bail, Result};
@@ -90,7 +92,7 @@ impl Model<'_> {
     fn get_histories(
         current_working_directory: PathBuf,
         runners: Vec<runner::Runner>,
-    ) -> Vec<command::Command> {
+    ) -> Vec<Command> {
         let histories = toml::Histories::into(toml::Histories::get_history());
 
         for history in histories.histories {
@@ -377,14 +379,16 @@ impl SelectCommandState<'_> {
         let runners = {
             let mut runners = vec![];
 
-            if let Ok(f) = make_main::Make::new(current_dir.clone()) {
-                runners.push(runner::Runner::MakeCommand(f));
+            if let Ok(f) = Make::new(current_dir.clone()) {
+                runners.push(Runner::MakeCommand(f));
             };
             if let Some(js_package_manager) = js::get_js_package_manager_runner(current_dir.clone())
             {
-                runners.push(runner::Runner::JsPackageManager(js_package_manager));
+                runners.push(Runner::JsPackageManager(js_package_manager));
             };
-
+            if let Ok(just) = Just::new(current_dir.clone()) {
+                runners.push(Runner::Just(just));
+            };
             runners
         };
 
@@ -643,7 +647,7 @@ impl SelectCommandState<'_> {
         SelectCommandState {
             current_dir: env::current_dir().unwrap(),
             current_pane: CurrentPane::Main,
-            runners: vec![runner::Runner::MakeCommand(make_main::Make::new_for_test())],
+            runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
             commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
             history: vec![
@@ -911,7 +915,7 @@ mod test {
                 message: Some(Message::ExecuteCommand),
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
-                        runner::Runner::MakeCommand(make_main::Make::new_for_test()),
+                        runner::Runner::MakeCommand(Make::new_for_test()),
                         command::Command::new(
                             runner_type::RunnerType::Make,
                             "target0".to_string(),
@@ -933,7 +937,7 @@ mod test {
                 message: Some(Message::ExecuteCommand),
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
-                        runner::Runner::MakeCommand(make_main::Make::new_for_test()),
+                        runner::Runner::MakeCommand(Make::new_for_test()),
                         command::Command::new(
                             runner_type::RunnerType::Make,
                             "history1".to_string(),
