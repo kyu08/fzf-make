@@ -1,5 +1,6 @@
 use super::{
-    command, js_package_manager::js_package_manager_main as js, just::just, make::make_main,
+    command, js_package_manager::js_package_manager_main::JsPackageManager, just::just_main::Just,
+    make::make_main::Make,
 };
 use anyhow::Result;
 use colored::Colorize;
@@ -7,9 +8,9 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Runner {
-    MakeCommand(make_main::Make),
-    JsPackageManager(js::JsPackageManager),
-    Just(just::Just),
+    MakeCommand(Make),
+    JsPackageManager(JsPackageManager),
+    Just(Just),
 }
 
 impl Runner {
