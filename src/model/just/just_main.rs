@@ -24,9 +24,14 @@ impl Just {
         };
         let source_code = fs::read_to_string(&justfile_path)?;
 
+        let commands = match Just::parse_justfile(justfile_path.clone(), source_code) {
+            Some(c) => c,
+            None => return Err(anyhow!("failed to parse justfile")),
+        };
+
         Ok(Just {
-            path: justfile_path.clone(),
-            commands: Just::parse_justfile(justfile_path, source_code).unwrap_or_default(),
+            path: justfile_path,
+            commands,
         })
     }
 
