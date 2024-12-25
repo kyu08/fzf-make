@@ -5,7 +5,7 @@ use std::{fmt, path::PathBuf};
 pub struct Command {
     pub runner_type: runner_type::RunnerType,
     pub args: String,
-    pub file_name: PathBuf,
+    pub file_path: PathBuf,
     pub line_number: u32,
 }
 
@@ -13,13 +13,13 @@ impl Command {
     pub fn new(
         runner_type: runner_type::RunnerType,
         args: String,
-        file_name: PathBuf,
+        file_path: PathBuf,
         line_number: u32,
     ) -> Self {
         Self {
             runner_type,
             args,
-            file_name,
+            file_path,
             line_number,
         }
     }

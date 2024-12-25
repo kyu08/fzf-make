@@ -654,19 +654,19 @@ impl SelectCommandState<'_> {
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
                     args: "history0".to_string(),
-                    file_name: PathBuf::from("Makefile"),
+                    file_path: PathBuf::from("Makefile"),
                     line_number: 1,
                 },
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
                     args: "history1".to_string(),
-                    file_name: PathBuf::from("Makefile"),
+                    file_path: PathBuf::from("Makefile"),
                     line_number: 4,
                 },
                 command::Command {
                     runner_type: runner_type::RunnerType::Make,
                     args: "history2".to_string(),
-                    file_name: PathBuf::from("Makefile"),
+                    file_path: PathBuf::from("Makefile"),
                     line_number: 7,
                 },
             ],
