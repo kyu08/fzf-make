@@ -108,7 +108,7 @@ impl Just {
         // At first, it seemed that it is more readable if we can use `Node#children_by_field_name` instead of `Node#children`.
         // But the elements wanted to be extracted here do not have names.
         // So we had no choice but to use `Node#children`.
-        for recipes_and_its_siblings in tree.root_node().named_children(&mut tree.walk()) {
+        'recipe: for recipes_and_its_siblings in tree.root_node().named_children(&mut tree.walk()) {
             if recipes_and_its_siblings.kind() == "recipe" {
                 let mut should_skip = false;
                 recipes_and_its_siblings
@@ -128,15 +128,15 @@ impl Just {
                         // `recipe_name` has format like: `fmt:`
                         let recipe_name = &source_code[recipe_child.byte_range()];
                         let trimmed = recipe_name.split(":").collect::<Vec<&str>>();
-                        match trimmed.first() {
-                            Some(r) => commands.push(Command::new(
+                        if let Some(r) = trimmed.first() {
+                            commands.push(Command::new(
                                 RunnerType::Just,
                                 r.trim().to_string(),
                                 justfile_path.clone(),
                                 recipe_child.start_position().row as u32 + 1,
-                            )),
-                            None => continue,
+                            ))
                         };
+                        continue 'recipe;
                     };
                 }
             }
