@@ -104,6 +104,10 @@ impl Just {
         //         ├── identifier
         //         └── argument: string
         let mut commands = vec![];
+
+        // At first, it seemed that it is more readable if we can use `Node#children_by_field_name` instead of `Node#children`.
+        // But the elements wanted to be extracted here do not have names.
+        // So we had no choice but to use `Node#children`.
         for recipes_and_its_siblings in tree.root_node().named_children(&mut tree.walk()) {
             if recipes_and_its_siblings.kind() == "recipe" {
                 let mut should_skip = false;
