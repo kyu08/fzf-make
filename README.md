@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
 
-`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting **make**, **pnpm**, **yarn**.
+`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just).
 
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
 [![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
@@ -14,13 +14,14 @@
 </div>
 
 # 🛠️ Features
-- Select and execute a make target or (pnpm | yarn) scripts using fuzzy-finder with a preview window by running `fzf-make`!
+- Select and execute a make target or (pnpm | yarn) scripts or just recipe using fuzzy-finder with a preview window by running `fzf-make`!
 - Execute the last executed command(By running `fzf-make --repeat`.)
 - Command history
-- Support make, pnpm, yarn. **Scheduled to be developed: npm.** 
+- Support [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just). **Scheduled to be developed: npm.** 
 - [make] Support `include` directive
 - [pnpm] Support workspace(collect scripts all of `package.json` in the directory where fzf-make is launched.)
 - [yarn] Support workspace(collect all scripts which is defined in `workspaces` field in root `package.json`.)
+- [just] Support execution inside of directory of justfile.
 - **(Scheduled to be developed)** Support config file
 
 # 📦 Installation
@@ -67,13 +68,13 @@ cargo install --locked fzf-make
 
 # 💡 Usage
 ## Run target using fuzzy finder
-1. Execute `fzf-make` in the directory you want to run make target, or (pnpm | yarn) scripts.
+1. Execute `fzf-make` in the directory you want to run make target, or (pnpm | yarn) scripts or just recipe.
 1. Select command you want to execute. If you type some characters, the list will be filtered.
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-main.png"> 
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-type-characters.png"> 
 
 ## Run target from history
-1. Execute `fzf-make` in the directory you want to run make target, or (pnpm | yarn) scripts.
+1. Execute `fzf-make` in the directory you want to run make target, or (pnpm | yarn) scripts or just recipe.(For just, we support execution inside of directory of justfile.)
 1. Press `Tab` to move to the history pane.
 1. Select command you want to execute.
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-history.png"> 
@@ -87,6 +88,9 @@ Whether `package.json` and `pnpm-lock.yaml` are in the current directory.
 
 ### yarn
 Whether `package.json` and `yarn.lock` are in the current directory.
+
+### just
+Whether `justfile` or `.justfile` are in the current directory or ancestor directories. If the lower cased file name matches `justfile` or `.justfile`, it is treat as a justfile. (e.g. `justFile` or `.JustFile` are also valid.)
 
 ## Commands Supported
 | Command                                                   | Description                                   |
