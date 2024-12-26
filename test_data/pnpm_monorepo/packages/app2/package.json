@@ -1,11 +1,11 @@
 {
-  "name": "app4",
+  "name": "app2",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "echo build app4",
-    "start": "echo start app4",
-    "test": "echo test app4"
+    "build": "echo build app2",
+    "start": "echo start app2",
+    "test": "echo test app2"
   },
   "devDependencies": {
     "@babel/cli": "7.12.10"
