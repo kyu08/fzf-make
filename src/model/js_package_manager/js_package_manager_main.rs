@@ -1,12 +1,11 @@
 use super::{pnpm, yarn};
-use crate::{file::path_to_content, model::command};
+use crate::model::command;
 use anyhow::Result;
 use codespan::Files;
 use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
 
 pub(super) const METADATA_FILE_NAME: &str = "package.json";
-pub(super) const IGNORE_DIR_NAMES: [&str; 5] = ["node_modules", ".git", ".cache", ".next", ".yarn"];
 const METADATA_PACKAGE_NAME_KEY: &str = "name";
 const METADATA_COMMAND_KEY: &str = "scripts";
 
@@ -47,22 +46,8 @@ impl JsPackageManager {
     }
 
     fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
-        let metadata_file_path = &PathBuf::from(METADATA_FILE_NAME);
-
-        // TODO: refactor same as yarn
-        // Search for lockfile to identify the package manager.
-        for file_name in file_names.clone() {
-            if pnpm::Pnpm::use_pnpm(&file_name) {
-                if let Ok(c) = path_to_content::path_to_content(metadata_file_path) {
-                    if let Some(result) = JsPackageManager::parse_package_json(&c) {
-                        return Some(JsPackageManager::JsPnpm(pnpm::Pnpm::new(
-                            current_dir.clone(),
-                            result.1,
-                        )));
-                    }
-                }
-                break;
-            }
+        if let Some(r) = pnpm::Pnpm::new(current_dir.clone(), file_names.clone()) {
+            return Some(JsPackageManager::JsPnpm(r));
         }
 
         if let Some(r) = yarn::Yarn::new(current_dir, file_names) {

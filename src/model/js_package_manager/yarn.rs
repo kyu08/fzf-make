@@ -86,6 +86,7 @@ impl Yarn {
                 };
 
                 // If `yarn workspaces (info|list) --json` returns non-zero status code, it means that the current directory is not a yarn workspace.
+                // TODO: 別にこのパターン(workspaceとは関係ないがpackage.jsonがあるパターン)でも実行できていいのでは？
                 if !workspace_output.status.success() {
                     return None;
                 }
@@ -219,7 +220,7 @@ impl Yarn {
             .arg("info")
             .arg("--json")
             .output()?;
-        /* output is like:
+        /* Example output:
         yarn workspaces v1.22.22
         {
           "app1": {
@@ -239,7 +240,7 @@ impl Yarn {
 
         let workspaces_json = {
             let output = String::from_utf8(output.stdout)?;
-            /* output is like:
+            /* Example output:
             "yarn workspaces v1.22.22\n{\n  \"app1\": {\n    \"location\": \"packages/app\",\n    \"workspaceDependencies\": [],\n    \"mismatchedWorkspaceDependencies\": []\n  }\n}\nDone in 0.01s.\n"
             */
 

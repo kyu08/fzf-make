@@ -4,7 +4,7 @@ use crate::{
     model::{command, runner_type},
 };
 use anyhow::{anyhow, Result};
-use std::{fs, path::PathBuf, process};
+use std::{path::PathBuf, process};
 
 const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
 
@@ -46,17 +46,115 @@ impl Pnpm {
         }
     }
 
-    pub fn new(current_dir: PathBuf, result: Vec<(String, String, u32)>) -> Pnpm {
-        let commands = Pnpm::scripts_to_commands(current_dir.clone(), result);
-
-        Pnpm {
-            path: current_dir,
-            commands,
+    pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Pnpm> {
+        Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME)?;
+        if Iterator::find(&mut cwd_file_names.iter(), |&f| f == PNPM_LOCKFILE_NAME).is_some() {
+            // package.json and lock file exist. It means that the current directory is a root of the workspace, or single package.
+            Pnpm::collect_workspace_scripts(current_dir.clone()).map(|commands| Pnpm {
+                path: current_dir,
+                commands,
+            })
+        } else {
+            // package.json exists, but lock file does not exist
+            Self::collect_scripts_in_package_json(current_dir.clone()).map(|commands| Pnpm {
+                path: current_dir,
+                commands,
+            })
         }
     }
 
-    pub fn use_pnpm(file_name: &str) -> bool {
-        file_name == PNPM_LOCKFILE_NAME
+    // scripts_to_commands collects all scripts by following steps:
+    // 1. Collect scripts defined in package.json in the current directory(which fzf-make is launched)
+    // 2. Collect the paths of all `package.json` in the workspace.
+    // 3. Collect all scripts defined in given `package.json` paths.
+    fn collect_workspace_scripts(current_dir: PathBuf) -> Option<Vec<command::Command>> {
+        // Collect scripts defined in package.json in the current directory(which fzf-make is launched)
+        let mut result = match Self::collect_scripts_in_package_json(current_dir.clone()) {
+            Some(result) => result,
+            None => return None,
+        };
+
+        // Collect the paths of all `package.json` in the workspace.
+        let workspace_package_json_paths = match Self::get_workspace_packages() {
+            Ok(result) => result,
+            Err(_) => return None,
+        };
+
+        // Collect all scripts defined in given `package.json` paths.
+        for path in workspace_package_json_paths {
+            if let Ok(c) = path_to_content::path_to_content(&path) {
+                if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
+                    for (key, _, line_number) in parsing_result {
+                        result.push(command::Command::new(
+                            runner_type::RunnerType::JsPackageManager(
+                                runner_type::JsPackageManager::Pnpm,
+                            ),
+                            // pnpm executes workspace script following format: `pnpm --filter {package_name} {script_name}`
+                            // e.g. `pnpm --filter app4 build`
+                            format!("--filter {} {}", name.clone(), key.as_str()),
+                            path.clone(),
+                            line_number,
+                        ));
+                    }
+                }
+            };
+        }
+
+        Some(result)
+    }
+
+    fn collect_scripts_in_package_json(current_dir: PathBuf) -> Option<Vec<command::Command>> {
+        let parsed_scripts_part_of_package_json =
+            match path_to_content::path_to_content(&current_dir.join(js::METADATA_FILE_NAME)) {
+                Ok(c) => match js::JsPackageManager::parse_package_json(&c) {
+                    Some(result) => result.1,
+                    None => return None,
+                },
+                Err(_) => return None,
+            };
+
+        Some(
+            parsed_scripts_part_of_package_json
+                .iter()
+                .map(|(key, _value, line_number)| {
+                    command::Command::new(
+                        runner_type::RunnerType::JsPackageManager(
+                            runner_type::JsPackageManager::Pnpm,
+                        ),
+                        key.to_string(),
+                        current_dir.clone().join(js::METADATA_FILE_NAME),
+                        *line_number,
+                    )
+                })
+                .collect(),
+        )
+    }
+
+    // get_workspaces_list parses the result of `pnpm -r exec pwd` and return path of `package.json` of each package.
+    fn get_workspace_packages() -> Result<Vec<PathBuf>> {
+        let output = process::Command::new("pnpm")
+            .arg("-r")
+            .arg("exec")
+            .arg("pwd")
+            .output()?;
+        /* Example output:
+            /Users/kyu08/code/fzf-make/test_data/pnpm_monorepo/packages/app1
+            /Users/kyu08/code/fzf-make/test_data/pnpm_monorepo/packages/app2
+            /Users/kyu08/code/fzf-make/test_data/pnpm_monorepo/packages/app3
+            /Users/kyu08/code/fzf-make/test_data/pnpm_monorepo/packages/sub_packages/sub_app
+        */
+
+        let output = String::from_utf8(output.stdout)?;
+        // split by newline to remove unnecessary lines.
+        let lines = output
+            .split("\n")
+            .filter(|l| !l.is_empty())
+            .collect::<Vec<&str>>();
+
+        Ok(lines
+            .iter()
+            .map(|line| PathBuf::from(line).join(js::METADATA_FILE_NAME))
+            .collect())
     }
 
     pub fn to_commands(&self) -> Vec<command::Command> {
@@ -65,166 +163,5 @@ impl Pnpm {
 
     fn get_command(&self, command: command::Command) -> Option<&command::Command> {
         self.commands.iter().find(|c| **c == command)
-    }
-
-    fn scripts_to_commands(
-        current_dir: PathBuf,
-        parsed_scripts_part_of_package_json: Vec<(String, String, u32)>,
-    ) -> Vec<command::Command> {
-        let mut result = vec![];
-
-        for (key, value, line_number) in parsed_scripts_part_of_package_json {
-            if Pnpm::use_filtering(value.clone()) {
-                continue;
-            }
-
-            // scripts defined in package.json in the current directory(which fzf-make is launched)
-            result.push(command::Command::new(
-                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
-                key,
-                current_dir.clone().join(js::METADATA_FILE_NAME),
-                line_number,
-            ));
-        }
-
-        /*
-        ## Following is the implementation for collecting all scripts in the workspace.
-
-        - If `packages` in pnpm-workspace.yaml is specified, the target to search is only under the directory defined at `packages`. If not specified, all package.json's are the target.
-        - Nested packages do not need to be considered. `./packages/app1/package.json` needs to be considered, but `./packages/app1/app2/package.json` does not need to be considered.
-        - If the directory structure is as follows, the examples will be shown in `entries_cwd.for_each(...)`.
-            ${CWD}
-            ├── package.json
-            ├── node_modules/
-            ├── packages
-            │   ├── app1
-            │   │   ├── package.json
-            │   │   └── node_modules
-            │   ├── app2
-            │   │   ├── package.json
-            │   │   └── node_modules
-            │   └── app3
-            │       ├── package.json
-            │       └── node_modules
-            ├── pnpm-lock.yaml
-            └── pnpm-workspace.yaml
-        */
-
-        // TODO: consider `packages` in pnpm-workspace.yaml.
-        // TODO: Add UT. (Use temp dir or fzf-make/test_data. If use temp dir, the test will be
-        // robust, but troublesome for now...😇)
-        let skip = |entry: &fs::DirEntry| {
-            entry.path().is_file()
-                || js::IGNORE_DIR_NAMES
-                    .iter()
-                    .any(|name| entry.file_name() == *name)
-        };
-        // In above example, entries_cwd: package.json, node_modules, packages/, pnpm-lock.yaml, pnpm-workspace.yaml
-        let entries_cwd = fs::read_dir(current_dir.clone()).unwrap();
-        entries_cwd.for_each(|entry_cwd| {
-            if let Ok(entry_in_cwd) = entry_cwd {
-                if skip(&entry_in_cwd) {
-                    return;
-                }
-                // In above example, entries_of_packages: app1, app2, app3.
-                let entries_of_packages = fs::read_dir(entry_in_cwd.path()).unwrap();
-                entries_of_packages.for_each(|entry_package| {
-                    if let Ok(entry_package) = entry_package {
-                        if skip(&entry_package) {
-                            return;
-                        }
-
-                        // In above example, entries_of_each_package: package.json, node_modules.
-                        let entries_of_each_package = fs::read_dir(entry_package.path()).unwrap();
-                        entries_of_each_package.for_each(|entry_of_each_package| {
-                            if let Ok(entry_of_each_package) = entry_of_each_package {
-                                if entry_of_each_package.file_name() != js::METADATA_FILE_NAME {
-                                    return;
-                                }
-                                if let Ok(c) =
-                                    path_to_content::path_to_content(&entry_of_each_package.path())
-                                {
-                                    if let Some((name, parsing_result)) =
-                                        js::JsPackageManager::parse_package_json(&c)
-                                    {
-                                        for (key, _, line_number) in parsing_result {
-                                            result.push(command::Command::new(
-                                                runner_type::RunnerType::JsPackageManager(
-                                                    runner_type::JsPackageManager::Pnpm,
-                                                ),
-                                                format!(
-                                                    "--filter {} {}",
-                                                    name.clone(),
-                                                    key.as_str()
-                                                ),
-                                                entry_of_each_package.path(),
-                                                line_number,
-                                            ));
-                                        }
-                                    }
-                                };
-                            }
-                        });
-                    }
-                });
-            }
-        });
-
-        result
-    }
-
-    // is filtering used
-    // ref: https://pnpm.io/filtering
-    fn use_filtering(value: String) -> bool {
-        let args = value.split_whitespace().collect::<Vec<&str>>();
-
-        let start_with_pnpm = args.first().map(|arg| *arg == "pnpm").unwrap_or(false);
-        let has_filtering_or_dir_option = args
-            .iter()
-            .any(|arg| *arg == "-F" || *arg == "--filter" || *arg == "-C" || *arg == "--dir");
-        let has_run = args.iter().any(|arg| *arg == "run");
-
-        start_with_pnpm && has_filtering_or_dir_option && !has_run
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn test_is_filtering() {
-        assert_eq!(true, Pnpm::use_filtering("pnpm -F app1".to_string()));
-        assert_eq!(true, Pnpm::use_filtering("pnpm --filter app2".to_string()));
-        assert_eq!(
-            true,
-            Pnpm::use_filtering("pnpm -r --filter app3".to_string())
-        );
-        assert_eq!(
-            true,
-            Pnpm::use_filtering("pnpm -C packages/app3".to_string())
-        );
-        assert_eq!(
-            true,
-            Pnpm::use_filtering("pnpm --dir packages/app3".to_string())
-        );
-        assert_eq!(true, Pnpm::use_filtering("pnpm -F".to_string()));
-        assert_eq!(true, Pnpm::use_filtering("pnpm --filter".to_string()));
-        assert_eq!(
-            false,
-            Pnpm::use_filtering("pnpm -C packages/app1 run test".to_string())
-        );
-        assert_eq!(
-            false,
-            Pnpm::use_filtering("pnpm --filter app1 run test".to_string())
-        );
-        assert_eq!(false, Pnpm::use_filtering("yarn run".to_string()));
-        assert_eq!(false, Pnpm::use_filtering("pnpm run".to_string()));
-        assert_eq!(false, Pnpm::use_filtering("pnpm -r hoge".to_string()));
-        assert_eq!(
-            false,
-            Pnpm::use_filtering("yarn -r --filter app3".to_string())
-        );
     }
 }
