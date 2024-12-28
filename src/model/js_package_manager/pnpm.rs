@@ -84,7 +84,10 @@ impl Pnpm {
         for path in workspace_package_json_paths {
             if let Ok(c) = path_to_content::path_to_content(&path) {
                 if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
-                    for (key, _, line_number) in parsing_result {
+                    for (key, value, line_number) in parsing_result {
+                        if Self::use_filtering(value) {
+                            continue;
+                        }
                         result.push(command::Command::new(
                             runner_type::RunnerType::JsPackageManager(
                                 runner_type::JsPackageManager::Pnpm,
@@ -116,6 +119,7 @@ impl Pnpm {
         Some(
             parsed_scripts_part_of_package_json
                 .iter()
+                .filter(|(_, value, _)| !Self::use_filtering(value.to_string()))
                 .map(|(key, _value, line_number)| {
                     command::Command::new(
                         runner_type::RunnerType::JsPackageManager(
@@ -163,5 +167,60 @@ impl Pnpm {
 
     fn get_command(&self, command: command::Command) -> Option<&command::Command> {
         self.commands.iter().find(|c| **c == command)
+    }
+
+    // ref: https://pnpm.io/filtering
+    fn use_filtering(value: String) -> bool {
+        let args = value.split_whitespace().collect::<Vec<&str>>();
+
+        let start_with_pnpm = args.first().map(|arg| *arg == "pnpm").unwrap_or(false);
+        let has_filtering_or_dir_option = args
+            .iter()
+            .any(|arg| *arg == "-F" || *arg == "--filter" || *arg == "-C" || *arg == "--dir");
+        let has_run = args.iter().any(|arg| *arg == "run");
+
+        start_with_pnpm && has_filtering_or_dir_option && !has_run
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_is_filtering() {
+        assert_eq!(true, Pnpm::use_filtering("pnpm -F app1".to_string()));
+        assert_eq!(true, Pnpm::use_filtering("pnpm -F \"app1\"".to_string()));
+        assert_eq!(true, Pnpm::use_filtering("pnpm --filter app2".to_string()));
+        assert_eq!(
+            true,
+            Pnpm::use_filtering("pnpm -r --filter app3".to_string())
+        );
+        assert_eq!(
+            true,
+            Pnpm::use_filtering("pnpm -C packages/app3".to_string())
+        );
+        assert_eq!(
+            true,
+            Pnpm::use_filtering("pnpm --dir packages/app3".to_string())
+        );
+        assert_eq!(true, Pnpm::use_filtering("pnpm -F".to_string()));
+        assert_eq!(true, Pnpm::use_filtering("pnpm --filter".to_string()));
+        assert_eq!(
+            false,
+            Pnpm::use_filtering("pnpm -C packages/app1 run test".to_string())
+        );
+        assert_eq!(
+            false,
+            Pnpm::use_filtering("pnpm --filter app1 run test".to_string())
+        );
+        assert_eq!(false, Pnpm::use_filtering("yarn run".to_string()));
+        assert_eq!(false, Pnpm::use_filtering("pnpm run".to_string()));
+        assert_eq!(false, Pnpm::use_filtering("pnpm -r hoge".to_string()));
+        assert_eq!(
+            false,
+            Pnpm::use_filtering("yarn -r --filter app3".to_string())
+        );
     }
 }
