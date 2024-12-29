@@ -92,7 +92,6 @@ impl Pnpm {
             if let Ok(c) = path_to_content::path_to_content(&path) {
                 if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
                     for (key, value, line_number) in parsing_result {
-                        // TODO: ここのロジックを共通化したい
                         if Self::use_filtering(value) {
                             continue;
                         }
