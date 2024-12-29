@@ -11,9 +11,15 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+
+        cargoLock = {
+          lockFile = ./Cargo.lock;
+          outputHashes = {
+            "tree-sitter-just-0.0.1" = "sha256-b42Dt9X0gaHjywb+tahNomGfDx9ZP+roudNuGAhKYPg=";
+          };
+        };
       in
-      rec
-      {
+      rec {
         devShells.default = pkgs.mkShell {
           inputsFrom = [ packages.fzf-make ];
           packages = with pkgs; [ rustfmt clippy typos ];
@@ -23,10 +29,10 @@
         packages = rec {
           fzf-make = pkgs.rustPlatform.buildRustPackage {
             pname = "fzf-make";
-            inherit (cargoTOML.package) version;
-
             src = ./.;
-            cargoLock.lockFile = ./Cargo.lock;
+
+            inherit (cargoTOML.package) version;
+            inherit cargoLock;
 
             nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
             postInstall =
