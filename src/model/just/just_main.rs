@@ -1,5 +1,6 @@
 use crate::model::{
     command::{self, Command},
+    file_util,
     runner_type::RunnerType,
 };
 use anyhow::{anyhow, bail, Result};
@@ -80,16 +81,7 @@ impl Just {
     }
 
     fn find_justfile(current_dir: PathBuf) -> Option<PathBuf> {
-        for path in current_dir.ancestors() {
-            for entry in PathBuf::from(path).read_dir().unwrap() {
-                let entry = entry.unwrap();
-                let file_name = entry.file_name().to_string_lossy().to_lowercase();
-                if file_name == "justfile" || file_name == ".justfile" {
-                    return Some(entry.path());
-                }
-            }
-        }
-        None
+        file_util::find_file_in_ancestors(current_dir, vec!["justfile", ".justfile"])
     }
 
     fn parse_justfile(justfile_path: PathBuf, source_code: String) -> Option<Vec<Command>> {
