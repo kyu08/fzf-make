@@ -96,13 +96,23 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
 
     let lines = {
         match (selecting_command, start_index_and_end_index, command_row_index) {
-            (Some(_), Some((start_index, _)), Some(command_row_index)) => {
+            (Some(cmd), Some((start_index, _)), Some(command_row_index)) => {
                 let ss = SyntaxSet::load_defaults_newlines();
-                // HACK: `ml` is specified intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
-                // lua, hs: `-- .*` is highlighted (but URL is highlighted with background color))
-                // md: no background color, but highlighted words are not so many
-                let syntax = ss.find_syntax_by_extension("ml").unwrap();
-                let theme = &mut ThemeSet::load_defaults().themes["base16-ocean.dark"].clone();
+
+                let mut ts = ThemeSet::load_defaults();
+                ts.add_from_folder("./").unwrap();
+
+                use crate::model::runner_type::RunnerType;
+
+                let file_extension = match cmd.runner_type {
+                    RunnerType::Make => "mk",
+                    RunnerType::Just => "just",
+                    RunnerType::JsPackageManager(_) => "json"
+                };
+
+                let theme = &mut ts.themes["OneHalfDark"].clone();
+                let syntax = ss.find_syntax_by_extension(file_extension)
+                    .unwrap_or_else(|| ss.find_syntax_plain_text());
 
                 let mut lines = vec![];
                 for (index, line) in source_lines.iter().enumerate() {
