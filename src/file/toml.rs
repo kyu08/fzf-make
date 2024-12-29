@@ -133,17 +133,11 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
         Ok(_) => {
             // When testing
             let cwd = env::current_dir().unwrap();
-            Some((
-                cwd.join(PathBuf::from("test_data/history")),
-                HISTORY_FILE_NAME.to_string(),
-            ))
+            Some((cwd.join(PathBuf::from("test_data/history")), HISTORY_FILE_NAME.to_string()))
         }
-        _ => home_dir().map(|home_dir| {
-            (
-                home_dir.join(PathBuf::from(".config/fzf-make")),
-                HISTORY_FILE_NAME.to_string(),
-            )
-        }),
+        _ => {
+            home_dir().map(|home_dir| (home_dir.join(PathBuf::from(".config/fzf-make")), HISTORY_FILE_NAME.to_string()))
+        }
     }
 }
 
@@ -161,11 +155,7 @@ pub fn create_or_update_history_file(
         fs::create_dir_all(history_directory_path.clone())?;
     }
     let mut history_file = File::create(history_directory_path.join(history_file_name))?;
-    history_file.write_all(
-        toml::to_string(&Histories::from(new_history))
-            .unwrap()
-            .as_bytes(),
-    )?;
+    history_file.write_all(toml::to_string(&Histories::from(new_history)).unwrap().as_bytes())?;
     history_file.flush()?;
 
     Ok(())
@@ -264,18 +254,15 @@ args = "app1 build"
                 content: r#"
                 "#
                 .to_string(),
-                expect: Err(anyhow::anyhow!("TOML parse error at line 1, column 1\n  |\n1 | \n  | ^\nmissing field `histories`\n")),
+                expect: Err(anyhow::anyhow!(
+                    "TOML parse error at line 1, column 1\n  |\n1 | \n  | ^\nmissing field `histories`\n"
+                )),
             },
         ];
 
         for case in cases {
             match case.expect {
-                Ok(v) => assert_eq!(
-                    v,
-                    parse_history(case.content).unwrap(),
-                    "\nFailed: 🚨{:?}🚨\n",
-                    case.title,
-                ),
+                Ok(v) => assert_eq!(v, parse_history(case.content).unwrap(), "\nFailed: 🚨{:?}🚨\n", case.title,),
                 Err(e) => assert_eq!(
                     e.to_string(),
                     parse_history(case.content).unwrap_err().to_string(),

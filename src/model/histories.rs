@@ -24,10 +24,7 @@ impl Histories {
 
         // Update the whole histories.
         let mut new_histories = self.histories.clone();
-        match new_histories
-            .iter()
-            .position(|h| h.path == new_history.path)
-        {
+        match new_histories.iter().position(|h| h.path == new_history.path) {
             Some(index) => {
                 new_histories[index] = new_history;
             }
@@ -199,8 +196,7 @@ mod test {
         for case in cases {
             assert_eq!(
                 case.after,
-                case.before
-                    .append(path_to_append.clone(), case.command_to_append),
+                case.before.append(path_to_append.clone(), case.command_to_append),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             )
@@ -421,12 +417,7 @@ mod test {
         ];
 
         for case in cases {
-            assert_eq!(
-                case.after,
-                case.before.append(case.command_to_append),
-                "\nFailed: 🚨{:?}🚨\n",
-                case.title,
-            )
+            assert_eq!(case.after, case.before.append(case.command_to_append), "\nFailed: 🚨{:?}🚨\n", case.title,)
         }
     }
 }

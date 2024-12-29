@@ -1,11 +1,11 @@
 {
-  "name": "project",
+  "name": "sub_app",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "echo build",
-    "start": "echo start",
-    "test": "echo test"
+    "build_sub_app": "echo build sub_app",
+    "start_sub_app": "echo start sub_app",
+    "test_sub_app": "echo test sub_app"
   },
   "devDependencies": {
     "@babel/cli": "7.12.10"

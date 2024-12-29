@@ -52,6 +52,7 @@ impl Yarn {
     pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Yarn> {
         Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME)?;
         if Iterator::find(&mut cwd_file_names.iter(), |&f| f == YARN_LOCKFILE_NAME).is_some() {
+            // package.json and yarn.lock exist
             match Yarn::collect_workspace_scripts(current_dir.clone()) {
                 Some(commands) => {
                     return Some(Yarn {
@@ -62,8 +63,9 @@ impl Yarn {
                 None => return None,
             }
         }
+        // package.json exists, but yarn.lock does not exist
 
-        // executed in child packages of yarn workspaces || using an other package manager
+        // executed in child packages of yarn workspaces || not in yarn workspace (including using an other package manager)
         match Self::get_yarn_version() {
             Some(yarn_version) => {
                 let workspace_output = match yarn_version {
@@ -80,7 +82,7 @@ impl Yarn {
                 };
                 let workspace_output = match workspace_output {
                     Ok(output) => output,
-                    Err(_) => return None,
+                    Err(_) => return None, //  failed to run above command
                 };
 
                 // If `yarn workspaces (info|list) --json` returns non-zero status code, it means that the current directory is not a yarn workspace.
@@ -88,6 +90,7 @@ impl Yarn {
                     return None;
                 }
 
+                // not in yarn workspace, but has a package.json
                 Self::collect_scripts_in_package_json(current_dir.clone()).map(|commands| Yarn {
                     path: current_dir,
                     commands,
@@ -127,14 +130,10 @@ impl Yarn {
         if let Ok(workspace_package_json_paths) = package_json_in_workspace {
             for path in workspace_package_json_paths {
                 if let Ok(c) = path_to_content::path_to_content(&path) {
-                    if let Some((name, parsing_result)) =
-                        js::JsPackageManager::parse_package_json(&c)
-                    {
+                    if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
                         for (key, _, line_number) in parsing_result {
                             result.push(command::Command::new(
-                                runner_type::RunnerType::JsPackageManager(
-                                    runner_type::JsPackageManager::Yarn,
-                                ),
+                                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
                                 // yarn executes workspace script following format: `yarn workspace {package_name} {script_name}`
                                 // e.g. `yarn workspace app4 build`
                                 format!("workspace {} {}", name.clone(), key.as_str()),
@@ -165,9 +164,7 @@ impl Yarn {
                 .iter()
                 .map(|(key, _value, line_number)| {
                     command::Command::new(
-                        runner_type::RunnerType::JsPackageManager(
-                            runner_type::JsPackageManager::Yarn,
-                        ),
+                        runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
                         key.to_string(),
                         current_dir.clone().join(js::METADATA_FILE_NAME),
                         *line_number,
@@ -216,7 +213,7 @@ impl Yarn {
             .arg("info")
             .arg("--json")
             .output()?;
-        /* output is like:
+        /* Example output:
         yarn workspaces v1.22.22
         {
           "app1": {
@@ -236,7 +233,7 @@ impl Yarn {
 
         let workspaces_json = {
             let output = String::from_utf8(output.stdout)?;
-            /* output is like:
+            /* Example output:
             "yarn workspaces v1.22.22\n{\n  \"app1\": {\n    \"location\": \"packages/app\",\n    \"workspaceDependencies\": [],\n    \"mismatchedWorkspaceDependencies\": []\n  }\n}\nDone in 0.01s.\n"
             */
 

@@ -69,10 +69,7 @@ impl Make {
     }
 
     fn get_command(&self, command: command::Command) -> Option<command::Command> {
-        self.to_commands()
-            .iter()
-            .find(|c| **c == command)
-            .map(|_| command)
+        self.to_commands().iter().find(|c| **c == command).map(|_| command)
     }
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
@@ -131,24 +128,9 @@ impl Make {
             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
             include_files: vec![],
             targets: Targets(vec![
-                command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "target0".to_string(),
-                    PathBuf::from(""),
-                    1,
-                ),
-                command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "target1".to_string(),
-                    PathBuf::from(""),
-                    4,
-                ),
-                command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "target2".to_string(),
-                    PathBuf::from(""),
-                    7,
-                ),
+                command::Command::new(runner_type::RunnerType::Make, "target0".to_string(), PathBuf::from(""), 1),
+                command::Command::new(runner_type::RunnerType::Make, "target1".to_string(), PathBuf::from(""), 4),
+                command::Command::new(runner_type::RunnerType::Make, "target2".to_string(), PathBuf::from(""), 7),
             ]),
         }
     }
@@ -255,10 +237,7 @@ mod test {
 
             assert_eq!(
                 expect,
-                Make::specify_makefile_name(
-                    env::current_dir().unwrap(),
-                    tmp_dir.to_string_lossy().to_string()
-                ),
+                Make::specify_makefile_name(env::current_dir().unwrap(), tmp_dir.to_string_lossy().to_string()),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
@@ -289,33 +268,13 @@ mod test {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
                     targets: Targets(vec![
-                        command::Command::new(
-                            runner_type::RunnerType::Make,
-                            "test".to_string(),
-                            PathBuf::from(""),
-                            4,
-                        ),
-                        command::Command::new(
-                            runner_type::RunnerType::Make,
-                            "run".to_string(),
-                            PathBuf::from(""),
-                            4,
-                        ),
+                        command::Command::new(runner_type::RunnerType::Make, "test".to_string(), PathBuf::from(""), 4),
+                        command::Command::new(runner_type::RunnerType::Make, "run".to_string(), PathBuf::from(""), 4),
                     ]),
                 },
                 expect: vec![
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "test".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "run".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
+                    command::Command::new(runner_type::RunnerType::Make, "test".to_string(), PathBuf::from(""), 4),
+                    command::Command::new(runner_type::RunnerType::Make, "run".to_string(), PathBuf::from(""), 4),
                 ],
             },
             Case {
@@ -378,80 +337,25 @@ mod test {
                         },
                     ],
                     targets: Targets(vec![
-                        command::Command::new(
-                            runner_type::RunnerType::Make,
-                            "test1".to_string(),
-                            PathBuf::from(""),
-                            4,
-                        ),
-                        command::Command::new(
-                            runner_type::RunnerType::Make,
-                            "run1".to_string(),
-                            PathBuf::from(""),
-                            4,
-                        ),
+                        command::Command::new(runner_type::RunnerType::Make, "test1".to_string(), PathBuf::from(""), 4),
+                        command::Command::new(runner_type::RunnerType::Make, "run1".to_string(), PathBuf::from(""), 4),
                     ]),
                 },
                 expect: vec![
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "test1".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "run1".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "test2".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "run2".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "test2-1".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "run2-1".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "test3".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
-                    command::Command::new(
-                        runner_type::RunnerType::Make,
-                        "run3".to_string(),
-                        PathBuf::from(""),
-                        4,
-                    ),
+                    command::Command::new(runner_type::RunnerType::Make, "test1".to_string(), PathBuf::from(""), 4),
+                    command::Command::new(runner_type::RunnerType::Make, "run1".to_string(), PathBuf::from(""), 4),
+                    command::Command::new(runner_type::RunnerType::Make, "test2".to_string(), PathBuf::from(""), 4),
+                    command::Command::new(runner_type::RunnerType::Make, "run2".to_string(), PathBuf::from(""), 4),
+                    command::Command::new(runner_type::RunnerType::Make, "test2-1".to_string(), PathBuf::from(""), 4),
+                    command::Command::new(runner_type::RunnerType::Make, "run2-1".to_string(), PathBuf::from(""), 4),
+                    command::Command::new(runner_type::RunnerType::Make, "test3".to_string(), PathBuf::from(""), 4),
+                    command::Command::new(runner_type::RunnerType::Make, "run3".to_string(), PathBuf::from(""), 4),
                 ],
             },
         ];
 
         for case in cases {
-            assert_eq!(
-                case.expect,
-                case.makefile.to_commands(),
-                "\nFailed: 🚨{:?}🚨\n",
-                case.title,
-            )
+            assert_eq!(case.expect, case.makefile.to_commands(), "\nFailed: 🚨{:?}🚨\n", case.title,)
         }
     }
 
@@ -522,34 +426,22 @@ mod test {
             Case {
                 title: "include one.mk two.mk",
                 line: "include one.mk two.mk",
-                expect: Some(vec![
-                    Path::new("one.mk").to_path_buf(),
-                    Path::new("two.mk").to_path_buf(),
-                ]),
+                expect: Some(vec![Path::new("one.mk").to_path_buf(), Path::new("two.mk").to_path_buf()]),
             },
             Case {
                 title: "-include",
                 line: "-include one.mk two.mk",
-                expect: Some(vec![
-                    Path::new("one.mk").to_path_buf(),
-                    Path::new("two.mk").to_path_buf(),
-                ]),
+                expect: Some(vec![Path::new("one.mk").to_path_buf(), Path::new("two.mk").to_path_buf()]),
             },
             Case {
                 title: "sinclude",
                 line: "sinclude hoge.mk fuga.mk",
-                expect: Some(vec![
-                    Path::new("hoge.mk").to_path_buf(),
-                    Path::new("fuga.mk").to_path_buf(),
-                ]),
+                expect: Some(vec![Path::new("hoge.mk").to_path_buf(), Path::new("fuga.mk").to_path_buf()]),
             },
             Case {
                 title: " include one.mk two.mk",
                 line: " include one.mk two.mk",
-                expect: Some(vec![
-                    Path::new("one.mk").to_path_buf(),
-                    Path::new("two.mk").to_path_buf(),
-                ]),
+                expect: Some(vec![Path::new("one.mk").to_path_buf(), Path::new("two.mk").to_path_buf()]),
             },
             Case {
                 title: "include one.mk two.mk(tab is not allowed)",
@@ -564,10 +456,7 @@ mod test {
             Case {
                 title: "include comment",
                 line: "include one.mk two.mk # three.mk",
-                expect: Some(vec![
-                    Path::new("one.mk").to_path_buf(),
-                    Path::new("two.mk").to_path_buf(),
-                ]),
+                expect: Some(vec![Path::new("one.mk").to_path_buf(), Path::new("two.mk").to_path_buf()]),
             },
             Case {
                 title: "# include one.mk two.mk # three.mk",

@@ -31,12 +31,8 @@ impl RunnerType {
         match runner {
             runner::Runner::MakeCommand(_) => RunnerType::Make,
             runner::Runner::JsPackageManager(js) => match js {
-                js::JsPackageManager::JsPnpm(_) => {
-                    RunnerType::JsPackageManager(JsPackageManager::Pnpm)
-                }
-                js::JsPackageManager::JsYarn(_) => {
-                    RunnerType::JsPackageManager(JsPackageManager::Yarn)
-                }
+                js::JsPackageManager::JsPnpm(_) => RunnerType::JsPackageManager(JsPackageManager::Pnpm),
+                js::JsPackageManager::JsYarn(_) => RunnerType::JsPackageManager(JsPackageManager::Yarn),
             },
             runner::Runner::Just(_) => RunnerType::Just,
         }
@@ -88,12 +84,8 @@ impl Serialize for RunnerType {
     {
         match self {
             RunnerType::Make => serializer.serialize_str("make"),
-            RunnerType::JsPackageManager(JsPackageManager::Pnpm) => {
-                serializer.serialize_str("pnpm")
-            }
-            RunnerType::JsPackageManager(JsPackageManager::Yarn) => {
-                serializer.serialize_str("yarn")
-            }
+            RunnerType::JsPackageManager(JsPackageManager::Pnpm) => serializer.serialize_str("pnpm"),
+            RunnerType::JsPackageManager(JsPackageManager::Yarn) => serializer.serialize_str("yarn"),
             RunnerType::Just => serializer.serialize_str("just"),
         }
     }
