@@ -5,10 +5,6 @@
   "scripts": {
     "build": "echo build",
     "start": "echo start",
-    "app1": "pnpm -F \"app1\"",
-    "test-app1": "pnpm -F \"app1\" run test",
-    "app2": "pnpm -F \"app2\"",
-    "app4": "pnpm -C packages/app4",
     "test": "echo test"
   },
   "devDependencies": {
