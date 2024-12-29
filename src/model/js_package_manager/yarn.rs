@@ -86,7 +86,6 @@ impl Yarn {
                 };
 
                 // If `yarn workspaces (info|list) --json` returns non-zero status code, it means that the current directory is not a yarn workspace.
-                // TODO: 別にこのパターン(workspaceとは関係ないがpackage.jsonがあるパターン)でも実行できていいのでは？
                 if !workspace_output.status.success() {
                     return None;
                 }

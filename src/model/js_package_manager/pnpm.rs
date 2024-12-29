@@ -1,7 +1,7 @@
 use super::js_package_manager_main as js;
 use crate::{
     file::path_to_content,
-    model::{command, runner_type},
+    model::{command, file_util, runner_type},
 };
 use anyhow::{anyhow, Result};
 use std::{path::PathBuf, process};
@@ -55,11 +55,17 @@ impl Pnpm {
                 commands,
             })
         } else {
-            // package.json exists, but lock file does not exist
-            Self::collect_scripts_in_package_json(current_dir.clone()).map(|commands| Pnpm {
-                path: current_dir,
-                commands,
-            })
+            if file_util::find_file_in_ancestors(current_dir.clone(), vec![PNPM_LOCKFILE_NAME])
+                .is_some()
+            {
+                // package.json exists, but lock file does not exist
+                Self::collect_scripts_in_package_json(current_dir.clone()).map(|commands| Pnpm {
+                    path: current_dir,
+                    commands,
+                })
+            } else {
+                None
+            }
         }
     }
 
