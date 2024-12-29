@@ -10,12 +10,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn new(
-        runner_type: runner_type::RunnerType,
-        args: String,
-        file_path: PathBuf,
-        line_number: u32,
-    ) -> Self {
+    pub fn new(runner_type: runner_type::RunnerType, args: String, file_path: PathBuf, line_number: u32) -> Self {
         Self {
             runner_type,
             args,

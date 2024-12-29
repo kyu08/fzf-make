@@ -8,6 +8,7 @@ on:
       - 'src/**.rs'
       - Cargo.toml
       - Cargo.lock
+      - rustfmt.toml
 
 env:
   CARGO_TERM_COLOR: always

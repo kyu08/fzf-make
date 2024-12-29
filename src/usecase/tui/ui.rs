@@ -57,15 +57,11 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
 
 const FG_COLOR_SELECTED: ratatui::style::Color = Color::Rgb(161, 220, 156);
 const FG_COLOR_NOT_SELECTED: ratatui::style::Color = Color::DarkGray;
-const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType =
-    ratatui::widgets::BorderType::Thick;
-const BORDER_STYLE_NOT_SELECTED: ratatui::widgets::block::BorderType =
-    ratatui::widgets::BorderType::Plain;
+const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Thick;
+const BORDER_STYLE_NOT_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Plain;
 const TITLE_STYLE: ratatui::style::Style = Style::new().add_modifier(Modifier::BOLD);
 
-fn color_and_border_style_for_selectable(
-    is_selected: bool,
-) -> (Color, ratatui::widgets::block::BorderType) {
+fn color_and_border_style_for_selectable(is_selected: bool) -> (Color, ratatui::widgets::block::BorderType) {
     if is_selected {
         (FG_COLOR_SELECTED, BORDER_STYLE_SELECTED)
     } else {
@@ -75,8 +71,7 @@ fn color_and_border_style_for_selectable(
 
 fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let narrow_down_commands = model.narrow_down_commands();
-    let selecting_command =
-        narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
+    let selecting_command = narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
     let reader = match selecting_command.map(|c| File::open(c.file_path.clone())) {
         Some(Ok(file)) => Some(BufReader::new(file)),
@@ -84,8 +79,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
     };
     let command_row_index = selecting_command.map(|c| c.line_number as usize - 1);
     let row_count = chunk.rows().count() - 2; // NOTE: chunk.rows().count() includes border lines
-    let start_index_and_end_index =
-        command_row_index.map(|c| determine_rendering_position(row_count, c));
+    let start_index_and_end_index = command_row_index.map(|c| determine_rendering_position(row_count, c));
     // NOTE: due to lifetime, source_lines need to be declared outside of `let lines = {/* ... */}`
     let source_lines: Vec<_> = match (selecting_command, start_index_and_end_index, reader) {
         (Some(_), Some((start_index, end_index)), Some(reader)) => {
@@ -101,11 +95,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
     };
 
     let lines = {
-        match (
-            selecting_command,
-            start_index_and_end_index,
-            command_row_index,
-        ) {
+        match (selecting_command, start_index_and_end_index, command_row_index) {
             (Some(_), Some((start_index, _)), Some(command_row_index)) => {
                 let ss = SyntaxSet::load_defaults_newlines();
                 // HACK: `ml` is specified intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
@@ -136,10 +126,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                         .collect();
 
                     // add row number
-                    spans.insert(
-                        0,
-                        Span::styled(format!("{:5} ", start_index + index + 1), Style::default()),
-                    );
+                    spans.insert(0, Span::styled(format!("{:5} ", start_index + index + 1), Style::default()));
 
                     lines.push(Line::from(spans));
                 }
@@ -149,17 +136,14 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
         }
     };
 
-    let (fg_color_, border_style) =
-        color_and_border_style_for_selectable(model.current_pane.is_main());
+    let (fg_color_, border_style) = color_and_border_style_for_selectable(model.current_pane.is_main());
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(border_style)
         .border_style(Style::default().fg(fg_color_))
         .title(" ✨ Preview ")
         .title_style(TITLE_STYLE);
-    let preview_widget = Paragraph::new(lines)
-        .wrap(Wrap { trim: false })
-        .block(block);
+    let preview_widget = Paragraph::new(lines).wrap(Wrap { trim: false }).block(block);
     f.render_widget(preview_widget, chunk);
 }
 
@@ -179,17 +163,9 @@ fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (
     }
 }
 
-fn render_commands_block(
-    model: &mut SelectCommandState,
-    f: &mut Frame,
-    chunk: ratatui::layout::Rect,
-) {
+fn render_commands_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
-        commands_block(
-            " 📢 Commands ",
-            model.narrow_down_commands(),
-            model.current_pane.is_main(),
-        ),
+        commands_block(" 📢 Commands ", model.narrow_down_commands(), model.current_pane.is_main()),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
         &mut model.commands_list_state,
@@ -197,8 +173,7 @@ fn render_commands_block(
 }
 
 fn render_input_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let (fg_color, border_style) =
-        color_and_border_style_for_selectable(model.current_pane.is_main());
+    let (fg_color, border_style) = color_and_border_style_for_selectable(model.current_pane.is_main());
 
     let block = Block::default()
         .title(" 🔍 Search ")
@@ -218,19 +193,11 @@ fn render_input_block(model: &mut SelectCommandState, f: &mut Frame, chunk: rata
     f.render_widget(&model.search_text_area.0, chunk);
 }
 
-fn render_notification_block(
-    model: &mut SelectCommandState,
-    f: &mut Frame,
-    chunk: ratatui::layout::Rect,
-) {
+fn render_notification_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let text = match &model.latest_version {
         Some(has_update) => {
             if format!("v{}", env!("CARGO_PKG_VERSION")) != *has_update {
-                format!(
-                    "📦️ A new release is available! v{} → {}.",
-                    env!("CARGO_PKG_VERSION"),
-                    has_update.as_str()
-                )
+                format!("📦️ A new release is available! v{} → {}.", env!("CARGO_PKG_VERSION"), has_update.as_str())
             } else {
                 "".to_string()
             }
@@ -243,9 +210,7 @@ fn render_notification_block(
         .padding(ratatui::widgets::Padding::new(1, 0, 1, 1))
         .style(Style::new().add_modifier(Modifier::BOLD).fg(Color::Yellow));
 
-    let key_notes_footer = Paragraph::new(notification)
-        .wrap(Wrap { trim: true })
-        .block(block);
+    let key_notes_footer = Paragraph::new(notification).wrap(Wrap { trim: true }).block(block);
     f.render_widget(key_notes_footer, chunk);
 }
 
@@ -262,17 +227,9 @@ fn render_current_version_block(f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_widget(key_notes_footer, chunk);
 }
 
-fn render_history_block(
-    model: &mut SelectCommandState,
-    f: &mut Frame,
-    chunk: ratatui::layout::Rect,
-) {
+fn render_history_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
-        commands_block(
-            " 📚 History ",
-            model.get_history(),
-            model.current_pane.is_history(),
-        ),
+        commands_block(" 📚 History ", model.get_history(), model.current_pane.is_history()),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
         &mut model.history_list_state,
@@ -296,11 +253,7 @@ fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratat
     f.render_widget(key_notes_footer, chunk);
 }
 
-fn commands_block(
-    title: &str,
-    narrowed_down_commands: Vec<command::Command>,
-    is_current: bool,
-) -> List<'_> {
+fn commands_block(title: &str, narrowed_down_commands: Vec<command::Command>, is_current: bool) -> List<'_> {
     let (fg_color, border_style) = color_and_border_style_for_selectable(is_current);
 
     let list: Vec<ListItem> = narrowed_down_commands

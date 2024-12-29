@@ -74,10 +74,7 @@ impl Just {
     }
 
     fn get_command(&self, command: command::Command) -> Option<command::Command> {
-        self.to_commands()
-            .iter()
-            .find(|c| **c == command)
-            .map(|_| command)
+        self.to_commands().iter().find(|c| **c == command).map(|_| command)
     }
 
     fn find_justfile(current_dir: PathBuf) -> Option<PathBuf> {
@@ -108,14 +105,12 @@ impl Just {
         'recipe: for recipes_and_its_siblings in tree.root_node().named_children(&mut tree.walk()) {
             if recipes_and_its_siblings.kind() == "recipe" {
                 let mut should_skip = false;
-                recipes_and_its_siblings
-                    .children(&mut tree.walk())
-                    .for_each(|attr| {
-                        let attr_name = &source_code[attr.byte_range()];
-                        if attr_name.contains("private") {
-                            should_skip = true;
-                        }
-                    });
+                recipes_and_its_siblings.children(&mut tree.walk()).for_each(|attr| {
+                    let attr_name = &source_code[attr.byte_range()];
+                    if attr_name.contains("private") {
+                        should_skip = true;
+                    }
+                });
                 if should_skip {
                     continue;
                 }
@@ -283,8 +278,7 @@ clippy:
         ];
 
         for case in cases {
-            let commands =
-                Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string());
+            let commands = Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string());
             assert_eq!(commands, case.expected, "{}", case.name);
         }
     }

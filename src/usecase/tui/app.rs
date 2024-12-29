@@ -89,10 +89,7 @@ impl Model<'_> {
     }
 
     // returns available commands in cwd from history file
-    fn get_histories(
-        current_working_directory: PathBuf,
-        runners: Vec<runner::Runner>,
-    ) -> Vec<Command> {
+    fn get_histories(current_working_directory: PathBuf, runners: Vec<runner::Runner>) -> Vec<Command> {
         let histories = toml::Histories::into(toml::Histories::get_history());
 
         for history in histories.histories {
@@ -112,8 +109,7 @@ impl Model<'_> {
     ) -> Vec<command::Command> {
         // make a hashmap in order to search commands by O(1).
         let command_hash_map: HashMap<runner_type::RunnerType, HashMap<String, command::Command>> = {
-            let mut map: HashMap<runner_type::RunnerType, HashMap<String, command::Command>> =
-                HashMap::new();
+            let mut map: HashMap<runner_type::RunnerType, HashMap<String, command::Command>> = HashMap::new();
             for runner in runners {
                 let mut inner_map = HashMap::new();
                 for c in runner.list_commands() {
@@ -136,11 +132,7 @@ impl Model<'_> {
         commands
     }
 
-    fn transition_to_execute_command_state(
-        &mut self,
-        runner: runner::Runner,
-        command: command::Command,
-    ) {
+    fn transition_to_execute_command_state(&mut self, runner: runner::Runner, command: command::Command) {
         self.app_state = AppState::ExecuteCommand(ExecuteCommandState::new(runner, command));
     }
 
@@ -200,8 +192,8 @@ pub async fn main(config: config::Config) -> Result<()> {
             runner.show_command(&command);
             runner.execute(&command)
         }
-        Ok(Ok(None)) => Ok(()), // no command was selected
-        Ok(Err(e)) => Err(e),   // Model::new or run returned Err
+        Ok(Ok(None)) => Ok(()),                                    // no command was selected
+        Ok(Err(e)) => Err(e),                                      // Model::new or run returned Err
         Err(e) => Err(anyhow!(any_to_string::any_to_string(&*e))), // panic occurred
     }
 }
@@ -219,8 +211,7 @@ async fn run<'a, B: Backend>(
     loop {
         if let AppState::SelectCommand(s) = &mut model.app_state {
             if s.latest_version.is_none() {
-                if let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY)
-                {
+                if let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY) {
                     s.latest_version = Some(new_version.to_string());
                 }
             }
@@ -247,11 +238,7 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
         return Err(anyhow!(e));
     }
 
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
 
     if let Err(e) = terminal.show_cursor() {
         return Err(anyhow!(e));
@@ -263,13 +250,11 @@ fn shutdown_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Resul
 const PKG_NAME: &str = "kyu08/fzf-make";
 async fn get_latest_version(share_clone: Arc<Mutex<HashMap<String, String>>>) {
     let current_version = env!("CARGO_PKG_VERSION").to_string();
-    let informer =
-        update_informer::new(registry::GitHub, PKG_NAME, current_version).interval(Duration::ZERO); // check version once a day
-                                                                                                    // .interval(Duration::from_secs(60 * 60 * 24)); // check version once a day
-    let version_result =
-        task::spawn_blocking(|| informer.check_version().map_err(|e| e.to_string()))
-            .await
-            .unwrap();
+    let informer = update_informer::new(registry::GitHub, PKG_NAME, current_version).interval(Duration::ZERO); // check version once a day
+                                                                                                               // .interval(Duration::from_secs(60 * 60 * 24)); // check version once a day
+    let version_result = task::spawn_blocking(|| informer.check_version().map_err(|e| e.to_string()))
+        .await
+        .unwrap();
     if let Ok(Some(new_version)) = version_result {
         let mut data = share_clone.lock().unwrap();
         data.insert(VERSION_KEY.to_string(), new_version.to_string().clone());
@@ -289,10 +274,7 @@ enum Message {
 
 // TODO: make this method Model's method
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
-    match (
-        crossterm::event::poll(std::time::Duration::from_millis(2000))?,
-        crossterm::event::read()?,
-    ) {
+    match (crossterm::event::poll(std::time::Duration::from_millis(2000))?, crossterm::event::read()?) {
         (true, crossterm::event::Event::Key(key)) => Ok(model.handle_key_input(key)),
         _ => Ok(None),
     }
@@ -382,8 +364,7 @@ impl SelectCommandState<'_> {
             if let Ok(f) = Make::new(current_dir.clone()) {
                 runners.push(Runner::MakeCommand(f));
             };
-            if let Some(js_package_manager) = js::get_js_package_manager_runner(current_dir.clone())
-            {
+            if let Some(js_package_manager) = js::get_js_package_manager_runner(current_dir.clone()) {
                 runners.push(Runner::JsPackageManager(js_package_manager));
             };
             if let Ok(just) = Just::new(current_dir.clone()) {
@@ -630,9 +611,7 @@ impl SelectCommandState<'_> {
 
                     // _ patterns. To prevent omission of corrections, _ is not used.
                     (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsYarn(_))
-                    | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsPnpm(_)) => {
-                        return None
-                    }
+                    | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsPnpm(_)) => return None,
                 },
                 _ => continue,
             }
@@ -783,9 +762,7 @@ mod test {
                         ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
-                    KeyCode::Char('a'),
-                ))),
+                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(KeyCode::Char('a')))),
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
                         search_text_area: {
@@ -801,22 +778,14 @@ mod test {
                 title: "when BackSpace is inputted, the selection should be reset",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(1),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
-                    KeyCode::Backspace,
-                ))),
+                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(KeyCode::Backspace))),
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(0),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
@@ -831,10 +800,7 @@ mod test {
                 message: Some(Message::NextCommand),
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(1),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
@@ -843,20 +809,14 @@ mod test {
                 title: "Next(2 -> 0)",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(2),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(2)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
                 message: Some(Message::NextCommand),
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(0),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
@@ -865,20 +825,14 @@ mod test {
                 title: "Previous(1 -> 0)",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(1),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
                 message: Some(Message::PreviousCommand),
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(0),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
@@ -887,20 +841,14 @@ mod test {
                 title: "Previous(0 -> 2)",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(0),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
                 message: Some(Message::PreviousCommand),
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(2),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(2)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
@@ -916,12 +864,7 @@ mod test {
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
                         runner::Runner::MakeCommand(Make::new_for_test()),
-                        command::Command::new(
-                            runner_type::RunnerType::Make,
-                            "target0".to_string(),
-                            PathBuf::new(),
-                            1,
-                        ),
+                        command::Command::new(runner_type::RunnerType::Make, "target0".to_string(), PathBuf::new(), 1),
                     )),
                 },
             },
@@ -952,22 +895,14 @@ mod test {
                     was inputted when the command located not in top of the commands",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(1),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
-                    KeyCode::Char('a'),
-                ))),
+                message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(KeyCode::Char('a')))),
                 expect_model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
-                        commands_list_state: ListState::with_selected(
-                            ListState::default(),
-                            Some(0),
-                        ),
+                        commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('a')));
@@ -982,19 +917,14 @@ mod test {
                 model: {
                     let mut m = Model {
                         app_state: AppState::SelectCommand(SelectCommandState {
-                            commands_list_state: ListState::with_selected(
-                                ListState::default(),
-                                None,
-                            ),
+                            commands_list_state: ListState::with_selected(ListState::default(), None),
                             ..SelectCommandState::new_for_test()
                         }),
                     };
                     update(
                         // There should not be commands because init_model has ["target0", "target1", "target2"] as command.
                         &mut m,
-                        Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
-                            KeyCode::Char('w'),
-                        ))),
+                        Some(Message::SearchTextAreaKeyInput(KeyEvent::from(KeyCode::Char('w')))),
                     );
                     m
                 },
@@ -1017,19 +947,14 @@ mod test {
                 model: {
                     let mut m = Model {
                         app_state: AppState::SelectCommand(SelectCommandState {
-                            commands_list_state: ListState::with_selected(
-                                ListState::default(),
-                                None,
-                            ),
+                            commands_list_state: ListState::with_selected(ListState::default(), None),
                             ..SelectCommandState::new_for_test()
                         }),
                     };
                     update(
                         // There should not be commands because init_model has ["target0", "target1", "target2"] as command.
                         &mut m,
-                        Some(Message::SearchTextAreaKeyInput(KeyEvent::from(
-                            KeyCode::Char('w'),
-                        ))),
+                        Some(Message::SearchTextAreaKeyInput(KeyEvent::from(KeyCode::Char('w')))),
                     );
                     m
                 },
@@ -1127,11 +1052,7 @@ mod test {
 
         for mut case in cases {
             update(&mut case.model, case.message);
-            assert_eq!(
-                case.expect_model, case.model,
-                "\nFailed: 🚨{:?}🚨\n",
-                case.title,
-            );
+            assert_eq!(case.expect_model, case.model, "\nFailed: 🚨{:?}🚨\n", case.title,);
         }
     }
 }

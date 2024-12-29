@@ -15,10 +15,7 @@ impl Histories {
         for h in self.history.clone() {
             let mut commands: Vec<fzf_make_toml::HistoryCommand> = vec![];
             for c in h.executed_targets {
-                commands.push(fzf_make_toml::HistoryCommand::new(
-                    model::runner_type::RunnerType::Make,
-                    c,
-                ));
+                commands.push(fzf_make_toml::HistoryCommand::new(model::runner_type::RunnerType::Make, c));
             }
             // NOTE: In old format, the path includes the file name but new format does not.
             let mut makefile_path = PathBuf::from(h.path);
@@ -69,25 +66,14 @@ mod test {
             after: fzf_make_toml::Histories::new(vec![fzf_make_toml::History::new(
                 PathBuf::from("path"),
                 vec![
-                    fzf_make_toml::HistoryCommand::new(
-                        runner_type::RunnerType::Make,
-                        "command1".to_string(),
-                    ),
-                    fzf_make_toml::HistoryCommand::new(
-                        runner_type::RunnerType::Make,
-                        "command2".to_string(),
-                    ),
+                    fzf_make_toml::HistoryCommand::new(runner_type::RunnerType::Make, "command1".to_string()),
+                    fzf_make_toml::HistoryCommand::new(runner_type::RunnerType::Make, "command2".to_string()),
                 ],
             )]),
         }];
 
         for case in cases {
-            assert_eq!(
-                case.after,
-                case.before.into_histories(),
-                "\nFailed: 🚨{:?}🚨\n",
-                case.title,
-            )
+            assert_eq!(case.after, case.before.into_histories(), "\nFailed: 🚨{:?}🚨\n", case.title,)
         }
     }
 
@@ -115,14 +101,8 @@ executed-targets = ["run", "echo1"]
                     fzf_make_toml::History::new(
                         PathBuf::from("/Users/user/code/fzf-make"),
                         vec![
-                            fzf_make_toml::HistoryCommand::new(
-                                runner_type::RunnerType::Make,
-                                "test".to_string(),
-                            ),
-                            fzf_make_toml::HistoryCommand::new(
-                                runner_type::RunnerType::Make,
-                                "check".to_string(),
-                            ),
+                            fzf_make_toml::HistoryCommand::new(runner_type::RunnerType::Make, "test".to_string()),
+                            fzf_make_toml::HistoryCommand::new(runner_type::RunnerType::Make, "check".to_string()),
                             fzf_make_toml::HistoryCommand::new(
                                 runner_type::RunnerType::Make,
                                 "spell-check".to_string(),
@@ -132,14 +112,8 @@ executed-targets = ["run", "echo1"]
                     fzf_make_toml::History::new(
                         PathBuf::from("/Users/user/code/golang/go-playground"),
                         vec![
-                            fzf_make_toml::HistoryCommand::new(
-                                runner_type::RunnerType::Make,
-                                "run".to_string(),
-                            ),
-                            fzf_make_toml::HistoryCommand::new(
-                                runner_type::RunnerType::Make,
-                                "echo1".to_string(),
-                            ),
+                            fzf_make_toml::HistoryCommand::new(runner_type::RunnerType::Make, "run".to_string()),
+                            fzf_make_toml::HistoryCommand::new(runner_type::RunnerType::Make, "echo1".to_string()),
                         ],
                     ),
                 ])),
@@ -149,18 +123,15 @@ executed-targets = ["run", "echo1"]
                 content: r#"
                 "#
                 .to_string(),
-                expect: Err(anyhow::anyhow!("TOML parse error at line 1, column 1\n  |\n1 | \n  | ^\nmissing field `history`\n")),
+                expect: Err(anyhow::anyhow!(
+                    "TOML parse error at line 1, column 1\n  |\n1 | \n  | ^\nmissing field `history`\n"
+                )),
             },
         ];
 
         for case in cases {
             match case.expect {
-                Ok(e) => assert_eq!(
-                    e,
-                    parse_history(case.content).unwrap(),
-                    "\nFailed: 🚨{:?}🚨\n",
-                    case.title,
-                ),
+                Ok(e) => assert_eq!(e, parse_history(case.content).unwrap(), "\nFailed: 🚨{:?}🚨\n", case.title,),
                 Err(err) => assert_eq!(
                     err.to_string(),
                     parse_history(case.content).unwrap_err().to_string(),

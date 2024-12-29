@@ -130,14 +130,10 @@ impl Yarn {
         if let Ok(workspace_package_json_paths) = package_json_in_workspace {
             for path in workspace_package_json_paths {
                 if let Ok(c) = path_to_content::path_to_content(&path) {
-                    if let Some((name, parsing_result)) =
-                        js::JsPackageManager::parse_package_json(&c)
-                    {
+                    if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
                         for (key, _, line_number) in parsing_result {
                             result.push(command::Command::new(
-                                runner_type::RunnerType::JsPackageManager(
-                                    runner_type::JsPackageManager::Yarn,
-                                ),
+                                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
                                 // yarn executes workspace script following format: `yarn workspace {package_name} {script_name}`
                                 // e.g. `yarn workspace app4 build`
                                 format!("workspace {} {}", name.clone(), key.as_str()),
@@ -168,9 +164,7 @@ impl Yarn {
                 .iter()
                 .map(|(key, _value, line_number)| {
                     command::Command::new(
-                        runner_type::RunnerType::JsPackageManager(
-                            runner_type::JsPackageManager::Yarn,
-                        ),
+                        runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
                         key.to_string(),
                         current_dir.clone().join(js::METADATA_FILE_NAME),
                         *line_number,

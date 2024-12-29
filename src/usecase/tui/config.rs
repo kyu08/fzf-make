@@ -8,9 +8,7 @@ impl Config {
     }
 
     pub fn default() -> Self {
-        Self {
-            focus_history: false,
-        }
+        Self { focus_history: false }
     }
 
     pub fn get_focus_history(&self) -> bool {

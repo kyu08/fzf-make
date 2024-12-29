@@ -81,8 +81,7 @@ impl JsPackageManager {
             if let Some(object) = v.as_object() {
                 for (k, v) in object {
                     let args = k.to_string();
-                    let line_number =
-                        files.line_index(file, k.start() as u32).number().to_usize() as u32;
+                    let line_number = files.line_index(file, k.start() as u32).number().to_usize() as u32;
                     if let Some(v) = v.as_string() {
                         result.push((args, v.to_string(), line_number));
                     }
@@ -97,9 +96,7 @@ impl JsPackageManager {
 
 pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<JsPackageManager> {
     let entries = fs::read_dir(current_dir.clone()).unwrap();
-    let file_names = entries
-        .map(|e| e.unwrap().file_name().into_string().unwrap())
-        .collect();
+    let file_names = entries.map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
 
     JsPackageManager::new(current_dir, file_names)
 }
