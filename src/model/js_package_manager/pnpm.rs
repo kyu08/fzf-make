@@ -47,25 +47,26 @@ impl Pnpm {
     }
 
     pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Pnpm> {
-        Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME)?;
-        if Iterator::find(&mut cwd_file_names.iter(), |&f| f == PNPM_LOCKFILE_NAME).is_some() {
-            // package.json and lock file exist. It means that the current directory is a root of the workspace, or single package.
-            Pnpm::collect_workspace_scripts(current_dir.clone()).map(|commands| Pnpm {
+        let package_json_exist = Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME);
+        let lockfile_exist_in_current_dir = Iterator::find(&mut cwd_file_names.iter(), |&f| f == PNPM_LOCKFILE_NAME);
+        let lockfile_exist_in_ancestors =
+            file_util::find_file_in_ancestors(current_dir.clone(), vec![PNPM_LOCKFILE_NAME]);
+
+        match (package_json_exist, lockfile_exist_in_current_dir, lockfile_exist_in_ancestors) {
+            (None, _, _) => None,
+            (Some(_), Some(_), _) => Pnpm::collect_workspace_scripts(current_dir.clone()).map(|commands| Pnpm {
                 path: current_dir,
                 commands,
-            })
-        } else {
-            if file_util::find_file_in_ancestors(current_dir.clone(), vec![PNPM_LOCKFILE_NAME])
-                .is_some()
-            {
-                // package.json exists, but lock file does not exist
+            }),
+            (Some(_), None, Some(_)) => {
                 Self::collect_scripts_in_package_json(current_dir.clone()).map(|commands| Pnpm {
                     path: current_dir,
                     commands,
                 })
-            } else {
-                None
             }
+            // Not a workspace children && not a workspace root
+            // In this case, package manager can not be determined.
+            (Some(_), None, None) => None,
         }
     }
 
@@ -91,13 +92,12 @@ impl Pnpm {
             if let Ok(c) = path_to_content::path_to_content(&path) {
                 if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
                     for (key, value, line_number) in parsing_result {
+                        // TODO: ここのロジックを共通化したい
                         if Self::use_filtering(value) {
                             continue;
                         }
                         result.push(command::Command::new(
-                            runner_type::RunnerType::JsPackageManager(
-                                runner_type::JsPackageManager::Pnpm,
-                            ),
+                            runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
                             // pnpm executes workspace script following format: `pnpm --filter {package_name} {script_name}`
                             // e.g. `pnpm --filter app4 build`
                             format!("--filter {} {}", name.clone(), key.as_str()),
@@ -128,9 +128,7 @@ impl Pnpm {
                 .filter(|(_, value, _)| !Self::use_filtering(value.to_string()))
                 .map(|(key, _value, line_number)| {
                     command::Command::new(
-                        runner_type::RunnerType::JsPackageManager(
-                            runner_type::JsPackageManager::Pnpm,
-                        ),
+                        runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
                         key.to_string(),
                         current_dir.clone().join(js::METADATA_FILE_NAME),
                         *line_number,
@@ -156,10 +154,7 @@ impl Pnpm {
 
         let output = String::from_utf8(output.stdout)?;
         // split by newline to remove unnecessary lines.
-        let lines = output
-            .split("\n")
-            .filter(|l| !l.is_empty())
-            .collect::<Vec<&str>>();
+        let lines = output.split("\n").filter(|l| !l.is_empty()).collect::<Vec<&str>>();
 
         Ok(lines
             .iter()
@@ -199,34 +194,16 @@ mod test {
         assert_eq!(true, Pnpm::use_filtering("pnpm -F app1".to_string()));
         assert_eq!(true, Pnpm::use_filtering("pnpm -F \"app1\"".to_string()));
         assert_eq!(true, Pnpm::use_filtering("pnpm --filter app2".to_string()));
-        assert_eq!(
-            true,
-            Pnpm::use_filtering("pnpm -r --filter app3".to_string())
-        );
-        assert_eq!(
-            true,
-            Pnpm::use_filtering("pnpm -C packages/app3".to_string())
-        );
-        assert_eq!(
-            true,
-            Pnpm::use_filtering("pnpm --dir packages/app3".to_string())
-        );
+        assert_eq!(true, Pnpm::use_filtering("pnpm -r --filter app3".to_string()));
+        assert_eq!(true, Pnpm::use_filtering("pnpm -C packages/app3".to_string()));
+        assert_eq!(true, Pnpm::use_filtering("pnpm --dir packages/app3".to_string()));
         assert_eq!(true, Pnpm::use_filtering("pnpm -F".to_string()));
         assert_eq!(true, Pnpm::use_filtering("pnpm --filter".to_string()));
-        assert_eq!(
-            false,
-            Pnpm::use_filtering("pnpm -C packages/app1 run test".to_string())
-        );
-        assert_eq!(
-            false,
-            Pnpm::use_filtering("pnpm --filter app1 run test".to_string())
-        );
+        assert_eq!(false, Pnpm::use_filtering("pnpm -C packages/app1 run test".to_string()));
+        assert_eq!(false, Pnpm::use_filtering("pnpm --filter app1 run test".to_string()));
         assert_eq!(false, Pnpm::use_filtering("yarn run".to_string()));
         assert_eq!(false, Pnpm::use_filtering("pnpm run".to_string()));
         assert_eq!(false, Pnpm::use_filtering("pnpm -r hoge".to_string()));
-        assert_eq!(
-            false,
-            Pnpm::use_filtering("yarn -r --filter app3".to_string())
-        );
+        assert_eq!(false, Pnpm::use_filtering("yarn -r --filter app3".to_string()));
     }
 }
