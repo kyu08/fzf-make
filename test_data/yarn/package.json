@@ -12,7 +12,7 @@
     "test-e2e": "echo test-e2e"
   },
   "devDependencies": {
-    "@babel/cli": "7.12.10"
+    "@babel/cli": "7.26.4"
   },
   "dependencies": {
     "firebase": "^8.6.8"
