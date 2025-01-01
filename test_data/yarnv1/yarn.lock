@@ -3,6 +3,6 @@
 
 
 "@types/node@^8.0.28":
-  version "8.10.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.10.2.tgz#f1fb9c73414832c5b00ee954c4bbf68394e2e526"
-  integrity sha512-A6Uv1anbsCvrRDtaUXS2xZ5tlzD+Kg7yMRlSLFDy3z0r7KlGXDzL14vELXIAgpk2aJbU3XeZZQRcEkLkowT92g==
+  version "8.10.66"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.10.66.tgz#dd035d409df322acc83dff62a602f12a5783bbb3"
+  integrity sha512-tktOkFUA4kXx2hhhrB8bIFb5TbwzS4uOhKEmwiD+NoiL0qtP2OQ9mFldbgD4dV1djrlBYP6eBuQZiWjuHUpqFw==
