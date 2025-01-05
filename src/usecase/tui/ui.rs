@@ -108,20 +108,12 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                     let _ = ts.add_from_folder(path);
                 }
 
-                use crate::model::runner_type::RunnerType;
-
-                // TODO: extract as RunnerType's method
-                let file_extension = match cmd.runner_type {
-                    RunnerType::Make => "mk",
-                    RunnerType::Just => "just",
-                    RunnerType::JsPackageManager(_) => "json",
-                };
-
-                let theme = &mut ts.themes["OneHalfDark"].clone();
+                let command_file_extension = cmd.runner_type.get_extension();
                 let syntax = ss
-                    .find_syntax_by_extension(file_extension)
+                    .find_syntax_by_extension(command_file_extension)
                     .unwrap_or_else(|| ss.find_syntax_plain_text());
 
+                let theme = &mut ts.themes["OneHalfDark"].clone();
                 let mut lines = vec![];
                 for (index, line) in source_lines.iter().enumerate() {
                     theme.settings.background = Some(SColor {

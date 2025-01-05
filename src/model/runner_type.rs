@@ -37,6 +37,14 @@ impl RunnerType {
             runner::Runner::Just(_) => RunnerType::Just,
         }
     }
+
+    pub fn get_extension(&self) -> &str {
+        match self {
+            RunnerType::Make => "mk",
+            RunnerType::Just => "just",
+            RunnerType::JsPackageManager(_) => "json",
+        }
+    }
 }
 
 impl fmt::Display for RunnerType {
