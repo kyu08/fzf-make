@@ -104,7 +104,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                 let ss = SyntaxSet::load_defaults_newlines();
 
                 let mut ts = ThemeSet::load_defaults();
-                if let Ok(path) = load_tree_sitter_theme() {
+                if let Ok(path) = load_syntax_highlighting_theme() {
                     let _ = ts.add_from_folder(path);
                 }
 
@@ -160,8 +160,8 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
 #[derive(RustEmbed)]
 #[folder = "assets"]
 struct Asset;
-fn load_tree_sitter_theme() -> Result<PathBuf> {
-    let temp_dir = std::env::temp_dir().join("tree-sitter-assets");
+fn load_syntax_highlighting_theme() -> Result<PathBuf> {
+    let temp_dir = std::env::temp_dir().join("fzf-make-syntax-highlighting-assets");
     let version_file = temp_dir.join(".version");
     let current_version = env!("CARGO_PKG_VERSION");
 
