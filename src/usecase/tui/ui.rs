@@ -1,5 +1,6 @@
 use super::app::{AppState, CurrentPane, Model, SelectCommandState};
 use crate::model::command;
+use anyhow::{Context, Result};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -7,8 +8,11 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
+use rust_embed::RustEmbed;
+use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color as SColor, ThemeSet};
 use syntect::parsing::SyntaxSet;
@@ -96,14 +100,20 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
 
     let lines = {
         match (selecting_command, start_index_and_end_index, command_row_index) {
-            (Some(_), Some((start_index, _)), Some(command_row_index)) => {
+            (Some(cmd), Some((start_index, _)), Some(command_row_index)) => {
                 let ss = SyntaxSet::load_defaults_newlines();
-                // HACK: `ml` is specified intentionally because it highlights `Makefile` and `json` files in a good way.(No unnecessary background color)
-                // lua, hs: `-- .*` is highlighted (but URL is highlighted with background color))
-                // md: no background color, but highlighted words are not so many
-                let syntax = ss.find_syntax_by_extension("ml").unwrap();
-                let theme = &mut ThemeSet::load_defaults().themes["base16-ocean.dark"].clone();
 
+                let mut ts = ThemeSet::load_defaults();
+                if let Ok(path) = load_syntax_highlighting_theme() {
+                    let _ = ts.add_from_folder(path);
+                }
+
+                let command_file_extension = cmd.runner_type.get_extension_for_highlighting();
+                let syntax = ss
+                    .find_syntax_by_extension(command_file_extension)
+                    .unwrap_or_else(|| ss.find_syntax_plain_text());
+
+                let theme = &mut ts.themes["OneHalfDark"].clone();
                 let mut lines = vec![];
                 for (index, line) in source_lines.iter().enumerate() {
                     theme.settings.background = Some(SColor {
@@ -145,6 +155,41 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
         .title_style(TITLE_STYLE);
     let preview_widget = Paragraph::new(lines).wrap(Wrap { trim: false }).block(block);
     f.render_widget(preview_widget, chunk);
+}
+
+#[derive(RustEmbed)]
+#[folder = "assets"]
+struct Asset;
+fn load_syntax_highlighting_theme() -> Result<PathBuf> {
+    let temp_dir = std::env::temp_dir().join("fzf-make-syntax-highlighting-assets");
+    let version_file = temp_dir.join(".version");
+    let current_version = env!("CARGO_PKG_VERSION");
+
+    let should_extract = if temp_dir.exists() {
+        match fs::read_to_string(&version_file) {
+            // extract is done only once per version
+            Ok(v) => v.trim() != current_version,
+            Err(_) => true,
+        }
+    } else {
+        true
+    };
+
+    if should_extract {
+        if temp_dir.exists() {
+            fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
+        }
+        fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
+
+        let theme_file_name = "OneHalfDark.tmTheme";
+        let path = temp_dir.join(theme_file_name);
+        let content = Asset::get(theme_file_name).context("Failed to get embedded asset")?;
+
+        fs::write(&path, content.data).context("Failed to write asset file")?;
+        fs::write(version_file, current_version).context("Failed to write version file")?;
+    }
+
+    Ok(temp_dir)
 }
 
 fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (usize, usize) {

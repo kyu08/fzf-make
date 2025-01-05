@@ -36,3 +36,4 @@ tree-sitter = "=0.24.4"
 # FIXME: https://github.com/kyu08/fzf-make/issues/410
 # The latest tag is 0.1.0 and it is old now. So, I am using the latest commit hash.
 tree-sitter-just = { git = "https://github.com/IndianBoy42/tree-sitter-just.git", rev = "f6d2930" }
+rust-embed = "8.5.0"
