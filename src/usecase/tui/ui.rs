@@ -108,7 +108,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                     let _ = ts.add_from_folder(path);
                 }
 
-                let command_file_extension = cmd.runner_type.get_extension();
+                let command_file_extension = cmd.runner_type.get_extension_for_highlighting();
                 let syntax = ss
                     .find_syntax_by_extension(command_file_extension)
                     .unwrap_or_else(|| ss.find_syntax_plain_text());

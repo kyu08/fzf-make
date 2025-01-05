@@ -38,10 +38,12 @@ impl RunnerType {
         }
     }
 
-    pub fn get_extension(&self) -> &str {
+    pub fn get_extension_for_highlighting(&self) -> &str {
         match self {
             RunnerType::Make => "mk",
-            RunnerType::Just => "just",
+            // HACK: If `just` is passed to syntect, it will be highlighted as just a plain text.
+            // So yaml which is similar to just is used intensionally.
+            RunnerType::Just => "yaml",
             RunnerType::JsPackageManager(_) => "json",
         }
     }
