@@ -1,5 +1,6 @@
 use super::app::{AppState, CurrentPane, Model, SelectCommandState};
 use crate::model::command;
+use anyhow::{Context, Result};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -7,8 +8,11 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
+use rust_embed::RustEmbed;
+use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color as SColor, ThemeSet};
 use syntect::parsing::SyntaxSet;
@@ -100,18 +104,22 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                 let ss = SyntaxSet::load_defaults_newlines();
 
                 let mut ts = ThemeSet::load_defaults();
-                ts.add_from_folder("./").unwrap();
+                if let Ok(path) = load_tree_sitter_theme() {
+                    let _ = ts.add_from_folder(path);
+                }
 
                 use crate::model::runner_type::RunnerType;
 
+                // TODO: extract as RunnerType's method
                 let file_extension = match cmd.runner_type {
                     RunnerType::Make => "mk",
                     RunnerType::Just => "just",
-                    RunnerType::JsPackageManager(_) => "json"
+                    RunnerType::JsPackageManager(_) => "json",
                 };
 
                 let theme = &mut ts.themes["OneHalfDark"].clone();
-                let syntax = ss.find_syntax_by_extension(file_extension)
+                let syntax = ss
+                    .find_syntax_by_extension(file_extension)
                     .unwrap_or_else(|| ss.find_syntax_plain_text());
 
                 let mut lines = vec![];
@@ -155,6 +163,41 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
         .title_style(TITLE_STYLE);
     let preview_widget = Paragraph::new(lines).wrap(Wrap { trim: false }).block(block);
     f.render_widget(preview_widget, chunk);
+}
+
+#[derive(RustEmbed)]
+#[folder = "assets"]
+struct Asset;
+fn load_tree_sitter_theme() -> Result<PathBuf> {
+    let temp_dir = std::env::temp_dir().join("tree-sitter-assets");
+    let version_file = temp_dir.join(".version");
+    let current_version = env!("CARGO_PKG_VERSION");
+
+    let should_extract = if temp_dir.exists() {
+        match fs::read_to_string(&version_file) {
+            // extract is done only once per version
+            Ok(v) => v.trim() != current_version,
+            Err(_) => true,
+        }
+    } else {
+        true
+    };
+
+    if should_extract {
+        if temp_dir.exists() {
+            fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
+        }
+        fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
+
+        let theme_file_name = "OneHalfDark.tmTheme";
+        let path = temp_dir.join(theme_file_name);
+        let content = Asset::get(theme_file_name).context("Failed to get embedded asset")?;
+
+        fs::write(&path, content.data).context("Failed to write asset file")?;
+        fs::write(version_file, current_version).context("Failed to write version file")?;
+    }
+
+    Ok(temp_dir)
 }
 
 fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (usize, usize) {
