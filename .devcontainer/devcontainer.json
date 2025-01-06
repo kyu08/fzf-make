@@ -21,8 +21,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-    // Workaround for namespace. See: https://github.com/sharkdp/bat?tab=readme-ov-file#on-ubuntu-using-apt
-    "postCreateCommand": "sudo apt update && sudo apt install -y bat && mkdir -p ~/.local/bin && ln -s /usr/bin/batcat ~/.local/bin/bat"
+    // "postCreateCommand": "",
 
 	// Configure tool-specific properties.
 	// "customizations": {},
