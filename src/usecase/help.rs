@@ -27,7 +27,7 @@ impl Usecase for Help {
 // TODO: Make each command have the following information as a struct, and just display it here.
 // Define the vector of usecases in only one place and refer to it.
 pub fn get_help() -> String {
-    r#"A command line tool that executes commands using fuzzy finder with preview window. Currently supporting make, pnpm.
+    r#"A command line tool that executes commands using fuzzy finder with preview window. Currently supporting make, pnpm, yarn, and just.
 
 USAGE:
     Run `fzf-make` in the directory where you want to execute make or pnpm command exists or `fzf-make [SUBCOMMAND]`.
