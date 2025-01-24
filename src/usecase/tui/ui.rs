@@ -92,7 +92,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                 .skip(start_index)
                 .take(end_index - start_index + 1)
                 // HACK: workaround for https://github.com/ratatui/ratatui/issues/876
-                .map(|line| line.unwrap().replace("\t", "    "))
+                .map(|line| line.unwrap().replace('\t', "    "))
                 .collect()
         }
         _ => vec![],
@@ -185,7 +185,7 @@ fn load_syntax_highlighting_theme() -> Result<PathBuf> {
         let path = temp_dir.join(theme_file_name);
         let content = Asset::get(theme_file_name).context("Failed to get embedded asset")?;
 
-        fs::write(&path, content.data).context("Failed to write asset file")?;
+        fs::write(path, content.data).context("Failed to write asset file")?;
         fs::write(version_file, current_version).context("Failed to write version file")?;
     }
 

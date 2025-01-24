@@ -114,10 +114,7 @@ impl Yarn {
     // 3. Collect all scripts defined in given `package.json` paths.
     fn collect_workspace_scripts(current_dir: PathBuf) -> Option<Vec<command::Command>> {
         // Collect scripts defined in package.json in the current directory(which fzf-make is launched)
-        let mut result = match Self::collect_scripts_in_package_json(current_dir.clone()) {
-            Some(result) => result,
-            None => return None,
-        };
+        let mut result = Self::collect_scripts_in_package_json(current_dir.clone())?;
 
         // Collect the paths of all `package.json` in the workspace.
         let package_json_in_workspace = match Self::get_yarn_version() {
@@ -238,7 +235,7 @@ impl Yarn {
             */
 
             // split by newline to remove unnecessary lines.
-            let lines = output.split("\n").collect::<Vec<&str>>();
+            let lines = output.split('\n').collect::<Vec<&str>>();
 
             // remove the first and last line and the second line from the end.
             match lines.get(1..(lines.len() - 2)) {
