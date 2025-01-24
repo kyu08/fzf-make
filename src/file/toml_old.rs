@@ -44,8 +44,7 @@ pub fn parse_history(content: String) -> Result<fzf_make_toml::Histories> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::file::toml as fzf_make_toml;
-    use crate::model::runner_type;
+    use crate::{file::toml as fzf_make_toml, model::runner_type};
     use pretty_assertions::assert_eq;
 
     #[test]

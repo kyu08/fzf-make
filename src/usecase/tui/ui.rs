@@ -9,13 +9,17 @@ use ratatui::{
     Frame,
 };
 use rust_embed::RustEmbed;
-use std::fs;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
-use syntect::easy::HighlightLines;
-use syntect::highlighting::{Color as SColor, ThemeSet};
-use syntect::parsing::SyntaxSet;
+use std::{
+    fs,
+    fs::File,
+    io::{BufRead, BufReader},
+    path::PathBuf,
+};
+use syntect::{
+    easy::HighlightLines,
+    highlighting::{Color as SColor, ThemeSet},
+    parsing::SyntaxSet,
+};
 use syntect_tui::into_span;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {

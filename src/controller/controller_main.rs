@@ -1,8 +1,6 @@
-use crate::usecase::fzf_make::FzfMake;
-use crate::usecase::{fzf_make, help, history, invalid_arg, repeat, usecase_main, version};
+use crate::usecase::{fzf_make, fzf_make::FzfMake, help, history, invalid_arg, repeat, usecase_main, version};
 use colored::Colorize;
-use std::sync::Arc;
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, sync::Arc};
 
 pub async fn run() {
     let command_line_args = env::args().collect();

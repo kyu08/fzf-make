@@ -2,10 +2,10 @@ use super::target::*;
 use crate::model::{command, file_util};
 use anyhow::{anyhow, Result};
 use regex::Regex;
-use std::process;
 use std::{
     fs,
     path::{Path, PathBuf},
+    process,
 };
 
 /// Make represents a Makefile.

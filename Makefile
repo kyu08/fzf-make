@@ -10,7 +10,7 @@ curl-test:
 ci: # Checks same as CI
 	@make test-ci; \
 	make check; \
-	make fmt; \
+	make fmt-check; \
 	make spell-check
 
 .PHONY: tools
@@ -89,6 +89,10 @@ build:
 
 .PHONY: fmt
  fmt:
+	@cargo +nightly fmt
+
+.PHONY: fmt-check
+ fmt-check:
 	@cargo +nightly fmt -- --check
 
 .PHONY: check
