@@ -89,7 +89,7 @@ build:
 
 .PHONY: fmt
  fmt:
-	@cargo fmt -- --check
+	@cargo +nightly fmt -- --check
 
 .PHONY: check
  check:
