@@ -19,7 +19,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
+    - name: Setup nightly rustfmt
+      run: |
+        rustup set profile minimal
+        rustup install nightly
+        rustup override set nightly
+        rustup component add rustfmt
     - name: Check formatting
       run: |
         make fmt

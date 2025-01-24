@@ -119,7 +119,7 @@ impl Just {
                     if recipe_child.kind() == "recipe_header" {
                         // `recipe_name` has format like: `fmt:`
                         let recipe_name = &source_code[recipe_child.byte_range()];
-                        let trimmed = recipe_name.split(":").collect::<Vec<&str>>();
+                        let trimmed = recipe_name.split(':').collect::<Vec<&str>>();
                         if let Some(r) = trimmed.first() {
                             commands.push(Command::new(
                                 RunnerType::Just,

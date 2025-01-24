@@ -1,3 +1,5 @@
 edition = "2021"
 max_width = 120
 fn_call_width = 120
+imports_granularity = "Crate"
+group_imports = "One"

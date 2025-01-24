@@ -76,10 +76,7 @@ impl Pnpm {
     // 3. Collect all scripts defined in given `package.json` paths.
     fn collect_workspace_scripts(current_dir: PathBuf) -> Option<Vec<command::Command>> {
         // Collect scripts defined in package.json in the current directory(which fzf-make is launched)
-        let mut result = match Self::collect_scripts_in_package_json(current_dir.clone()) {
-            Some(result) => result,
-            None => return None,
-        };
+        let mut result = Self::collect_scripts_in_package_json(current_dir.clone())?;
 
         // Collect the paths of all `package.json` in the workspace.
         let workspace_package_json_paths = match Self::get_workspace_packages() {
@@ -153,7 +150,7 @@ impl Pnpm {
 
         let output = String::from_utf8(output.stdout)?;
         // split by newline to remove unnecessary lines.
-        let lines = output.split("\n").filter(|l| !l.is_empty()).collect::<Vec<&str>>();
+        let lines = output.split('\n').filter(|l| !l.is_empty()).collect::<Vec<&str>>();
 
         Ok(lines
             .iter()

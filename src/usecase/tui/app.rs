@@ -29,10 +29,11 @@ use std::{
     collections::HashMap,
     env,
     io::{self, Stderr},
+    panic::AssertUnwindSafe,
     path::PathBuf,
     sync::{Arc, Mutex},
+    time::Duration,
 };
-use std::{panic::AssertUnwindSafe, time::Duration};
 use tokio::task;
 use tui_textarea::TextArea;
 use update_informer::{registry, Check};

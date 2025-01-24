@@ -1,6 +1,8 @@
 use super::{js_package_manager::js_package_manager_main as js, runner};
-use serde::de::{self};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{
+    de::{self},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use std::fmt;
 
 #[derive(Hash, PartialEq, Debug, Clone, Eq)]
