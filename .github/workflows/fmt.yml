@@ -27,4 +27,4 @@ jobs:
         rustup component add rustfmt
     - name: Check formatting
       run: |
-        make fmt
+        make fmt-check
