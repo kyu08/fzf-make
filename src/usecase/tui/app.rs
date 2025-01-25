@@ -70,7 +70,8 @@ impl Model<'_> {
                 KeyCode::Tab => Some(Message::MoveToNextPane),
                 KeyCode::Esc => Some(Message::Quit),
                 _ => {
-                  let is_ctrl_pressed = key.modifiers == KeyModifiers::CONTROL;
+                  let is_ctrl_pressed = key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL);
+
                   match s.current_pane {
                       CurrentPane::Main => {
                         match (key.code, is_ctrl_pressed) {
