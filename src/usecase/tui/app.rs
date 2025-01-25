@@ -14,7 +14,7 @@ use crate::{
 };
 use anyhow::{anyhow, bail, Result};
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -69,21 +69,24 @@ impl Model<'_> {
             AppState::SelectCommand(s) => match key.code {
                 KeyCode::Tab => Some(Message::MoveToNextPane),
                 KeyCode::Esc => Some(Message::Quit),
-                _ => match s.current_pane {
-                    CurrentPane::Main => match key.code {
-                        KeyCode::Down => Some(Message::NextCommand),
-                        KeyCode::Up => Some(Message::PreviousCommand),
-                        KeyCode::Enter => Some(Message::ExecuteCommand),
-                        _ => Some(Message::SearchTextAreaKeyInput(key)),
-                    },
-                    CurrentPane::History => match key.code {
-                        KeyCode::Char('q') => Some(Message::Quit),
-                        KeyCode::Down => Some(Message::NextHistory),
-                        KeyCode::Up => Some(Message::PreviousHistory),
-                        KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteCommand),
-                        _ => None,
-                    },
-                },
+                _ => {
+                    let is_ctrl_pressed = key.modifiers.contains(KeyModifiers::CONTROL);
+                    match s.current_pane {
+                        CurrentPane::Main => match (key.code, is_ctrl_pressed) {
+                            (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
+                            (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
+                            (KeyCode::Enter, _) => Some(Message::ExecuteCommand),
+                            (_, _) => Some(Message::SearchTextAreaKeyInput(key)),
+                        },
+                        CurrentPane::History => match (key.code, is_ctrl_pressed) {
+                            (KeyCode::Char('q'), _) => Some(Message::Quit),
+                            (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
+                            (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
+                            (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => Some(Message::ExecuteCommand),
+                            _ => None,
+                        },
+                    }
+                }
             },
             _ => None,
         }
