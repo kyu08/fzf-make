@@ -14,7 +14,7 @@ use crate::{
 };
 use anyhow::{anyhow, bail, Result};
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -70,12 +70,15 @@ impl Model<'_> {
                 KeyCode::Tab => Some(Message::MoveToNextPane),
                 KeyCode::Esc => Some(Message::Quit),
                 _ => match s.current_pane {
-                    CurrentPane::Main => match key.code {
-                        KeyCode::Down => Some(Message::NextCommand),
-                        KeyCode::Up => Some(Message::PreviousCommand),
-                        KeyCode::Enter => Some(Message::ExecuteCommand),
-                        _ => Some(Message::SearchTextAreaKeyInput(key)),
-                    },
+                    CurrentPane::Main => {
+                      let is_ctrl_pressed = key.modifiers == KeyModifiers::CONTROL;
+                      match (key.code, is_ctrl_pressed) {
+                          (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
+                          (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
+                          (KeyCode::Enter, _) => Some(Message::ExecuteCommand),
+                          (_, _) => Some(Message::SearchTextAreaKeyInput(key)),
+                      }
+                    }
                     CurrentPane::History => match key.code {
                         KeyCode::Char('q') => Some(Message::Quit),
                         KeyCode::Down => Some(Message::NextHistory),
