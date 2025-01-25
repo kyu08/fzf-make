@@ -70,26 +70,22 @@ impl Model<'_> {
                 KeyCode::Tab => Some(Message::MoveToNextPane),
                 KeyCode::Esc => Some(Message::Quit),
                 _ => {
-                  let is_ctrl_pressed = key.modifiers.contains(KeyModifiers::CONTROL);
-                  match s.current_pane {
-                      CurrentPane::Main => {
-                        match (key.code, is_ctrl_pressed) {
+                    let is_ctrl_pressed = key.modifiers.contains(KeyModifiers::CONTROL);
+                    match s.current_pane {
+                        CurrentPane::Main => match (key.code, is_ctrl_pressed) {
                             (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
                             (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
                             (KeyCode::Enter, _) => Some(Message::ExecuteCommand),
                             (_, _) => Some(Message::SearchTextAreaKeyInput(key)),
-                        }
-                      }
-                      CurrentPane::History => {
-                        match (key.code, is_ctrl_pressed) {
+                        },
+                        CurrentPane::History => match (key.code, is_ctrl_pressed) {
                             (KeyCode::Char('q'), _) => Some(Message::Quit),
                             (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
                             (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
                             (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => Some(Message::ExecuteCommand),
                             _ => None,
-                        }
-                      }
-                  }
+                        },
+                    }
                 }
             },
             _ => None,
