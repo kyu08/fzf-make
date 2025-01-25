@@ -1,9 +1,9 @@
 export
 RUST_BACKTRACE=full
 
-.PHONY: curl-test
-curl-test:
-	curl -sSL https://example.com | jq
+.PHONY: run
+run:
+	@cargo run
 
 # https://example.com
 .PHONY: ci
