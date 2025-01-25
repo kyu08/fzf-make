@@ -69,24 +69,28 @@ impl Model<'_> {
             AppState::SelectCommand(s) => match key.code {
                 KeyCode::Tab => Some(Message::MoveToNextPane),
                 KeyCode::Esc => Some(Message::Quit),
-                _ => match s.current_pane {
-                    CurrentPane::Main => {
-                      let is_ctrl_pressed = key.modifiers == KeyModifiers::CONTROL;
-                      match (key.code, is_ctrl_pressed) {
-                          (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
-                          (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
-                          (KeyCode::Enter, _) => Some(Message::ExecuteCommand),
-                          (_, _) => Some(Message::SearchTextAreaKeyInput(key)),
+                _ => {
+                  let is_ctrl_pressed = key.modifiers == KeyModifiers::CONTROL;
+                  match s.current_pane {
+                      CurrentPane::Main => {
+                        match (key.code, is_ctrl_pressed) {
+                            (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
+                            (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
+                            (KeyCode::Enter, _) => Some(Message::ExecuteCommand),
+                            (_, _) => Some(Message::SearchTextAreaKeyInput(key)),
+                        }
                       }
-                    }
-                    CurrentPane::History => match key.code {
-                        KeyCode::Char('q') => Some(Message::Quit),
-                        KeyCode::Down => Some(Message::NextHistory),
-                        KeyCode::Up => Some(Message::PreviousHistory),
-                        KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ExecuteCommand),
-                        _ => None,
-                    },
-                },
+                      CurrentPane::History => {
+                        match (key.code, is_ctrl_pressed) {
+                            (KeyCode::Char('q'), _) => Some(Message::Quit),
+                            (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
+                            (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
+                            (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => Some(Message::ExecuteCommand),
+                            _ => None,
+                        }
+                      }
+                  }
+                }
             },
             _ => None,
         }
