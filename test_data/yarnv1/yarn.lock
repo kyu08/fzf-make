@@ -2,7 +2,14 @@
 # yarn lockfile v1
 
 
-"@types/node@^8.0.28":
-  version "8.10.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.10.2.tgz#f1fb9c73414832c5b00ee954c4bbf68394e2e526"
-  integrity sha512-A6Uv1anbsCvrRDtaUXS2xZ5tlzD+Kg7yMRlSLFDy3z0r7KlGXDzL14vELXIAgpk2aJbU3XeZZQRcEkLkowT92g==
+"@types/node@^22.0.0":
+  version "22.13.7"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.13.7.tgz#63ae4418a4d2607cf4ccb1ff5f000fa40d73712a"
+  integrity sha512-oU2q+BsQldB9lYxHNp/5aZO+/Bs0Usa74Abo9mAKulz4ahQyXRHK6UVKYIN8KSC8HXwhWSi7b49JnX+txuac0w==
+  dependencies:
+    undici-types "~6.20.0"
+
+undici-types@~6.20.0:
+  version "6.20.0"
+  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-6.20.0.tgz#8171bf22c1f588d1554d55bf204bc624af388433"
+  integrity sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==

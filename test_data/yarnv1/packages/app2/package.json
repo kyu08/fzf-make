@@ -6,6 +6,6 @@
     "inner": "echo inner2"
   },
   "devDependencies": {
-    "@types/node": "^8.0.28"
+    "@types/node": "^22.0.0"
   }
 }
