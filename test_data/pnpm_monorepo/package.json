@@ -12,7 +12,7 @@
     "test": "echo test"
   },
   "devDependencies": {
-    "@babel/cli": "7.12.10"
+    "@babel/cli": "7.27.0"
   },
   "dependencies": {
     "firebase": "^8.6.8"
