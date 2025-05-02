@@ -15,3 +15,21 @@ If you want to add a new runner, please follow the checklist below.
 - [ ] Add a test directory to `test_data`
 
 -->
+
+<!--
+
+If you add some feature, make sure to follow the checklist below for preventing regression.
+
+## Test cases
+- [ ] Regression
+	- [ ] Existing feature works properly.
+		- [ ] History
+			- [ ] Read histories
+			- [ ] Write histories
+		- [ ] Execution
+			- [ ] Any command can be executed.
+			- [ ] Narrow downed command can be executed.
+		- [ ] Preview
+			- [ ] Preview is shown properly.
+
+-->
