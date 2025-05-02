@@ -9,6 +9,7 @@ on:
       - Cargo.toml
       - Cargo.lock
       - rustfmt.toml
+      - rust-toolchain.toml
 
 env:
   CARGO_TERM_COLOR: always

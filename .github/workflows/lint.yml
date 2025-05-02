@@ -9,6 +9,7 @@ on:
       - Cargo.toml
       - Cargo.lock
       - rustfmt.toml
+      - rust-toolchain.toml
 
 env:
   CARGO_TERM_COLOR: always
@@ -18,7 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
+    - name: Setup clippy
+      run: |
+        rustup set profile minimal
+        rustup component add clippy
     - name: Lint
       run: |
         make check
