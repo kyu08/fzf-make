@@ -71,18 +71,35 @@ impl Model<'_> {
                 KeyCode::Esc => Some(Message::Quit),
                 _ => {
                     let is_ctrl_pressed = key.modifiers.contains(KeyModifiers::CONTROL);
+
+                    // When additional arguments window is opened
+                    if let Some(additional_arguments_window_state) = &s.additional_arguments_window_state {
+                        return match (key.code, is_ctrl_pressed) {
+                            (KeyCode::Esc, _) => Some(Message::CloseAdditionalArgumentsWindow),
+                            (KeyCode::Enter, _) => {
+                                Some(Message::ExecuteCommand(additional_arguments_window_state.append_arguments()))
+                            }
+                            (_, _) => Some(Message::AdditionalArgumentsKeyInput(key)),
+                        };
+                    }
+
+                    // When additional arguments window is not opened
                     match s.current_pane {
                         CurrentPane::Main => match (key.code, is_ctrl_pressed) {
                             (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
                             (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
-                            (KeyCode::Enter, _) => Some(Message::ExecuteCommand),
+                            (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
+                            (KeyCode::Enter, _) => Some(Message::ExecuteCommand(s.get_selected_command().unwrap())),
                             (_, _) => Some(Message::SearchTextAreaKeyInput(key)),
                         },
                         CurrentPane::History => match (key.code, is_ctrl_pressed) {
                             (KeyCode::Char('q'), _) => Some(Message::Quit),
                             (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
                             (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
-                            (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => Some(Message::ExecuteCommand),
+                            (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
+                            (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => {
+                                Some(Message::ExecuteCommand(s.get_selected_command().unwrap()))
+                            }
                             _ => None,
                         },
                     }
@@ -269,12 +286,16 @@ async fn get_latest_version(share_clone: Arc<Mutex<HashMap<String, String>>>) {
 
 enum Message {
     SearchTextAreaKeyInput(KeyEvent),
-    ExecuteCommand,
+    ExecuteCommand(command::Command),
     NextCommand,
     PreviousCommand,
     MoveToNextPane,
     NextHistory,
     PreviousHistory,
+    // Additional arguments
+    OpenAdditionalArgumentsWindow,
+    CloseAdditionalArgumentsWindow,
+    AdditionalArgumentsKeyInput(KeyEvent),
     Quit,
 }
 
@@ -296,13 +317,11 @@ fn update(model: &mut Model, message: Option<Message>) {
     if let AppState::SelectCommand(ref mut s) = model.app_state {
         match message {
             Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
-            Some(Message::ExecuteCommand) => {
-                if let Some(command) = s.get_selected_command() {
-                    s.store_history(command.clone());
-                    if let Some(r) = command.runner_type.to_runner(&s.runners) {
-                        model.transition_to_execute_command_state(r, command);
-                    }
-                };
+            Some(Message::ExecuteCommand(command)) => {
+                s.store_history(command.clone());
+                if let Some(r) = command.runner_type.to_runner(&s.runners) {
+                    model.transition_to_execute_command_state(r, command);
+                }
             }
             Some(Message::NextCommand) => s.next_command(),
             Some(Message::PreviousCommand) => s.previous_command(),
@@ -310,7 +329,10 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
             Some(Message::Quit) => model.transition_to_should_quit_state(),
-            _ => {}
+            Some(Message::OpenAdditionalArgumentsWindow) => s.open_additional_arguments_window(),
+            Some(Message::CloseAdditionalArgumentsWindow) => s.close_additional_arguments_window(),
+            Some(Message::AdditionalArgumentsKeyInput(key_event)) => s.handle_additional_arguments_key_input(key_event),
+            None => {}
         }
     }
 }
@@ -327,6 +349,7 @@ pub struct SelectCommandState<'a> {
     /// or hiding commands that existed at the time of execution but no longer exist.
     pub history: Vec<command::Command>,
     pub history_list_state: ListState,
+    additional_arguments_window_state: Option<AdditionalWindowState<'a>>,
     pub latest_version: Option<String>,
 }
 
@@ -394,6 +417,7 @@ impl SelectCommandState<'_> {
                 commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                 history: Model::get_histories(current_dir, runners),
                 history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+                additional_arguments_window_state: None,
                 latest_version: None,
             })
         }
@@ -576,6 +600,26 @@ impl SelectCommandState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
+    fn open_additional_arguments_window(&mut self) {
+        if let Some(command) = self.get_selected_command() {
+            if self.additional_arguments_window_state.is_none() {
+                self.additional_arguments_window_state = Some(AdditionalWindowState::new(command));
+            }
+        }
+    }
+
+    fn close_additional_arguments_window(&mut self) {
+        if self.additional_arguments_window_state.is_some() {
+            self.additional_arguments_window_state = None;
+        }
+    }
+
+    fn handle_additional_arguments_key_input(&mut self, key_event: KeyEvent) {
+        if let Some(ref mut additional_window) = self.additional_arguments_window_state {
+            additional_window.arguments_text_area.0.input(key_event);
+        }
+    }
+
     fn store_history(&self, command: command::Command) {
         // NOTE: self.get_selected_command should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
@@ -660,8 +704,32 @@ impl SelectCommandState<'_> {
                 },
             ],
             history_list_state: ListState::with_selected(ListState::default(), Some(0)),
+            additional_arguments_window_state: None,
             latest_version: None,
         }
+    }
+}
+
+#[derive(Debug)]
+struct AdditionalWindowState<'a> {
+    pub arguments_text_area: TextArea_<'a>,
+    command: command::Command,
+}
+
+impl<'a> AdditionalWindowState<'a> {
+    pub fn new(command: command::Command) -> Self {
+        Self {
+            arguments_text_area: TextArea_(TextArea::default()),
+            command,
+        }
+    }
+
+    pub fn append_arguments(&self) -> command::Command {
+        let mut new_command = self.command.clone();
+        if let Some(arguments) = self.arguments_text_area.0.lines().join(" ").trim().to_string().into() {
+            new_command.args.push_str(&format!(" {}", arguments));
+        }
+        new_command
     }
 }
 
@@ -870,7 +938,12 @@ mod test {
                         ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::ExecuteCommand),
+                message: Some(Message::ExecuteCommand(command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "target0".to_string(),
+                    PathBuf::from(""),
+                    1,
+                ))),
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
                         runner::Runner::MakeCommand(Make::new_for_test()),
@@ -887,7 +960,12 @@ mod test {
                         ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::ExecuteCommand),
+                message: Some(Message::ExecuteCommand(command::Command::new(
+                    runner_type::RunnerType::Make,
+                    "history1".to_string(),
+                    PathBuf::from("Makefile"),
+                    4,
+                ))),
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
                         runner::Runner::MakeCommand(Make::new_for_test()),
