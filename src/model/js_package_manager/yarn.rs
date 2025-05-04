@@ -21,20 +21,10 @@ enum YarnVersion {
 
 impl Yarn {
     pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
-        // To ensure that the command exists, it is necessary to check the command name.
-        // If implementation is wrong, developers can notice it here.
-        match self.get_command(command.clone()) {
-            Some(c) => Ok(format!("yarn {}", c.args)),
-            None => Err(anyhow!("command not found")),
-        }
+        Ok(format!("yarn {}", command.args))
     }
 
     pub fn execute(&self, command: &command::Command) -> Result<()> {
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
         let child = process::Command::new("yarn")
             .stdin(process::Stdio::inherit())
             .args(command.args.split_whitespace().collect::<Vec<&str>>())
@@ -102,10 +92,6 @@ impl Yarn {
 
     pub fn to_commands(&self) -> Vec<command::Command> {
         self.commands.clone()
-    }
-
-    fn get_command(&self, command: command::Command) -> Option<&command::Command> {
-        self.commands.iter().find(|c| **c == command)
     }
 
     // scripts_to_commands collects all scripts by following steps:

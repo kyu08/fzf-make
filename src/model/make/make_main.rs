@@ -21,13 +21,6 @@ impl Make {
     /// command as an argument. However, if it is an associated function, it can be called
     /// from anywhere, so it is better to make it a method to limit the context.
     pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
-        // To ensure that the command exists, it is necessary to check the command name.
-        // If implementation is wrong, developers can notice it here.
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
         Ok(format!("make {}", command.args))
     }
 
@@ -49,14 +42,9 @@ impl Make {
     }
 
     pub fn execute(&self, command: &command::Command) -> Result<()> {
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
         let child = process::Command::new("make")
             .stdin(process::Stdio::inherit())
-            .arg(&command.args)
+            .args(command.args.split_whitespace())
             .spawn();
 
         match child {
@@ -66,10 +54,6 @@ impl Make {
             },
             Err(e) => Err(anyhow!("failed to spawn: {}", e)),
         }
-    }
-
-    fn get_command(&self, command: command::Command) -> Option<command::Command> {
-        self.to_commands().iter().find(|c| **c == command).map(|_| command)
     }
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).

@@ -45,23 +45,13 @@ impl Just {
     }
 
     pub fn command_to_run(&self, command: &command::Command) -> Result<String, anyhow::Error> {
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
         Ok(format!("just {}", command.args))
     }
 
     pub fn execute(&self, command: &command::Command) -> Result<(), anyhow::Error> {
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
         let child = process::Command::new("just")
             .stdin(process::Stdio::inherit())
-            .arg(&command.args)
+            .args(command.args.split_whitespace())
             .spawn();
 
         match child {
@@ -71,10 +61,6 @@ impl Just {
             },
             Err(e) => Err(anyhow!("failed to spawn: {}", e)),
         }
-    }
-
-    fn get_command(&self, command: command::Command) -> Option<command::Command> {
-        self.to_commands().iter().find(|c| **c == command).map(|_| command)
     }
 
     fn find_justfile(current_dir: PathBuf) -> Option<PathBuf> {
