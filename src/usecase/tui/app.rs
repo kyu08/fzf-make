@@ -68,24 +68,24 @@ impl Model<'_> {
         match &self.app_state {
             AppState::SelectCommand(s) => match key.code {
                 KeyCode::Tab => Some(Message::MoveToNextPane),
-                KeyCode::Esc => Some(Message::Quit),
                 _ => {
                     let is_ctrl_pressed = key.modifiers.contains(KeyModifiers::CONTROL);
 
                     // When additional arguments window is opened
-                    if let Some(additional_arguments_window_state) = &s.additional_arguments_window_state {
-                        return match (key.code, is_ctrl_pressed) {
-                            (KeyCode::Esc, _) => Some(Message::CloseAdditionalArgumentsWindow),
-                            (KeyCode::Enter, _) => {
-                                Some(Message::ExecuteCommand(additional_arguments_window_state.append_arguments()))
+                    if let Some(additional_arguments_popup_state) = &s.additional_arguments_popup_state {
+                        return match key.code {
+                            KeyCode::Esc => Some(Message::CloseAdditionalArgumentsWindow),
+                            KeyCode::Enter => {
+                                Some(Message::ExecuteCommand(additional_arguments_popup_state.append_arguments()))
                             }
-                            (_, _) => Some(Message::AdditionalArgumentsKeyInput(key)),
+                            _ => Some(Message::AdditionalArgumentsKeyInput(key)),
                         };
                     }
 
                     // When additional arguments window is not opened
                     match s.current_pane {
                         CurrentPane::Main => match (key.code, is_ctrl_pressed) {
+                            (KeyCode::Esc, _) => Some(Message::Quit),
                             (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
                             (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
                             (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
@@ -93,6 +93,7 @@ impl Model<'_> {
                             (_, _) => Some(Message::SearchTextAreaKeyInput(key)),
                         },
                         CurrentPane::History => match (key.code, is_ctrl_pressed) {
+                            (KeyCode::Esc, _) => Some(Message::Quit),
                             (KeyCode::Char('q'), _) => Some(Message::Quit),
                             (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
                             (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
@@ -329,8 +330,8 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
             Some(Message::Quit) => model.transition_to_should_quit_state(),
-            Some(Message::OpenAdditionalArgumentsWindow) => s.open_additional_arguments_window(),
-            Some(Message::CloseAdditionalArgumentsWindow) => s.close_additional_arguments_window(),
+            Some(Message::OpenAdditionalArgumentsWindow) => s.open_additional_arguments_popup(),
+            Some(Message::CloseAdditionalArgumentsWindow) => s.close_additional_arguments_popup(),
             Some(Message::AdditionalArgumentsKeyInput(key_event)) => s.handle_additional_arguments_key_input(key_event),
             None => {}
         }
@@ -349,7 +350,7 @@ pub struct SelectCommandState<'a> {
     /// or hiding commands that existed at the time of execution but no longer exist.
     pub history: Vec<command::Command>,
     pub history_list_state: ListState,
-    additional_arguments_window_state: Option<AdditionalWindowState<'a>>,
+    pub additional_arguments_popup_state: Option<AdditionalWindowState<'a>>,
     pub latest_version: Option<String>,
 }
 
@@ -417,13 +418,13 @@ impl SelectCommandState<'_> {
                 commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                 history: Model::get_histories(current_dir, runners),
                 history_list_state: ListState::with_selected(ListState::default(), Some(0)),
-                additional_arguments_window_state: None,
+                additional_arguments_popup_state: None,
                 latest_version: None,
             })
         }
     }
 
-    fn get_selected_command(&self) -> Option<command::Command> {
+    pub fn get_selected_command(&self) -> Option<command::Command> {
         match self.current_pane {
             CurrentPane::Main => self.selected_command(),
             CurrentPane::History => self.selected_history(),
@@ -600,22 +601,22 @@ impl SelectCommandState<'_> {
         self.search_text_area.0.input(key_event);
     }
 
-    fn open_additional_arguments_window(&mut self) {
+    fn open_additional_arguments_popup(&mut self) {
         if let Some(command) = self.get_selected_command() {
-            if self.additional_arguments_window_state.is_none() {
-                self.additional_arguments_window_state = Some(AdditionalWindowState::new(command));
+            if self.additional_arguments_popup_state.is_none() {
+                self.additional_arguments_popup_state = Some(AdditionalWindowState::new(command));
             }
         }
     }
 
-    fn close_additional_arguments_window(&mut self) {
-        if self.additional_arguments_window_state.is_some() {
-            self.additional_arguments_window_state = None;
+    fn close_additional_arguments_popup(&mut self) {
+        if self.additional_arguments_popup_state.is_some() {
+            self.additional_arguments_popup_state = None;
         }
     }
 
     fn handle_additional_arguments_key_input(&mut self, key_event: KeyEvent) {
-        if let Some(ref mut additional_window) = self.additional_arguments_window_state {
+        if let Some(ref mut additional_window) = self.additional_arguments_popup_state {
             additional_window.arguments_text_area.0.input(key_event);
         }
     }
@@ -673,6 +674,10 @@ impl SelectCommandState<'_> {
         None
     }
 
+    pub fn is_additional_arguments_popup_opened(&self) -> bool {
+        self.additional_arguments_popup_state.is_some()
+    }
+
     #[cfg(test)]
     fn new_for_test() -> Self {
         use crate::model::runner_type;
@@ -704,14 +709,14 @@ impl SelectCommandState<'_> {
                 },
             ],
             history_list_state: ListState::with_selected(ListState::default(), Some(0)),
-            additional_arguments_window_state: None,
+            additional_arguments_popup_state: None,
             latest_version: None,
         }
     }
 }
 
-#[derive(Debug)]
-struct AdditionalWindowState<'a> {
+#[derive(Debug, Clone)]
+pub struct AdditionalWindowState<'a> {
     pub arguments_text_area: TextArea_<'a>,
     command: command::Command,
 }
