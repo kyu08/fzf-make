@@ -280,9 +280,13 @@ enum Message {
 
 // TODO: make this method Model's method
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
-    match (crossterm::event::poll(std::time::Duration::from_millis(10000))?, crossterm::event::read()?) {
-        (true, crossterm::event::Event::Key(key)) => Ok(model.handle_key_input(key)),
-        _ => Ok(None),
+    if crossterm::event::poll(std::time::Duration::from_millis(500))? {
+        match crossterm::event::read()? {
+            crossterm::event::Event::Key(key) => Ok(model.handle_key_input(key)),
+            _ => Ok(None),
+        }
+    } else {
+        Ok(None)
     }
 }
 
