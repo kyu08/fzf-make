@@ -2,6 +2,11 @@
 run:
 	echo "run"
 
+# just echo args
+.PHONY: run-with-args
+run-with-args:
+	echo $(ARG1); echo $(ARG2)
+
 include ./makefiles/test.mk
 
 .PHONY: cmd
