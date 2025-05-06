@@ -107,9 +107,13 @@ impl Just {
                         let recipe_name = &source_code[recipe_child.byte_range()];
                         let trimmed = recipe_name.split(':').collect::<Vec<&str>>();
                         if let Some(r) = trimmed.first() {
+                            // If recipe includes an argument, it will be like `run arg:`.
+                            // So we need to split it by space and take the first element.
+                            let command_name = r.split_whitespace().next().unwrap_or("").to_string();
+
                             commands.push(Command::new(
                                 RunnerType::Just,
-                                r.trim().to_string(),
+                                command_name,
                                 justfile_path.clone(),
                                 recipe_child.start_position().row as u32 + 1,
                             ))
@@ -199,7 +203,7 @@ mod test {
                 expected: None,
             },
             Case {
-                name: "justfile with one recipe",
+                name: "justfile with multiple recipes",
                 source_code: r#"
 #!/usr/bin/env -S just --justfile
 
@@ -258,6 +262,33 @@ clippy:
                         args: "clippy".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 26,
+                    },
+                ]),
+            },
+            Case {
+                name: "justfile with recipes including a recipe with argument",
+                source_code: r#"#!/usr/bin/env -S just --justfile
+
+[group: 'misc']
+run arg:
+  echo "run {{arg}}"
+
+[group: 'misc']
+build:
+  echo build
+        "#,
+                expected: Some(vec![
+                    Command {
+                        runner_type: RunnerType::Just,
+                        args: "run".to_string(),
+                        file_path: PathBuf::from("justfile"),
+                        line_number: 4,
+                    },
+                    Command {
+                        runner_type: RunnerType::Just,
+                        args: "build".to_string(),
+                        file_path: PathBuf::from("justfile"),
+                        line_number: 8,
                     },
                 ]),
             },
