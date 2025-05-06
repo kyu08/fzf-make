@@ -15,11 +15,11 @@ pub struct Pnpm {
 }
 
 impl Pnpm {
-    pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
+    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
         Ok(format!("pnpm {}", command.args))
     }
 
-    pub fn execute(&self, command: &command::Command) -> Result<()> {
+    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
         let child = process::Command::new("pnpm")
             .stdin(process::Stdio::inherit())
             .args(command.args.split_whitespace().collect::<Vec<&str>>())

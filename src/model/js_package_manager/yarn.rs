@@ -20,11 +20,11 @@ enum YarnVersion {
 }
 
 impl Yarn {
-    pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
+    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
         Ok(format!("yarn {}", command.args))
     }
 
-    pub fn execute(&self, command: &command::Command) -> Result<()> {
+    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
         let child = process::Command::new("yarn")
             .stdin(process::Stdio::inherit())
             .args(command.args.split_whitespace().collect::<Vec<&str>>())

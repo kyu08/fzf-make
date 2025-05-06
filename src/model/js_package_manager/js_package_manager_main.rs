@@ -17,7 +17,7 @@ pub enum JsPackageManager {
 }
 
 impl JsPackageManager {
-    pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
+    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.command_to_run(command),
             JsPackageManager::JsYarn(yarn) => yarn.command_to_run(command),
@@ -31,7 +31,7 @@ impl JsPackageManager {
         }
     }
 
-    pub fn execute(&self, command: &command::Command) -> Result<()> {
+    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.execute(command),
             JsPackageManager::JsYarn(yarn) => yarn.execute(command),

@@ -233,7 +233,7 @@ fn render_commands_block(model: &mut SelectCommandState, f: &mut Frame, chunk: r
     f.render_stateful_widget(
         commands_block(
             " 📢 Commands ",
-            model.narrow_down_commands(),
+            model.narrow_down_commands().into_iter().map(|c| c.into()).collect(),
             model.current_pane.is_main(),
             model.is_additional_arguments_popup_opened(),
         ),
@@ -305,7 +305,7 @@ fn render_history_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ra
     f.render_stateful_widget(
         commands_block(
             " 📚 History ",
-            model.get_history(),
+            model.get_history().into_iter().map(|c| c.into()).collect(),
             model.current_pane.is_history(),
             model.is_additional_arguments_popup_opened(),
         ),
@@ -332,9 +332,9 @@ fn render_additional_arguments_popup(model: &mut SelectCommandState, f: &mut Fra
     // This clears out the background which is needed to allow
     // overdrawing
     f.render_widget(Clear, area);
-    let mut additional_arguments_popup_statw = model.additional_arguments_popup_state.clone().unwrap();
-    additional_arguments_popup_statw.arguments_text_area.0.set_block(block);
-    f.render_widget(&additional_arguments_popup_statw.arguments_text_area.0, area);
+    let mut additional_arguments_popup_state = model.additional_arguments_popup_state.clone().unwrap();
+    additional_arguments_popup_state.arguments_text_area.0.set_block(block);
+    f.render_widget(&additional_arguments_popup_state.arguments_text_area.0, area);
 }
 
 fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
@@ -356,7 +356,7 @@ fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratat
 
 fn commands_block(
     title: &str,
-    narrowed_down_commands: Vec<command::Command>,
+    narrowed_down_commands: Vec<command::CommandForExec>,
     is_current: bool,
     is_additional_arguments_popup_opened: bool,
 ) -> List<'_> {

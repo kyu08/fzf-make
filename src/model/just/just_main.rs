@@ -44,11 +44,11 @@ impl Just {
         self.path.clone()
     }
 
-    pub fn command_to_run(&self, command: &command::Command) -> Result<String, anyhow::Error> {
+    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String, anyhow::Error> {
         Ok(format!("just {}", command.args))
     }
 
-    pub fn execute(&self, command: &command::Command) -> Result<(), anyhow::Error> {
+    pub fn execute(&self, command: &command::CommandForExec) -> Result<(), anyhow::Error> {
         let child = process::Command::new("just")
             .stdin(process::Stdio::inherit())
             .args(command.args.split_whitespace())

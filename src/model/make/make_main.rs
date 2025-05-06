@@ -20,7 +20,7 @@ impl Make {
     /// It is possible to implement this method as an associated function because it takes a
     /// command as an argument. However, if it is an associated function, it can be called
     /// from anywhere, so it is better to make it a method to limit the context.
-    pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
+    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
         Ok(format!("make {}", command.args))
     }
 
@@ -41,7 +41,7 @@ impl Make {
         result
     }
 
-    pub fn execute(&self, command: &command::Command) -> Result<()> {
+    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
         let child = process::Command::new("make")
             .stdin(process::Stdio::inherit())
             .args(command.args.split_whitespace())

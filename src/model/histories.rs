@@ -10,7 +10,7 @@ pub struct Histories {
 }
 
 impl Histories {
-    pub fn append(&self, current_dir: PathBuf, command: command::Command) -> Self {
+    pub fn append(&self, current_dir: PathBuf, command: command::CommandForExec) -> Self {
         // Update the command history for the current directory.
         let new_history = {
             match self.histories.iter().find(|h| h.path == current_dir) {
@@ -48,7 +48,7 @@ pub struct History {
 }
 
 impl History {
-    fn append(&self, executed_command: command::Command) -> Self {
+    fn append(&self, executed_command: command::CommandForExec) -> Self {
         let mut updated_commands = self.commands.clone();
         // removes the executed_command from the history
         updated_commands.retain(|t| *t != HistoryCommand::from(executed_command.clone()));
@@ -76,8 +76,8 @@ pub struct HistoryCommand {
     pub args: String,
 }
 
-impl HistoryCommand {
-    pub fn from(command: command::Command) -> Self {
+impl From<command::CommandForExec> for HistoryCommand {
+    fn from(command: command::CommandForExec) -> Self {
         Self {
             runner_type: command.runner_type,
             args: command.args,
@@ -96,7 +96,7 @@ mod test {
         struct Case {
             title: &'static str,
             before: Histories,
-            command_to_append: command::Command,
+            command_to_append: command::CommandForExec,
             after: Histories,
         }
 
@@ -124,11 +124,9 @@ mod test {
                         },
                     ],
                 },
-                command_to_append: command::Command {
+                command_to_append: command::CommandForExec {
                     runner_type: runner_type::RunnerType::Make,
                     args: "append".to_string(),
-                    file_path: PathBuf::from("Makefile"),
-                    line_number: 1,
                 },
                 after: Histories {
                     histories: vec![
@@ -166,11 +164,9 @@ mod test {
                         }],
                     }],
                 },
-                command_to_append: command::Command {
+                command_to_append: command::CommandForExec {
                     runner_type: runner_type::RunnerType::Make,
                     args: "append".to_string(),
-                    file_path: PathBuf::from("Makefile"),
-                    line_number: 1,
                 },
                 after: Histories {
                     histories: vec![
@@ -208,7 +204,7 @@ mod test {
         struct Case {
             title: &'static str,
             before: History,
-            command_to_append: command::Command,
+            command_to_append: command::CommandForExec,
             after: History,
         }
         let path = PathBuf::from("/Users/user/code/fzf-make".to_string());
@@ -228,12 +224,10 @@ mod test {
                         },
                     ],
                 },
-                command_to_append: command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "history2".to_string(),
-                    PathBuf::from("Makefile"),
-                    1,
-                ),
+                command_to_append: command::CommandForExec {
+                    runner_type: runner_type::RunnerType::Make,
+                    args: "history2".to_string(),
+                },
                 after: History {
                     path: path.clone(),
                     commands: vec![
@@ -258,12 +252,10 @@ mod test {
                     path: path.clone(),
                     commands: vec![],
                 },
-                command_to_append: command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "history0".to_string(),
-                    PathBuf::from("Makefile"),
-                    4,
-                ),
+                command_to_append: command::CommandForExec {
+                    runner_type: runner_type::RunnerType::Make,
+                    args: "history0".to_string(),
+                },
                 after: History {
                     path: path.clone(),
                     commands: vec![HistoryCommand {
@@ -291,12 +283,10 @@ mod test {
                         },
                     ],
                 },
-                command_to_append: command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "history2".to_string(),
-                    PathBuf::from("Makefile"),
-                    1,
-                ),
+                command_to_append: command::CommandForExec {
+                    runner_type: runner_type::RunnerType::Make,
+                    args: "history2".to_string(),
+                },
                 after: History {
                     path: path.clone(),
                     commands: vec![
@@ -362,12 +352,10 @@ mod test {
                         },
                     ],
                 },
-                command_to_append: command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "history10".to_string(),
-                    PathBuf::from("Makefile"),
-                    1,
-                ),
+                command_to_append: command::CommandForExec {
+                    runner_type: runner_type::RunnerType::Make,
+                    args: "history10".to_string(),
+                },
                 after: History {
                     path: path.clone(),
                     commands: vec![

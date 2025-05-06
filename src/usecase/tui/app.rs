@@ -3,7 +3,7 @@ use crate::{
     err::any_to_string,
     file::toml,
     model::{
-        command::{self, Command},
+        command::{self},
         histories::{self},
         js_package_manager::js_package_manager_main as js,
         just::just_main::Just,
@@ -111,50 +111,24 @@ impl Model<'_> {
     }
 
     // returns available commands in cwd from history file
-    fn get_histories(current_working_directory: PathBuf, runners: Vec<runner::Runner>) -> Vec<Command> {
+    fn get_histories(current_working_directory: PathBuf) -> Vec<histories::HistoryCommand> {
         let histories = toml::Histories::into(toml::Histories::get_history());
 
         for history in histories.histories {
             if history.path != current_working_directory {
                 continue;
             }
-            return Self::get_commands_from_history(history.commands, &runners);
+
+            // Originally, it was filtering out commands in history that no longer exist.
+            // But due to the development of the feature to pass arguments to commands,
+            // checking the existence of commands was removed.
+            return history.commands;
         }
 
         vec![]
     }
 
-    /// get command from history and filter commands that no longer exist.
-    fn get_commands_from_history(
-        history_commands: Vec<histories::HistoryCommand>,
-        runners: &Vec<runner::Runner>,
-    ) -> Vec<command::Command> {
-        // make a hashmap in order to search commands by O(1).
-        let command_hash_map: HashMap<runner_type::RunnerType, HashMap<String, command::Command>> = {
-            let mut map: HashMap<runner_type::RunnerType, HashMap<String, command::Command>> = HashMap::new();
-            for runner in runners {
-                let mut inner_map = HashMap::new();
-                for c in runner.list_commands() {
-                    inner_map.insert(c.args.clone(), c);
-                }
-                map.insert(runner_type::RunnerType::from(runner), inner_map);
-            }
-
-            map
-        };
-
-        let mut commands: Vec<command::Command> = Vec::new();
-        for history_command in history_commands {
-            if let Some(inner_map) = command_hash_map.get(&history_command.runner_type) {
-                if let Some(c) = inner_map.get(&history_command.args) {
-                    commands.push(c.clone());
-                }
-            }
-        }
-        commands
-    }
-
-    fn transition_to_execute_command_state(&mut self, runner: runner::Runner, command: command::Command) {
+    fn transition_to_execute_command_state(&mut self, runner: runner::Runner, command: command::CommandForExec) {
         self.app_state = AppState::ExecuteCommand(ExecuteCommandState::new(runner, command));
     }
 
@@ -170,7 +144,7 @@ impl Model<'_> {
         matches!(self.app_state, AppState::ExecuteCommand(_))
     }
 
-    fn command_to_execute(&self) -> Option<(runner::Runner, command::Command)> {
+    fn command_to_execute(&self) -> Option<(runner::Runner, command::CommandForExec)> {
         match &self.app_state {
             AppState::ExecuteCommand(command) => {
                 let command = command.clone();
@@ -224,7 +198,7 @@ const VERSION_KEY: &str = "version";
 async fn run<'a, B: Backend>(
     terminal: &mut Terminal<B>,
     model: &'a mut Model<'a>,
-) -> Result<Option<(runner::Runner, command::Command)>> {
+) -> Result<Option<(runner::Runner, command::CommandForExec)>> {
     let shared_version_hash_map = Arc::new(Mutex::new(HashMap::new()));
 
     let cloned_hash_map = shared_version_hash_map.clone();
@@ -287,7 +261,7 @@ async fn get_latest_version(share_clone: Arc<Mutex<HashMap<String, String>>>) {
 
 enum Message {
     SearchTextAreaKeyInput(KeyEvent),
-    ExecuteCommand(command::Command),
+    ExecuteCommand(command::CommandForExec),
     NextCommand,
     PreviousCommand,
     MoveToNextPane,
@@ -345,10 +319,7 @@ pub struct SelectCommandState<'a> {
     pub runners: Vec<runner::Runner>,
     pub search_text_area: TextArea_<'a>,
     pub commands_list_state: ListState,
-    /// This field could have been of type `Vec<Histories>`, but it was intentionally made of type `Vec<command::Command>`.
-    /// This is because it allows for future features such as displaying the contents of history in the preview window
-    /// or hiding commands that existed at the time of execution but no longer exist.
-    pub history: Vec<command::Command>,
+    pub history: Vec<histories::HistoryCommand>,
     pub history_list_state: ListState,
     pub additional_arguments_popup_state: Option<AdditionalWindowState<'a>>,
     pub latest_version: Option<String>,
@@ -416,7 +387,7 @@ impl SelectCommandState<'_> {
                 runners: runners.clone(),
                 search_text_area: TextArea_(TextArea::default()),
                 commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
-                history: Model::get_histories(current_dir, runners),
+                history: Model::get_histories(current_dir),
                 history_list_state: ListState::with_selected(ListState::default(), Some(0)),
                 additional_arguments_popup_state: None,
                 latest_version: None,
@@ -424,10 +395,10 @@ impl SelectCommandState<'_> {
         }
     }
 
-    pub fn get_selected_command(&self) -> Option<command::Command> {
+    pub fn get_selected_command(&self) -> Option<command::CommandForExec> {
         match self.current_pane {
-            CurrentPane::Main => self.selected_command(),
-            CurrentPane::History => self.selected_history(),
+            CurrentPane::Main => self.selected_command().map(|c| c.into()),
+            CurrentPane::History => self.selected_history().map(|c| c.into()),
         }
     }
 
@@ -445,7 +416,7 @@ impl SelectCommandState<'_> {
         }
     }
 
-    fn selected_history(&self) -> Option<command::Command> {
+    fn selected_history(&self) -> Option<histories::HistoryCommand> {
         let history = self.get_history();
         if history.is_empty() {
             return None;
@@ -507,7 +478,7 @@ impl SelectCommandState<'_> {
         result
     }
 
-    pub fn get_history(&self) -> Vec<command::Command> {
+    pub fn get_history(&self) -> Vec<histories::HistoryCommand> {
         self.history.clone()
     }
 
@@ -621,7 +592,7 @@ impl SelectCommandState<'_> {
         }
     }
 
-    fn store_history(&self, command: command::Command) {
+    fn store_history(&self, command: command::CommandForExec) {
         // NOTE: self.get_selected_command should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
         // before update.
@@ -642,7 +613,7 @@ impl SelectCommandState<'_> {
         self.commands_list_state.select(Some(0));
     }
 
-    pub fn get_latest_command(&self) -> Option<&command::Command> {
+    pub fn get_latest_command(&self) -> Option<&histories::HistoryCommand> {
         self.history.first()
     }
 
@@ -689,23 +660,17 @@ impl SelectCommandState<'_> {
             search_text_area: TextArea_(TextArea::default()),
             commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
             history: vec![
-                command::Command {
+                histories::HistoryCommand {
                     runner_type: runner_type::RunnerType::Make,
                     args: "history0".to_string(),
-                    file_path: PathBuf::from("Makefile"),
-                    line_number: 1,
                 },
-                command::Command {
+                histories::HistoryCommand {
                     runner_type: runner_type::RunnerType::Make,
                     args: "history1".to_string(),
-                    file_path: PathBuf::from("Makefile"),
-                    line_number: 4,
                 },
-                command::Command {
+                histories::HistoryCommand {
                     runner_type: runner_type::RunnerType::Make,
                     args: "history2".to_string(),
-                    file_path: PathBuf::from("Makefile"),
-                    line_number: 7,
                 },
             ],
             history_list_state: ListState::with_selected(ListState::default(), Some(0)),
@@ -718,18 +683,18 @@ impl SelectCommandState<'_> {
 #[derive(Debug, Clone)]
 pub struct AdditionalWindowState<'a> {
     pub arguments_text_area: TextArea_<'a>,
-    command: command::Command,
+    command: command::CommandForExec,
 }
 
 impl<'a> AdditionalWindowState<'a> {
-    pub fn new(command: command::Command) -> Self {
+    pub fn new(command: command::CommandForExec) -> Self {
         Self {
             arguments_text_area: TextArea_(TextArea::default()),
             command,
         }
     }
 
-    pub fn append_arguments(&self) -> command::Command {
+    pub fn append_arguments(&self) -> command::CommandForExec {
         let mut new_command = self.command.clone();
         if let Some(arguments) = self.arguments_text_area.0.lines().join(" ").trim().to_string().into() {
             new_command.args.push_str(&format!(" {}", arguments));
@@ -743,11 +708,11 @@ pub struct ExecuteCommandState {
     /// It is possible to have one concrete type like Command struct here.
     /// But from the perspective of simpleness of code base, this field has trait object.
     executor: runner::Runner,
-    command: command::Command,
+    command: command::CommandForExec,
 }
 
 impl ExecuteCommandState {
-    fn new(executor: runner::Runner, command: command::Command) -> Self {
+    fn new(executor: runner::Runner, command: command::CommandForExec) -> Self {
         ExecuteCommandState { executor, command }
     }
 }
@@ -943,16 +908,17 @@ mod test {
                         ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::ExecuteCommand(command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "target0".to_string(),
-                    PathBuf::from(""),
-                    1,
-                ))),
+                message: Some(Message::ExecuteCommand(command::CommandForExec {
+                    runner_type: runner_type::RunnerType::Make,
+                    args: "target0".to_string(),
+                })),
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
                         runner::Runner::MakeCommand(Make::new_for_test()),
-                        command::Command::new(runner_type::RunnerType::Make, "target0".to_string(), PathBuf::new(), 1),
+                        command::CommandForExec {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "target0".to_string(),
+                        },
                     )),
                 },
             },
@@ -965,21 +931,17 @@ mod test {
                         ..SelectCommandState::new_for_test()
                     }),
                 },
-                message: Some(Message::ExecuteCommand(command::Command::new(
-                    runner_type::RunnerType::Make,
-                    "history1".to_string(),
-                    PathBuf::from("Makefile"),
-                    4,
-                ))),
+                message: Some(Message::ExecuteCommand(command::CommandForExec {
+                    runner_type: runner_type::RunnerType::Make,
+                    args: "history1".to_string(),
+                })),
                 expect_model: Model {
                     app_state: AppState::ExecuteCommand(ExecuteCommandState::new(
                         runner::Runner::MakeCommand(Make::new_for_test()),
-                        command::Command::new(
-                            runner_type::RunnerType::Make,
-                            "history1".to_string(),
-                            PathBuf::from("Makefile"),
-                            4,
-                        ),
+                        command::CommandForExec {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history1".to_string(),
+                        },
                     )),
                 },
             },
@@ -1035,7 +997,7 @@ mod test {
                 },
             },
             Case {
-                title: "PreviousCommand when there is no commands to select, 
+                title: "PreviousCommand when there is no commands to select,
                     panic should not occur",
                 model: {
                     let mut m = Model {
@@ -1101,7 +1063,7 @@ mod test {
                 },
             },
             Case {
-                title: "When the last history is selected and NextHistory is received, 
+                title: "When the last history is selected and NextHistory is received,
                     it returns to the beginning.",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
@@ -1120,7 +1082,7 @@ mod test {
                 },
             },
             Case {
-                title: "When the first history is selected and PreviousHistory is received, 
+                title: "When the first history is selected and PreviousHistory is received,
                     it moves to the last history.",
                 model: Model {
                     app_state: AppState::SelectCommand(SelectCommandState {
