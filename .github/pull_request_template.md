@@ -13,6 +13,7 @@ If you want to add a new runner, please follow the checklist below.
 - [ ] Update the output of `fzf-make --help`
 - [ ] Update `CREDITS` if needed
 - [ ] Add a test directory to `test_data`
+- [ ] Update `docs/MANUAL_TEST_CASES.md`
 
 -->
 
