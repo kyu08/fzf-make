@@ -29,6 +29,7 @@ impl RunnerType {
         None
     }
 
+    // TODO: impl as From trait
     pub fn from(runner: &runner::Runner) -> Self {
         match runner {
             runner::Runner::MakeCommand(_) => RunnerType::Make,
