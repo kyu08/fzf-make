@@ -1,7 +1,7 @@
 ## Test cases
 - [ ] `fzf-make`
     - [ ] Execution
-        - [ ] A command name  executing is shown
+        - [ ] A command name executing is shown
         - [ ] Selected command is executed
     - [ ] Narrowing down
         - [ ] Placeholder is shown when no characters are typed.
