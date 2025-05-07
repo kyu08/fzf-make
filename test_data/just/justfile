@@ -4,8 +4,11 @@ test:
   cargo test --all
 
 [group: 'misc']
-run:
-  echo run
+run message:
+  echo "run {{message}}"
+
+run2 message1 message2:
+  echo "run {{message1}} {{message2}}"
 
 [group: 'misc']
 build:

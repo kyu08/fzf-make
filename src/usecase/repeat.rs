@@ -2,7 +2,7 @@ use super::tui::{
     app::{AppState, Model},
     config,
 };
-use crate::usecase::usecase_main::Usecase;
+use crate::{model::command, usecase::usecase_main::Usecase};
 use anyhow::{anyhow, Result};
 use futures::{future::BoxFuture, FutureExt};
 
@@ -27,8 +27,8 @@ impl Usecase for Repeat {
                     AppState::SelectCommand(state) => match state.get_latest_command() {
                         Some(c) => match state.get_runner(&c.runner_type) {
                             Some(runner) => {
-                                runner.show_command(c);
-                                runner.execute(c)
+                                runner.show_command(&command::CommandForExec::from(c.clone()));
+                                runner.execute(&command::CommandForExec::from(c.clone()))
                             }
                             None => Err(anyhow!("runner not found.")),
                         },

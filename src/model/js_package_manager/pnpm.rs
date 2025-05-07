@@ -11,27 +11,15 @@ const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pnpm {
     pub path: PathBuf,
-    commands: Vec<command::Command>,
+    commands: Vec<command::CommandWithPreview>,
 }
 
 impl Pnpm {
-    pub fn command_to_run(&self, command: &command::Command) -> Result<String> {
-        // To ensure that the command exists, it is necessary to check the command name.
-        // If implementation is wrong, developers can notice it here.
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
+    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
         Ok(format!("pnpm {}", command.args))
     }
 
-    pub fn execute(&self, command: &command::Command) -> Result<()> {
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
+    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
         let child = process::Command::new("pnpm")
             .stdin(process::Stdio::inherit())
             .args(command.args.split_whitespace().collect::<Vec<&str>>())
@@ -74,7 +62,7 @@ impl Pnpm {
     // 1. Collect scripts defined in package.json in the current directory(which fzf-make is launched)
     // 2. Collect the paths of all `package.json` in the workspace.
     // 3. Collect all scripts defined in given `package.json` paths.
-    fn collect_workspace_scripts(current_dir: PathBuf) -> Option<Vec<command::Command>> {
+    fn collect_workspace_scripts(current_dir: PathBuf) -> Option<Vec<command::CommandWithPreview>> {
         // Collect scripts defined in package.json in the current directory(which fzf-make is launched)
         let mut result = Self::collect_scripts_in_package_json(current_dir.clone())?;
 
@@ -92,7 +80,7 @@ impl Pnpm {
                         if Self::use_filtering(value) {
                             continue;
                         }
-                        result.push(command::Command::new(
+                        result.push(command::CommandWithPreview::new(
                             runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
                             // pnpm executes workspace script following format: `pnpm --filter {package_name} {script_name}`
                             // e.g. `pnpm --filter app4 build`
@@ -108,7 +96,7 @@ impl Pnpm {
         Some(result)
     }
 
-    fn collect_scripts_in_package_json(current_dir: PathBuf) -> Option<Vec<command::Command>> {
+    fn collect_scripts_in_package_json(current_dir: PathBuf) -> Option<Vec<command::CommandWithPreview>> {
         let parsed_scripts_part_of_package_json =
             match path_to_content::path_to_content(&current_dir.join(js::METADATA_FILE_NAME)) {
                 Ok(c) => match js::JsPackageManager::parse_package_json(&c) {
@@ -123,7 +111,7 @@ impl Pnpm {
                 .iter()
                 .filter(|(_, value, _)| !Self::use_filtering(value.to_string()))
                 .map(|(key, _value, line_number)| {
-                    command::Command::new(
+                    command::CommandWithPreview::new(
                         runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
                         key.to_string(),
                         current_dir.clone().join(js::METADATA_FILE_NAME),
@@ -158,12 +146,8 @@ impl Pnpm {
             .collect())
     }
 
-    pub fn to_commands(&self) -> Vec<command::Command> {
+    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         self.commands.clone()
-    }
-
-    fn get_command(&self, command: command::Command) -> Option<&command::Command> {
-        self.commands.iter().find(|c| **c == command)
     }
 
     // ref: https://pnpm.io/filtering

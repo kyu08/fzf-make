@@ -18,6 +18,7 @@
 - Execute the last executed command(By running `fzf-make --repeat`.)
 - Command history
 - Support [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just). **Scheduled to be developed: npm.** 
+- Support passing additional arguments to the command using popup window. The UI looks like: https://github.com/kyu08/fzf-make/pull/447
 - [make] Support `include` directive
 - [pnpm] Support workspace(collect scripts all of `package.json` in the directory where fzf-make is launched.)
 - [yarn] Support workspace(collect all scripts which is defined in `workspaces` field in root `package.json`.)

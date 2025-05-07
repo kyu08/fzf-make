@@ -44,6 +44,7 @@ impl Histories {
         Self { histories }
     }
 
+    // TODO: impl as From trait
     fn from(histories: histories::Histories) -> Self {
         let mut result: Vec<History> = vec![];
         for h in histories.histories {
@@ -68,6 +69,7 @@ pub struct History {
 }
 
 impl History {
+    // TODO: impl as From trait
     fn from(history: histories::History) -> Self {
         let mut commands: Vec<HistoryCommand> = vec![];
         for h in history.commands {
@@ -110,6 +112,7 @@ impl HistoryCommand {
         Self { runner_type, args }
     }
 
+    // TODO: impl as From trait
     fn from(command: histories::HistoryCommand) -> Self {
         Self {
             runner_type: command.runner_type,

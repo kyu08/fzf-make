@@ -1,5 +1,5 @@
 use crate::model::{
-    command::{self, Command},
+    command::{self, CommandWithPreview},
     file_util,
     runner_type::RunnerType,
 };
@@ -14,7 +14,7 @@ use tree_sitter::Parser;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Just {
     path: PathBuf,
-    commands: Vec<command::Command>,
+    commands: Vec<command::CommandWithPreview>,
 }
 
 impl Just {
@@ -36,7 +36,7 @@ impl Just {
         })
     }
 
-    pub fn to_commands(&self) -> Vec<command::Command> {
+    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         self.commands.clone()
     }
 
@@ -44,24 +44,14 @@ impl Just {
         self.path.clone()
     }
 
-    pub fn command_to_run(&self, command: &command::Command) -> Result<String, anyhow::Error> {
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
+    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String, anyhow::Error> {
         Ok(format!("just {}", command.args))
     }
 
-    pub fn execute(&self, command: &command::Command) -> Result<(), anyhow::Error> {
-        let command = match self.get_command(command.clone()) {
-            Some(c) => c,
-            None => return Err(anyhow!("command not found")),
-        };
-
+    pub fn execute(&self, command: &command::CommandForExec) -> Result<(), anyhow::Error> {
         let child = process::Command::new("just")
             .stdin(process::Stdio::inherit())
-            .arg(&command.args)
+            .args(command.args.split_whitespace())
             .spawn();
 
         match child {
@@ -73,15 +63,11 @@ impl Just {
         }
     }
 
-    fn get_command(&self, command: command::Command) -> Option<command::Command> {
-        self.to_commands().iter().find(|c| **c == command).map(|_| command)
-    }
-
     fn find_justfile(current_dir: PathBuf) -> Option<PathBuf> {
         file_util::find_file_in_ancestors(current_dir, vec!["justfile", ".justfile"])
     }
 
-    fn parse_justfile(justfile_path: PathBuf, source_code: String) -> Option<Vec<Command>> {
+    fn parse_justfile(justfile_path: PathBuf, source_code: String) -> Option<Vec<CommandWithPreview>> {
         let mut parser = Parser::new();
         parser.set_language(&tree_sitter_just::language()).unwrap();
         let tree = parser.parse(&source_code, None).unwrap();
@@ -121,9 +107,13 @@ impl Just {
                         let recipe_name = &source_code[recipe_child.byte_range()];
                         let trimmed = recipe_name.split(':').collect::<Vec<&str>>();
                         if let Some(r) = trimmed.first() {
-                            commands.push(Command::new(
+                            // If recipe includes an argument, it will be like `run arg:`.
+                            // So we need to split it by space and take the first element.
+                            let command_name = r.split_whitespace().next().unwrap_or("").to_string();
+
+                            commands.push(CommandWithPreview::new(
                                 RunnerType::Just,
-                                r.trim().to_string(),
+                                command_name,
                                 justfile_path.clone(),
                                 recipe_child.start_position().row as u32 + 1,
                             ))
@@ -204,7 +194,7 @@ mod test {
         struct Case {
             name: &'static str,
             source_code: &'static str,
-            expected: Option<Vec<Command>>,
+            expected: Option<Vec<CommandWithPreview>>,
         }
         let cases = vec![
             Case {
@@ -213,7 +203,7 @@ mod test {
                 expected: None,
             },
             Case {
-                name: "justfile with one recipe",
+                name: "justfile with multiple recipes",
                 source_code: r#"
 #!/usr/bin/env -S just --justfile
 
@@ -243,35 +233,62 @@ clippy:
   echo clippy
         "#,
                 expected: Some(vec![
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "test".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 4,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "run".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 8,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "build".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 12,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "fmt".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 16,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "clippy".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 26,
+                    },
+                ]),
+            },
+            Case {
+                name: "justfile with recipes including a recipe with argument",
+                source_code: r#"#!/usr/bin/env -S just --justfile
+
+[group: 'misc']
+run arg:
+  echo "run {{arg}}"
+
+[group: 'misc']
+build:
+  echo build
+        "#,
+                expected: Some(vec![
+                    CommandWithPreview {
+                        runner_type: RunnerType::Just,
+                        args: "run".to_string(),
+                        file_path: PathBuf::from("justfile"),
+                        line_number: 4,
+                    },
+                    CommandWithPreview {
+                        runner_type: RunnerType::Just,
+                        args: "build".to_string(),
+                        file_path: PathBuf::from("justfile"),
+                        line_number: 8,
                     },
                 ]),
             },

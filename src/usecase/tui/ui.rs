@@ -2,10 +2,10 @@ use super::app::{AppState, CurrentPane, Model, SelectCommandState};
 use crate::model::command;
 use anyhow::{Context, Result};
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Flex, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 use rust_embed::RustEmbed;
@@ -22,6 +22,14 @@ use syntect::{
 };
 use syntect_tui::into_span;
 
+/// helper function to create a centered rect using up certain percentage of the available rect `r`
+fn popup_area(area: Rect, x: u16, y: u16) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(y)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Percentage(x)]).flex(Flex::Center);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
+}
 pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectCommand(model) = &mut model.app_state {
         let main_and_key_bindings = Layout::default()
@@ -60,6 +68,9 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
             .split(preview_and_commands[1]);
         render_commands_block(model, f, commands[0]);
         render_history_block(model, f, commands[1]);
+
+        // Render additional arguments popup if needed.
+        render_additional_arguments_popup(model, f);
     }
 }
 
@@ -69,8 +80,11 @@ const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType = ratatui::widg
 const BORDER_STYLE_NOT_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Plain;
 const TITLE_STYLE: ratatui::style::Style = Style::new().add_modifier(Modifier::BOLD);
 
-fn color_and_border_style_for_selectable(is_selected: bool) -> (Color, ratatui::widgets::block::BorderType) {
-    if is_selected {
+fn color_and_border_style_for_selectable(
+    is_selected: bool,
+    is_additional_arguments_popup_opened: bool,
+) -> (Color, ratatui::widgets::block::BorderType) {
+    if is_selected && !is_additional_arguments_popup_opened {
         (FG_COLOR_SELECTED, BORDER_STYLE_SELECTED)
     } else {
         (FG_COLOR_NOT_SELECTED, BORDER_STYLE_NOT_SELECTED)
@@ -150,7 +164,10 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
         }
     };
 
-    let (fg_color_, border_style) = color_and_border_style_for_selectable(model.current_pane.is_main());
+    let (fg_color_, border_style) = color_and_border_style_for_selectable(
+        model.current_pane.is_main(),
+        model.is_additional_arguments_popup_opened(),
+    );
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(border_style)
@@ -214,7 +231,12 @@ fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (
 
 fn render_commands_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
-        commands_block(" 📢 Commands ", model.narrow_down_commands(), model.current_pane.is_main()),
+        commands_block(
+            " 📢 Commands ",
+            model.narrow_down_commands().into_iter().map(|c| c.into()).collect(),
+            model.current_pane.is_main(),
+            model.is_additional_arguments_popup_opened(),
+        ),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
         &mut model.commands_list_state,
@@ -222,7 +244,10 @@ fn render_commands_block(model: &mut SelectCommandState, f: &mut Frame, chunk: r
 }
 
 fn render_input_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let (fg_color, border_style) = color_and_border_style_for_selectable(model.current_pane.is_main());
+    let (fg_color, border_style) = color_and_border_style_for_selectable(
+        model.current_pane.is_main(),
+        model.is_additional_arguments_popup_opened(),
+    );
 
     let block = Block::default()
         .title(" 🔍 Search ")
@@ -278,21 +303,52 @@ fn render_current_version_block(f: &mut Frame, chunk: ratatui::layout::Rect) {
 
 fn render_history_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
-        commands_block(" 📚 History ", model.get_history(), model.current_pane.is_history()),
+        commands_block(
+            " 📚 History ",
+            model.get_history().into_iter().map(|c| c.into()).collect(),
+            model.current_pane.is_history(),
+            model.is_additional_arguments_popup_opened(),
+        ),
         chunk,
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
         &mut model.history_list_state,
     );
 }
 
+fn render_additional_arguments_popup(model: &mut SelectCommandState, f: &mut Frame) {
+    if model.additional_arguments_popup_state.is_none() {
+        return;
+    }
+    // If this popup is going to be opened, model.get_selected_command() returns Some(command).
+    // So we can call unwrap() safely.
+    let command = model.get_selected_command().unwrap();
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BORDER_STYLE_SELECTED)
+        .border_style(Style::default().fg(FG_COLOR_SELECTED))
+        .title(format!("Pass additional arguments to `{}`", command));
+
+    let area = popup_area(f.area(), 60, 3);
+    // This clears out the background which is needed to allow
+    // overdrawing
+    f.render_widget(Clear, area);
+    let mut additional_arguments_popup_state = model.additional_arguments_popup_state.clone().unwrap();
+    additional_arguments_popup_state.arguments_text_area.0.set_block(block);
+    f.render_widget(&additional_arguments_popup_state.arguments_text_area.0, area);
+}
+
 fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let hint_text = match model.current_pane {
+    let hint_text = if model.is_additional_arguments_popup_opened() {
+        "Execute the selected command: <enter> | Passing additional arguments: (type any character) | Close the popup window: <esc>"
+    } else {
+        match model.current_pane {
         CurrentPane::Main => {
             "Execute the selected command: <enter> | Select command: ↑/↓ | Narrow down command: (type any character) | Move to next tab: <tab> | Quit: <esc>"
         }
         CurrentPane::History => {
             "Execute the selected command: <enter> | Select command: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
         }
+    }
     };
     let hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 
@@ -302,8 +358,14 @@ fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratat
     f.render_widget(key_notes_footer, chunk);
 }
 
-fn commands_block(title: &str, narrowed_down_commands: Vec<command::Command>, is_current: bool) -> List<'_> {
-    let (fg_color, border_style) = color_and_border_style_for_selectable(is_current);
+fn commands_block(
+    title: &str,
+    narrowed_down_commands: Vec<command::CommandForExec>,
+    is_current: bool,
+    is_additional_arguments_popup_opened: bool,
+) -> List<'_> {
+    let (fg_color, border_style) =
+        color_and_border_style_for_selectable(is_current, is_additional_arguments_popup_opened);
 
     let list: Vec<ListItem> = narrowed_down_commands
         .into_iter()
