@@ -326,7 +326,7 @@ fn render_additional_arguments_popup(model: &mut SelectCommandState, f: &mut Fra
         .borders(Borders::ALL)
         .border_type(BORDER_STYLE_SELECTED)
         .border_style(Style::default().fg(FG_COLOR_SELECTED))
-        .title(format!("Pass additional arguments to `{}`", command));
+        .title(format!(" 👋 Pass additional arguments to `{}`", command));
 
     let area = popup_area(f.area(), 60, 3);
     // This clears out the background which is needed to allow
