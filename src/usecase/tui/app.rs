@@ -696,10 +696,9 @@ impl<'a> AdditionalWindowState<'a> {
 
     pub fn append_arguments(&self) -> command::CommandForExec {
         let mut new_command = self.command.clone();
-        if let Some(arguments) = self.arguments_text_area.0.lines().join(" ").trim().to_string().into() {
-            if !arguments.is_empty() {
-                new_command.args.push_str(&format!(" {}", arguments));
-            }
+        let arguments = self.arguments_text_area.0.lines().join(" ").trim().to_string();
+        if !arguments.is_empty() {
+            new_command.args.push_str(&format!(" {}", arguments));
         }
         new_command
     }
