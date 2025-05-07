@@ -338,13 +338,17 @@ fn render_additional_arguments_popup(model: &mut SelectCommandState, f: &mut Fra
 }
 
 fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let hint_text = match model.current_pane {
+    let hint_text = if model.is_additional_arguments_popup_opened() {
+        "Execute the selected command: <enter> | Passing additional arguments: (type any character) | Close the popup window: <esc>"
+    } else {
+        match model.current_pane {
         CurrentPane::Main => {
             "Execute the selected command: <enter> | Select command: ↑/↓ | Narrow down command: (type any character) | Move to next tab: <tab> | Quit: <esc>"
         }
         CurrentPane::History => {
             "Execute the selected command: <enter> | Select command: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
         }
+    }
     };
     let hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 
