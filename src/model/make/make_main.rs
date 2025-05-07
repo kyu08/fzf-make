@@ -112,9 +112,24 @@ impl Make {
             path: env::current_dir().unwrap().join(Path::new("Test.mk")),
             include_files: vec![],
             targets: Targets(vec![
-                command::CommandWithPreview::new(runner_type::RunnerType::Make, "target0".to_string(), PathBuf::from(""), 1),
-                command::CommandWithPreview::new(runner_type::RunnerType::Make, "target1".to_string(), PathBuf::from(""), 4),
-                command::CommandWithPreview::new(runner_type::RunnerType::Make, "target2".to_string(), PathBuf::from(""), 7),
+                command::CommandWithPreview::new(
+                    runner_type::RunnerType::Make,
+                    "target0".to_string(),
+                    PathBuf::from(""),
+                    1,
+                ),
+                command::CommandWithPreview::new(
+                    runner_type::RunnerType::Make,
+                    "target1".to_string(),
+                    PathBuf::from(""),
+                    4,
+                ),
+                command::CommandWithPreview::new(
+                    runner_type::RunnerType::Make,
+                    "target2".to_string(),
+                    PathBuf::from(""),
+                    7,
+                ),
             ]),
         }
     }
@@ -252,13 +267,33 @@ mod test {
                     path: Path::new("path").to_path_buf(),
                     include_files: vec![],
                     targets: Targets(vec![
-                        command::CommandWithPreview::new(runner_type::RunnerType::Make, "test".to_string(), PathBuf::from(""), 4),
-                        command::CommandWithPreview::new(runner_type::RunnerType::Make, "run".to_string(), PathBuf::from(""), 4),
+                        command::CommandWithPreview::new(
+                            runner_type::RunnerType::Make,
+                            "test".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                        command::CommandWithPreview::new(
+                            runner_type::RunnerType::Make,
+                            "run".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
                     ]),
                 },
                 expect: vec![
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "test".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "run".to_string(), PathBuf::from(""), 4),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "test".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "run".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
                 ],
             },
             Case {
@@ -321,19 +356,69 @@ mod test {
                         },
                     ],
                     targets: Targets(vec![
-                        command::CommandWithPreview::new(runner_type::RunnerType::Make, "test1".to_string(), PathBuf::from(""), 4),
-                        command::CommandWithPreview::new(runner_type::RunnerType::Make, "run1".to_string(), PathBuf::from(""), 4),
+                        command::CommandWithPreview::new(
+                            runner_type::RunnerType::Make,
+                            "test1".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
+                        command::CommandWithPreview::new(
+                            runner_type::RunnerType::Make,
+                            "run1".to_string(),
+                            PathBuf::from(""),
+                            4,
+                        ),
                     ]),
                 },
                 expect: vec![
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "test1".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "run1".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "test2".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "run2".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "test2-1".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "run2-1".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "test3".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "run3".to_string(), PathBuf::from(""), 4),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "test1".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "run1".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "test2".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "run2".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "test2-1".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "run2-1".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "test3".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "run3".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
                 ],
             },
         ];

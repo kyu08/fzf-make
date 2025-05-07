@@ -21,8 +21,12 @@ impl Targets {
                 LineType::Normal => {
                     if define_block_depth == 0 {
                         if let Some(t) = line_to_target(line.to_string()) {
-                            let command =
-                                command::CommandWithPreview::new(runner_type::RunnerType::Make, t, path.clone(), i as u32 + 1);
+                            let command = command::CommandWithPreview::new(
+                                runner_type::RunnerType::Make,
+                                t,
+                                path.clone(),
+                                i as u32 + 1,
+                            );
                             result.push(command);
                         }
                     }
@@ -107,11 +111,36 @@ test: # run test
 echo:
 	@echo good",
                 expect: Targets(vec![
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "run".to_string(), PathBuf::from(""), 3),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "build".to_string(), PathBuf::from(""), 6),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "check".to_string(), PathBuf::from(""), 9),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "test".to_string(), PathBuf::from(""), 13),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "echo".to_string(), PathBuf::from(""), 16),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "run".to_string(),
+                        PathBuf::from(""),
+                        3,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "build".to_string(),
+                        PathBuf::from(""),
+                        6,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "check".to_string(),
+                        PathBuf::from(""),
+                        9,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "test".to_string(),
+                        PathBuf::from(""),
+                        13,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "echo".to_string(),
+                        PathBuf::from(""),
+                        16,
+                    ),
                 ]),
             },
             Case {
@@ -126,8 +155,18 @@ clone:
 build:
 		@cargo build",
                 expect: Targets(vec![
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "clone".to_string(), PathBuf::from(""), 4),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "build".to_string(), PathBuf::from(""), 7),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "clone".to_string(),
+                        PathBuf::from(""),
+                        4,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "build".to_string(),
+                        PathBuf::from(""),
+                        7,
+                    ),
                 ]),
             },
             Case {
@@ -149,8 +188,18 @@ endef
 my_script:
 	$(file >my_script,$(script-block))\n",
                 expect: Targets(vec![
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "all".to_string(), PathBuf::from(""), 3),
-                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "my_script".to_string(), PathBuf::from(""), 9),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "all".to_string(),
+                        PathBuf::from(""),
+                        3,
+                    ),
+                    command::CommandWithPreview::new(
+                        runner_type::RunnerType::Make,
+                        "my_script".to_string(),
+                        PathBuf::from(""),
+                        9,
+                    ),
                 ]),
             },
             Case {
