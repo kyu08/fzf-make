@@ -2,14 +2,14 @@ use super::{histories, runner_type};
 use std::{fmt, path::PathBuf};
 
 #[derive(PartialEq, Clone, Debug)]
-pub struct Command {
+pub struct CommandWithPreview {
     pub runner_type: runner_type::RunnerType,
     pub args: String,
     pub file_path: PathBuf,
     pub line_number: u32,
 }
 
-impl Command {
+impl CommandWithPreview {
     pub fn new(runner_type: runner_type::RunnerType, args: String, file_path: PathBuf, line_number: u32) -> Self {
         Self {
             runner_type,
@@ -20,7 +20,7 @@ impl Command {
     }
 }
 
-impl fmt::Display for Command {
+impl fmt::Display for CommandWithPreview {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", self.runner_type, self.args)
     }
@@ -32,8 +32,8 @@ pub struct CommandForExec {
     pub args: String,
 }
 
-impl From<Command> for CommandForExec {
-    fn from(c: Command) -> CommandForExec {
+impl From<CommandWithPreview> for CommandForExec {
+    fn from(c: CommandWithPreview) -> CommandForExec {
         CommandForExec {
             runner_type: c.runner_type.clone(),
             args: c.args.clone(),

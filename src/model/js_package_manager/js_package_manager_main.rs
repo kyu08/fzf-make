@@ -24,7 +24,7 @@ impl JsPackageManager {
         }
     }
 
-    pub fn to_commands(&self) -> Vec<command::Command> {
+    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         match self {
             JsPackageManager::JsPnpm(pnpm) => pnpm.to_commands(),
             JsPackageManager::JsYarn(yarn) => yarn.to_commands(),

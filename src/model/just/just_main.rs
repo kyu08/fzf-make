@@ -1,5 +1,5 @@
 use crate::model::{
-    command::{self, Command},
+    command::{self, CommandWithPreview},
     file_util,
     runner_type::RunnerType,
 };
@@ -14,7 +14,7 @@ use tree_sitter::Parser;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Just {
     path: PathBuf,
-    commands: Vec<command::Command>,
+    commands: Vec<command::CommandWithPreview>,
 }
 
 impl Just {
@@ -36,7 +36,7 @@ impl Just {
         })
     }
 
-    pub fn to_commands(&self) -> Vec<command::Command> {
+    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         self.commands.clone()
     }
 
@@ -67,7 +67,7 @@ impl Just {
         file_util::find_file_in_ancestors(current_dir, vec!["justfile", ".justfile"])
     }
 
-    fn parse_justfile(justfile_path: PathBuf, source_code: String) -> Option<Vec<Command>> {
+    fn parse_justfile(justfile_path: PathBuf, source_code: String) -> Option<Vec<CommandWithPreview>> {
         let mut parser = Parser::new();
         parser.set_language(&tree_sitter_just::language()).unwrap();
         let tree = parser.parse(&source_code, None).unwrap();
@@ -111,7 +111,7 @@ impl Just {
                             // So we need to split it by space and take the first element.
                             let command_name = r.split_whitespace().next().unwrap_or("").to_string();
 
-                            commands.push(Command::new(
+                            commands.push(CommandWithPreview::new(
                                 RunnerType::Just,
                                 command_name,
                                 justfile_path.clone(),
@@ -194,7 +194,7 @@ mod test {
         struct Case {
             name: &'static str,
             source_code: &'static str,
-            expected: Option<Vec<Command>>,
+            expected: Option<Vec<CommandWithPreview>>,
         }
         let cases = vec![
             Case {
@@ -233,31 +233,31 @@ clippy:
   echo clippy
         "#,
                 expected: Some(vec![
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "test".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 4,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "run".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 8,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "build".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 12,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "fmt".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 16,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "clippy".to_string(),
                         file_path: PathBuf::from("justfile"),
@@ -278,13 +278,13 @@ build:
   echo build
         "#,
                 expected: Some(vec![
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "run".to_string(),
                         file_path: PathBuf::from("justfile"),
                         line_number: 4,
                     },
-                    Command {
+                    CommandWithPreview {
                         runner_type: RunnerType::Just,
                         args: "build".to_string(),
                         file_path: PathBuf::from("justfile"),

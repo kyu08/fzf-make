@@ -3,11 +3,11 @@ use regex::Regex;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Targets(pub Vec<command::Command>);
+pub struct Targets(pub Vec<command::CommandWithPreview>);
 
 impl Targets {
     pub fn new(content: String, path: PathBuf) -> Targets {
-        let mut result: Vec<command::Command> = Vec::new();
+        let mut result: Vec<command::CommandWithPreview> = Vec::new();
         let mut define_block_depth = 0;
 
         for (i, line) in content.lines().enumerate() {
@@ -22,7 +22,7 @@ impl Targets {
                     if define_block_depth == 0 {
                         if let Some(t) = line_to_target(line.to_string()) {
                             let command =
-                                command::Command::new(runner_type::RunnerType::Make, t, path.clone(), i as u32 + 1);
+                                command::CommandWithPreview::new(runner_type::RunnerType::Make, t, path.clone(), i as u32 + 1);
                             result.push(command);
                         }
                     }
@@ -107,11 +107,11 @@ test: # run test
 echo:
 	@echo good",
                 expect: Targets(vec![
-                    command::Command::new(runner_type::RunnerType::Make, "run".to_string(), PathBuf::from(""), 3),
-                    command::Command::new(runner_type::RunnerType::Make, "build".to_string(), PathBuf::from(""), 6),
-                    command::Command::new(runner_type::RunnerType::Make, "check".to_string(), PathBuf::from(""), 9),
-                    command::Command::new(runner_type::RunnerType::Make, "test".to_string(), PathBuf::from(""), 13),
-                    command::Command::new(runner_type::RunnerType::Make, "echo".to_string(), PathBuf::from(""), 16),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "run".to_string(), PathBuf::from(""), 3),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "build".to_string(), PathBuf::from(""), 6),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "check".to_string(), PathBuf::from(""), 9),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "test".to_string(), PathBuf::from(""), 13),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "echo".to_string(), PathBuf::from(""), 16),
                 ]),
             },
             Case {
@@ -126,8 +126,8 @@ clone:
 build:
 		@cargo build",
                 expect: Targets(vec![
-                    command::Command::new(runner_type::RunnerType::Make, "clone".to_string(), PathBuf::from(""), 4),
-                    command::Command::new(runner_type::RunnerType::Make, "build".to_string(), PathBuf::from(""), 7),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "clone".to_string(), PathBuf::from(""), 4),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "build".to_string(), PathBuf::from(""), 7),
                 ]),
             },
             Case {
@@ -149,8 +149,8 @@ endef
 my_script:
 	$(file >my_script,$(script-block))\n",
                 expect: Targets(vec![
-                    command::Command::new(runner_type::RunnerType::Make, "all".to_string(), PathBuf::from(""), 3),
-                    command::Command::new(runner_type::RunnerType::Make, "my_script".to_string(), PathBuf::from(""), 9),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "all".to_string(), PathBuf::from(""), 3),
+                    command::CommandWithPreview::new(runner_type::RunnerType::Make, "my_script".to_string(), PathBuf::from(""), 9),
                 ]),
             },
             Case {

@@ -409,7 +409,7 @@ impl SelectCommandState<'_> {
         }
     }
 
-    fn selected_command(&self) -> Option<command::Command> {
+    fn selected_command(&self) -> Option<command::CommandWithPreview> {
         match self.commands_list_state.selected() {
             Some(i) => self.narrow_down_commands().get(i).cloned(),
             None => None,
@@ -428,9 +428,9 @@ impl SelectCommandState<'_> {
         }
     }
 
-    pub fn narrow_down_commands(&self) -> Vec<command::Command> {
+    pub fn narrow_down_commands(&self) -> Vec<command::CommandWithPreview> {
         let commands = {
-            let mut commands: Vec<command::Command> = Vec::new();
+            let mut commands: Vec<command::CommandWithPreview> = Vec::new();
             for runner in &self.runners {
                 commands = [commands, runner.list_commands()].concat();
             }
@@ -442,7 +442,7 @@ impl SelectCommandState<'_> {
         }
 
         // Store the commands in a temporary map in the form of map[command.to_string()]Command
-        let mut temporary_command_map: HashMap<String, command::Command> = HashMap::new();
+        let mut temporary_command_map: HashMap<String, command::CommandWithPreview> = HashMap::new();
         for command in &commands {
             temporary_command_map.insert(command.to_string(), command.clone());
         }
@@ -467,7 +467,7 @@ impl SelectCommandState<'_> {
             list.into_iter().map(|(_, command)| command).collect()
         };
 
-        let mut result: Vec<command::Command> = Vec::new();
+        let mut result: Vec<command::CommandWithPreview> = Vec::new();
         // Get the filtered values from the temporary map
         for c in filtered_list {
             if let Some(command) = temporary_command_map.get(&c) {

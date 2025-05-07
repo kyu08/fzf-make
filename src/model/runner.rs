@@ -14,7 +14,7 @@ pub enum Runner {
 }
 
 impl Runner {
-    pub fn list_commands(&self) -> Vec<command::Command> {
+    pub fn list_commands(&self) -> Vec<command::CommandWithPreview> {
         match self {
             Runner::MakeCommand(make) => make.to_commands(),
             Runner::JsPackageManager(js) => js.to_commands(),
