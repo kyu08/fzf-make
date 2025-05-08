@@ -1,7 +1,7 @@
 use super::tui::config;
 use crate::usecase::{tui::app, usecase_main::Usecase};
 use anyhow::Result;
-use futures::{future::BoxFuture, FutureExt};
+use futures::{FutureExt, future::BoxFuture};
 
 pub struct FzfMake;
 

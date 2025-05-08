@@ -1,6 +1,6 @@
 use super::target::*;
 use crate::model::{command, file_util};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use regex::Regex;
 use std::{
     fs,

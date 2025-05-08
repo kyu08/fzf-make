@@ -3,7 +3,7 @@ use crate::{
     file::path_to_content,
     model::{command, file_util, runner_type},
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::{path::PathBuf, process};
 
 const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";

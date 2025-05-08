@@ -1,6 +1,6 @@
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
-use futures::{future::BoxFuture, FutureExt};
+use futures::{FutureExt, future::BoxFuture};
 use std::env;
 
 pub struct Version;

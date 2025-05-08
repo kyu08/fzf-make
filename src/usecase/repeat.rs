@@ -3,8 +3,8 @@ use super::tui::{
     config,
 };
 use crate::{model::command, usecase::usecase_main::Usecase};
-use anyhow::{anyhow, Result};
-use futures::{future::BoxFuture, FutureExt};
+use anyhow::{Result, anyhow};
+use futures::{FutureExt, future::BoxFuture};
 
 pub struct Repeat;
 

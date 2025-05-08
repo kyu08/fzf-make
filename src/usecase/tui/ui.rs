@@ -2,11 +2,11 @@ use super::app::{AppState, CurrentPane, Model, SelectCommandState};
 use crate::model::command;
 use anyhow::{Context, Result};
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Flex, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
-    Frame,
 };
 use rust_embed::RustEmbed;
 use std::{
@@ -342,13 +342,13 @@ fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratat
         "Execute the selected command: <enter> | Passing additional arguments: (type any character) | Close the popup window: <esc>"
     } else {
         match model.current_pane {
-        CurrentPane::Main => {
-            "Execute the selected command: <enter> | Select command: ↑/↓ | Narrow down command: (type any character) | Move to next tab: <tab> | Quit: <esc>"
+            CurrentPane::Main => {
+                "Execute the selected command: <enter> | Select command: ↑/↓ | Narrow down command: (type any character) | Move to next tab: <tab> | Quit: <esc>"
+            }
+            CurrentPane::History => {
+                "Execute the selected command: <enter> | Select command: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
+            }
         }
-        CurrentPane::History => {
-            "Execute the selected command: <enter> | Select command: ↑/↓ | Move to next tab: <tab> | Quit: q/<esc>"
-        }
-    }
     };
     let hint = Span::styled(hint_text, Style::default().fg(FG_COLOR_SELECTED));
 

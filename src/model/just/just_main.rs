@@ -3,7 +3,7 @@ use crate::model::{
     file_util,
     runner_type::RunnerType,
 };
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use std::{
     fs::{self},
     path::PathBuf,
@@ -124,11 +124,7 @@ impl Just {
             }
         }
 
-        if commands.is_empty() {
-            None
-        } else {
-            Some(commands)
-        }
+        if commands.is_empty() { None } else { Some(commands) }
     }
 }
 

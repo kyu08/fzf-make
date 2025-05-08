@@ -3,7 +3,7 @@ use crate::{
     file::path_to_content,
     model::{command, runner_type},
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::{path::PathBuf, process};
 
 const YARN_LOCKFILE_NAME: &str = "yarn.lock";
@@ -48,7 +48,7 @@ impl Yarn {
                     return Some(Yarn {
                         path: current_dir,
                         commands,
-                    })
+                    });
                 }
                 None => return None,
             }
