@@ -1106,7 +1106,7 @@ mod test {
         ];
 
         // NOTE: When running tests, you need to set FZF_MAKE_IS_TESTING=true. Otherwise, the developer's history file will be overwritten.
-        env::set_var("FZF_MAKE_IS_TESTING", "true");
+        unsafe { env::set_var("FZF_MAKE_IS_TESTING", "true") };
 
         for mut case in cases {
             update(&mut case.model, case.message);
