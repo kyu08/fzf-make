@@ -4,10 +4,12 @@
 
 `fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just).
 
-![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
-[![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat-square)](https://github.com/kyu08/fzf-make/releases/latest)
-[![crates.io](https://img.shields.io/crates/v/fzf-make?style=flatflat-square)](https://crates.io/crates/fzf-make)
+![](https://shields.io/badge/-Rust-3776AB?style=flat&logo=rust)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/fzf-make)](https://crates.io/crates/fzf-make)
+![](https://img.shields.io/homebrew/v/fzf-make)
+[![Latest Release](https://img.shields.io/github/v/release/kyu08/fzf-make?style=flat&label=GitHub)](https://github.com/kyu08/fzf-make/releases/latest)
+[![crates.io](https://img.shields.io/crates/v/fzf-make?style=flat)](https://crates.io/crates/fzf-make)
+![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat)
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/demo.gif" />
 
