@@ -217,7 +217,7 @@ fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (
     let middle_row_index = if row_count % 2 == 0 {
         row_count / 2 - 1
     } else {
-        (row_count + 1) / 2 - 1
+        row_count.div_ceil(2) - 1
     };
 
     if command_row_index < middle_row_index {

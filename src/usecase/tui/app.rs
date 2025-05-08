@@ -686,7 +686,7 @@ pub struct AdditionalWindowState<'a> {
     command: command::CommandForExec,
 }
 
-impl<'a> AdditionalWindowState<'a> {
+impl AdditionalWindowState<'_> {
     pub fn new(command: command::CommandForExec) -> Self {
         Self {
             arguments_text_area: TextArea_(TextArea::default()),
