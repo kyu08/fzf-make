@@ -5,7 +5,6 @@ use crate::model::{
 };
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use simple_home_dir::home_dir;
 use std::{
     env,
     fs::{self, File},
@@ -142,9 +141,10 @@ pub fn history_file_path() -> Option<(PathBuf, String)> {
             let cwd = env::current_dir().unwrap();
             Some((cwd.join(PathBuf::from("test_data/history")), HISTORY_FILE_NAME.to_string()))
         }
-        _ => {
-            home_dir().map(|home_dir| (home_dir.join(PathBuf::from(".config/fzf-make")), HISTORY_FILE_NAME.to_string()))
-        }
+        // This will be undeprecated in the next version(1.87.0), so we ignore it for now
+        #[allow(deprecated)]
+        _ => std::env::home_dir()
+            .map(|home_dir| (home_dir.join(PathBuf::from(".config/fzf-make")), HISTORY_FILE_NAME.to_string())),
     }
 }
 

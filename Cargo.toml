@@ -19,7 +19,6 @@ ratatui = "0.29.0"
 tui-textarea = "0.7.0"
 toml = "0.8.19"
 serde = {version = "1.0.204", features = ["derive"]}
-simple-home-dir = "0.4.0"
 pretty_assertions = "1.4.1"
 json-spanned-value = "0.2.2"
 codespan = "0.12.0"

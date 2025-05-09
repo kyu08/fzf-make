@@ -462,7 +462,6 @@ dependencies = [
  "rust-embed",
  "serde",
  "serde_json",
- "simple-home-dir",
  "syntect",
  "syntect-tui",
  "tokio",
@@ -1445,15 +1444,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "simple-home-dir"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d80554cb5ec21f0163f142f4078427aaa5a93d40e87e9ad2b6b8392c26e20f8"
-dependencies = [
- "windows-sys 0.59.0",
 ]
 
 [[package]]
