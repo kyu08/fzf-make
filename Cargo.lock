@@ -462,7 +462,6 @@ dependencies = [
  "rust-embed",
  "serde",
  "serde_json",
- "simple-home-dir",
  "syntect",
  "syntect-tui",
  "tokio",
@@ -1446,12 +1445,6 @@ checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "simple-home-dir"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57341e4ed0a2a2af338e3fc37ddd8c6a1825212bf2e20d4f5e1f3703d6dfdc2e"
 
 [[package]]
 name = "slab"
