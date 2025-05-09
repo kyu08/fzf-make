@@ -22,23 +22,11 @@ pub enum JsPackageManager {
 impl RunnerType {
     pub fn to_runner(&self, runners: &Vec<runner::Runner>) -> Option<runner::Runner> {
         for r in runners {
-            if self.clone() == RunnerType::from(r) {
+            if self.clone() == RunnerType::from(r.clone()) {
                 return Some(r.clone());
             }
         }
         None
-    }
-
-    // TODO: impl as From trait
-    pub fn from(runner: &runner::Runner) -> Self {
-        match runner {
-            runner::Runner::MakeCommand(_) => RunnerType::Make,
-            runner::Runner::JsPackageManager(js) => match js {
-                js::JsPackageManager::JsPnpm(_) => RunnerType::JsPackageManager(JsPackageManager::Pnpm),
-                js::JsPackageManager::JsYarn(_) => RunnerType::JsPackageManager(JsPackageManager::Yarn),
-            },
-            runner::Runner::Just(_) => RunnerType::Just,
-        }
     }
 
     pub fn get_extension_for_highlighting(&self) -> &str {
@@ -48,6 +36,19 @@ impl RunnerType {
             // So yaml which is similar to just is used intensionally.
             RunnerType::Just => "yaml",
             RunnerType::JsPackageManager(_) => "json",
+        }
+    }
+}
+
+impl From<runner::Runner> for RunnerType {
+    fn from(runner: runner::Runner) -> RunnerType {
+        match runner {
+            runner::Runner::MakeCommand(_) => RunnerType::Make,
+            runner::Runner::JsPackageManager(js) => match js {
+                js::JsPackageManager::JsPnpm(_) => RunnerType::JsPackageManager(JsPackageManager::Pnpm),
+                js::JsPackageManager::JsYarn(_) => RunnerType::JsPackageManager(JsPackageManager::Yarn),
+            },
+            runner::Runner::Just(_) => RunnerType::Just,
         }
     }
 }

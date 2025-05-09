@@ -44,21 +44,22 @@ impl Histories {
         Self { histories }
     }
 
-    // TODO: impl as From trait
-    fn from(histories: histories::Histories) -> Self {
+    pub fn into(self) -> histories::Histories {
+        let mut result: Vec<histories::History> = vec![];
+        for h in self.histories {
+            result.push(h.into());
+        }
+        histories::Histories { histories: result }
+    }
+}
+
+impl From<histories::Histories> for Histories {
+    fn from(histories: histories::Histories) -> Histories {
         let mut result: Vec<History> = vec![];
         for h in histories.histories {
             result.push(History::from(h));
         }
         Self { histories: result }
-    }
-
-    pub fn into(self) -> histories::Histories {
-        let mut result: Vec<histories::History> = vec![];
-        for h in self.histories {
-            result.push(History::into(h));
-        }
-        histories::Histories { histories: result }
     }
 }
 
@@ -69,19 +70,7 @@ pub struct History {
 }
 
 impl History {
-    // TODO: impl as From trait
-    fn from(history: histories::History) -> Self {
-        let mut commands: Vec<HistoryCommand> = vec![];
-        for h in history.commands {
-            commands.push(HistoryCommand::from(h));
-        }
-
-        History {
-            path: history.path,
-            commands,
-        }
-    }
-
+    // Implementing From<file::toml::History> on the model::History side is not desirable due to dependency direction, so the into method is manually defined.
     fn into(self) -> histories::History {
         let mut commands: Vec<histories::HistoryCommand> = vec![];
         for h in self.commands {
@@ -99,6 +88,20 @@ impl History {
     }
 }
 
+impl From<histories::History> for History {
+    fn from(history: histories::History) -> History {
+        let mut commands: Vec<HistoryCommand> = vec![];
+        for h in history.commands {
+            commands.push(HistoryCommand::from(h));
+        }
+
+        History {
+            path: history.path,
+            commands,
+        }
+    }
+}
+
 /// toml representation of histories::HistoryCommand.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "kebab-case")]
@@ -112,18 +115,19 @@ impl HistoryCommand {
         Self { runner_type, args }
     }
 
-    // TODO: impl as From trait
-    fn from(command: histories::HistoryCommand) -> Self {
-        Self {
-            runner_type: command.runner_type,
-            args: command.args.clone(),
-        }
-    }
-
     fn into(self) -> histories::HistoryCommand {
         histories::HistoryCommand {
             runner_type: self.runner_type,
             args: self.args,
+        }
+    }
+}
+
+impl From<histories::HistoryCommand> for HistoryCommand {
+    fn from(command: histories::HistoryCommand) -> HistoryCommand {
+        Self {
+            runner_type: command.runner_type,
+            args: command.args.clone(),
         }
     }
 }
