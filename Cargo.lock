@@ -1449,12 +1449,9 @@ dependencies = [
 
 [[package]]
 name = "simple-home-dir"
-version = "0.4.4"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d80554cb5ec21f0163f142f4078427aaa5a93d40e87e9ad2b6b8392c26e20f8"
-dependencies = [
- "windows-sys 0.59.0",
-]
+checksum = "57341e4ed0a2a2af338e3fc37ddd8c6a1825212bf2e20d4f5e1f3703d6dfdc2e"
 
 [[package]]
 name = "slab"
