@@ -1,7 +1,7 @@
 use super::help;
 use crate::usecase::usecase_main::Usecase;
 use anyhow::Result;
-use futures::{future::BoxFuture, FutureExt};
+use futures::{FutureExt, future::BoxFuture};
 
 pub struct InvalidArg;
 

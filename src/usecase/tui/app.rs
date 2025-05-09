@@ -12,18 +12,18 @@ use crate::{
         runner_type,
     },
 };
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use futures::FutureExt;
-use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
+use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{
+    Terminal,
     backend::{Backend, CrosstermBackend},
     widgets::ListState,
-    Terminal,
 };
 use std::{
     collections::HashMap,
@@ -36,7 +36,7 @@ use std::{
 };
 use tokio::task;
 use tui_textarea::TextArea;
-use update_informer::{registry, Check};
+use update_informer::{Check, registry};
 
 // AppState represents the state of the application.
 // "Making impossible states impossible"
@@ -379,7 +379,9 @@ impl SelectCommandState<'_> {
         };
 
         if runners.is_empty() {
-            Err(anyhow!("No task runner found.\nRun following command to see usage.\nopen \"https://github.com/kyu08/fzf-make?tab=readme-ov-file#-usage\""))
+            Err(anyhow!(
+                "No task runner found.\nRun following command to see usage.\nopen \"https://github.com/kyu08/fzf-make?tab=readme-ov-file#-usage\""
+            ))
         } else {
             Ok(SelectCommandState {
                 current_dir: current_dir.clone(),
@@ -1104,7 +1106,7 @@ mod test {
         ];
 
         // NOTE: When running tests, you need to set FZF_MAKE_IS_TESTING=true. Otherwise, the developer's history file will be overwritten.
-        env::set_var("FZF_MAKE_IS_TESTING", "true");
+        unsafe { env::set_var("FZF_MAKE_IS_TESTING", "true") };
 
         for mut case in cases {
             update(&mut case.model, case.message);

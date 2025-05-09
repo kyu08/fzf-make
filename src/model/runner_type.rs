@@ -1,7 +1,7 @@
 use super::{js_package_manager::js_package_manager_main as js, runner};
 use serde::{
-    de::{self},
     Deserialize, Deserializer, Serialize, Serializer,
+    de::{self},
 };
 use std::fmt;
 
