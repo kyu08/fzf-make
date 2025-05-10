@@ -90,7 +90,7 @@ detect-unused-dependencies: tool-detect-unused-dependencies
 
 .PHONY: update-license-file
 update-license-file: tool-update-license-file
-	cargo about generate about.hbs > license.html
+	cargo about generate about.hbs > CREDITS.html
 
 .PHONY: check-licenses
 check-licenses: tool-check-licenses
