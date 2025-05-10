@@ -7,6 +7,7 @@ on:
 
 jobs:
   spell-check:
+    name: Spell Check with Typos
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
