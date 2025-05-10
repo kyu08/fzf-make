@@ -73,6 +73,7 @@ bump-fzf-make-version: tool-bump-version
 		git pull; \
 		cargo set-version --bump minor; \
 		export CURRENT_VERSION=$$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version'); \
+		make update-license-file; \
 		git add .; \
 		git commit -m "chore(release): bump to v$${CURRENT_VERSION}"; \
 		git push origin HEAD; \
