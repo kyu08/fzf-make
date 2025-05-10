@@ -1,17 +1,13 @@
-export
-RUST_BACKTRACE=full
-
-.PHONY: run
-run:
-	@cargo run
-
-# https://example.com
 .PHONY: ci
 ci: # Checks same as CI
 	@make test-ci; \
 	make check; \
 	make fmt-check; \
 	make spell-check
+
+.PHONY: run
+run:
+	@cargo run
 
 .PHONY: tools
 tools: tool-test tool-bump-version tool-spell-check
