@@ -30,6 +30,12 @@ tool-spell-check:
 		cargo install typos-cli; \
 	fi
 
+.PHONY: tool-detect-unused-dependencies
+tool-detect-unused-dependencies:
+	@if ! which cargo-machete > /dev/null; then \
+		cargo install cargo-machete; \
+	fi
+
 .PHONY: test-ci # for CI
 test-ci:
 	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo test
@@ -67,6 +73,10 @@ bump-fzf-make-version: tool-bump-version
 .PHONY: spell-check
 spell-check: tool-spell-check
 	typos
+
+.PHONY: detect-unused-dependencies
+detect-unused-dependencies: tool-detect-unused-dependencies
+	cargo machete
 
 DEBUG_EXECUTABLE = ./target/debug/fzf-make
 TEST_DIR = ./test_data
