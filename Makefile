@@ -36,6 +36,12 @@ tool-detect-unused-dependencies:
 		cargo install cargo-machete; \
 	fi
 
+.PHONY: tool-update-license-file
+tool-update-license-file:
+	@if ! which cargo-about > /dev/null; then \
+		cargo install --locked cargo-about; \
+	fi
+
 .PHONY: test-ci # for CI
 test-ci:
 	RUST_BACKTRACE=full FZF_MAKE_IS_TESTING=true cargo test
@@ -77,6 +83,10 @@ spell-check: tool-spell-check
 .PHONY: detect-unused-dependencies
 detect-unused-dependencies: tool-detect-unused-dependencies
 	cargo machete
+
+.PHONY: update-license-file
+update-license-file: tool-update-license-file
+	cargo about generate about.hbs > license.html
 
 DEBUG_EXECUTABLE = ./target/debug/fzf-make
 TEST_DIR = ./test_data
