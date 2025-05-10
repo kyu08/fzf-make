@@ -12,25 +12,31 @@ tools: tool-test tool-bump-version tool-spell-check
 .PHONY: tool-test
 tool-test:
 	@if ! which cargo-nextest > /dev/null; then \
-		cargo install cargo-nextest; \
+		cargo install --locked cargo-nextest; \
 	fi
 
 .PHONY: tool-bump-version
 tool-bump-version:
 	@if ! which cargo-set-version > /dev/null; then \
-		cargo install cargo-edit; \
+		cargo install --locked cargo-edit; \
 	fi
 
 .PHONY: tool-spell-check
 tool-spell-check:
 	@if ! which typos > /dev/null; then \
-		cargo install typos-cli; \
+		cargo install --locked typos-cli; \
 	fi
 
 .PHONY: tool-detect-unused-dependencies
 tool-detect-unused-dependencies:
 	@if ! which cargo-machete > /dev/null; then \
-		cargo install cargo-machete; \
+		cargo install --locked cargo-machete; \
+	fi
+
+.PHONY: tool-check-licenses
+tool-check-licenses:
+	@if ! which cargo-deny > /dev/null; then \
+		cargo install --locked cargo-deny; \
 	fi
 
 .PHONY: tool-update-license-file
@@ -84,6 +90,10 @@ detect-unused-dependencies: tool-detect-unused-dependencies
 .PHONY: update-license-file
 update-license-file: tool-update-license-file
 	cargo about generate about.hbs > license.html
+
+.PHONY: check-licenses
+check-licenses: tool-check-licenses
+	cargo deny check licenses
 
 DEBUG_EXECUTABLE = ./target/debug/fzf-make
 TEST_DIR = ./test_data
