@@ -1,9 +1,6 @@
+# Checks same as CI
 .PHONY: ci
-ci: # Checks same as CI
-	@make test-ci; \
-	make check; \
-	make fmt-check; \
-	make spell-check
+ci: test-ci check fmt-check detect-unused-dependencies update-license-file spell-check
 
 .PHONY: run
 run:
