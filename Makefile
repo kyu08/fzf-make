@@ -1,6 +1,6 @@
 # Checks same as CI
 .PHONY: ci
-ci: test-ci check fmt-check detect-unused-dependencies update-license-file spell-check
+ci: test-ci check fmt-check detect-unused-dependencies check-licenses update-license-file spell-check
 
 .PHONY: run
 run:
