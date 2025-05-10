@@ -65,48 +65,47 @@ impl Model<'_> {
     }
 
     fn handle_key_input(&self, key: KeyEvent) -> Option<Message> {
-        match &self.app_state {
-            AppState::SelectCommand(s) => match key.code {
-                KeyCode::Tab => Some(Message::MoveToNextPane),
-                _ => {
-                    let is_ctrl_pressed = key.modifiers.contains(KeyModifiers::CONTROL);
+        if let AppState::SelectCommand(s) = &self.app_state {
+            let is_ctrl_pressed = key.modifiers.contains(KeyModifiers::CONTROL);
 
-                    // When additional arguments window is opened
-                    if let Some(additional_arguments_popup_state) = &s.additional_arguments_popup_state {
-                        return match key.code {
-                            KeyCode::Esc => Some(Message::CloseAdditionalArgumentsWindow),
-                            KeyCode::Enter => {
-                                Some(Message::ExecuteCommand(additional_arguments_popup_state.append_arguments()))
-                            }
-                            _ => Some(Message::AdditionalArgumentsKeyInput(key)),
-                        };
+            // When additional arguments popup is opened
+            if let Some(additional_arguments_popup_state) = &s.additional_arguments_popup_state {
+                match key.code {
+                    KeyCode::Esc => Some(Message::CloseAdditionalArgumentsWindow),
+                    KeyCode::Tab => None, // no-op: same as Main pane.
+                    KeyCode::Enter => {
+                        Some(Message::ExecuteCommand(additional_arguments_popup_state.append_arguments()))
                     }
-
-                    // When additional arguments window is not opened
-                    match s.current_pane {
-                        CurrentPane::Main => match (key.code, is_ctrl_pressed) {
-                            (KeyCode::Esc, _) => Some(Message::Quit),
-                            (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
-                            (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
-                            (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
-                            (KeyCode::Enter, _) => Some(Message::ExecuteCommand(s.get_selected_command().unwrap())),
-                            (_, _) => Some(Message::SearchTextAreaKeyInput(key)),
-                        },
-                        CurrentPane::History => match (key.code, is_ctrl_pressed) {
-                            (KeyCode::Esc, _) => Some(Message::Quit),
-                            (KeyCode::Char('q'), _) => Some(Message::Quit),
-                            (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
-                            (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
-                            (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
-                            (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => {
-                                Some(Message::ExecuteCommand(s.get_selected_command().unwrap()))
-                            }
-                            _ => None,
-                        },
-                    }
+                    _ => Some(Message::AdditionalArgumentsKeyInput(key)),
                 }
-            },
-            _ => None,
+            } else {
+                // When additional arguments popup is not opened
+                match s.current_pane {
+                    CurrentPane::Main => match (key.code, is_ctrl_pressed) {
+                        (KeyCode::Tab, _) => Some(Message::MoveToNextPane),
+                        (KeyCode::Esc, _) => Some(Message::Quit),
+                        (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
+                        (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
+                        (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
+                        (KeyCode::Enter, _) => Some(Message::ExecuteCommand(s.get_selected_command().unwrap())),
+                        _ => Some(Message::SearchTextAreaKeyInput(key)),
+                    },
+                    CurrentPane::History => match (key.code, is_ctrl_pressed) {
+                        (KeyCode::Tab, _) => Some(Message::MoveToNextPane),
+                        (KeyCode::Esc, _) => Some(Message::Quit),
+                        (KeyCode::Char('q'), _) => Some(Message::Quit),
+                        (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
+                        (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
+                        (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
+                        (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => {
+                            Some(Message::ExecuteCommand(s.get_selected_command().unwrap()))
+                        }
+                        _ => None,
+                    },
+                }
+            }
+        } else {
+            None
         }
     }
 
