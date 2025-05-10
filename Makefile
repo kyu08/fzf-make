@@ -1,9 +1,6 @@
+# Checks same as CI
 .PHONY: ci
-ci: # Checks same as CI
-	@make test-ci; \
-	make check; \
-	make fmt-check; \
-	make spell-check
+ci: test-ci check fmt-check detect-unused-dependencies update-license-file spell-check
 
 .PHONY: run
 run:
@@ -34,6 +31,12 @@ tool-spell-check:
 tool-detect-unused-dependencies:
 	@if ! which cargo-machete > /dev/null; then \
 		cargo install cargo-machete; \
+	fi
+
+.PHONY: tool-update-license-file
+tool-update-license-file:
+	@if ! which cargo-about > /dev/null; then \
+		cargo install --locked cargo-about; \
 	fi
 
 .PHONY: test-ci # for CI
@@ -77,6 +80,10 @@ spell-check: tool-spell-check
 .PHONY: detect-unused-dependencies
 detect-unused-dependencies: tool-detect-unused-dependencies
 	cargo machete
+
+.PHONY: update-license-file
+update-license-file: tool-update-license-file
+	cargo about generate about.hbs > license.html
 
 DEBUG_EXECUTABLE = ./target/debug/fzf-make
 TEST_DIR = ./test_data

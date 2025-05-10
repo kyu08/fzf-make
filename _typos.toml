@@ -2,4 +2,4 @@
 ratatui = "ratatui"
 
 [files]
-extend-exclude = ["doc/README-*.md"]
+extend-exclude = ["license.html"]
