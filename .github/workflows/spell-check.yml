@@ -7,9 +7,6 @@ on:
 
 jobs:
   spell-check:
-    # For some reason, when the `name` field is not set, the job status is shown as `Expected`
-    # in PR's status window despite that the job is completed in `Actions` tab.
-    name: Spell Check with Typos
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
