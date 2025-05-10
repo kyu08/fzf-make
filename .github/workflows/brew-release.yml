@@ -4,8 +4,7 @@ on:
     tags: 
       - 'v*'
 jobs:
-  release:
-    name: Bump Homebrew formula
+  bump-homebrew-formula:
     runs-on: ubuntu-latest
     steps:
       - uses: mislav/bump-homebrew-formula-action@v3
