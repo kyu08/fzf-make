@@ -6,7 +6,26 @@ authors = ["kyu08"]
 description = "A command line tool that executes commands using fuzzy finder with preview window for make, pnpm, yarn and just."
 license = "MIT"
 repository = "https://github.com/kyu08/fzf-make"
-exclude = ["/.git", "/.github", ".gitignore", "Makefile", "/static", "/makefiles", "/doc", "_typos.toml", "renovate.json", "test_data"]
+exclude = [
+  "/.devcontainer",
+  "/.git",
+  "/.github",
+  "/docs",
+  "/static",
+  "/test_data",
+  ".gitattributes",
+  ".gitignore",
+  "_typos.toml",
+  "about.hbs",
+  "about.toml",
+  "deny.toml",
+  "flake.lock",
+  "flake.nix",
+  "Makefile",
+  "renovate.json",
+  "rust-toolchain.toml",
+  "rustfmt.toml",
+]
 
 [dependencies]
 regex = "1.10.4"
