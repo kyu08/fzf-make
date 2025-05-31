@@ -8,7 +8,10 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "Unicode-DFS-2016",
+    "Unicode-3.0",
     "OpenSSL",
+    "CDLA-Permissive-2.0",
+    "Zlib",
 ]
 confidence-threshold = 0.8
 exceptions = []
