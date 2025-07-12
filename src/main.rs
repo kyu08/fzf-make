@@ -8,6 +8,10 @@ mod usecase;
 
 #[tokio::main]
 async fn main() {
+    // foo
+    // ref: https://zenn.dev/techno_tanoc/articles/4c207397df3ab0#assertunwindsafe
+    let res = AssertUnwindSafe(controller::controller_main::run())
+    // foo
     // ref: https://zenn.dev/techno_tanoc/articles/4c207397df3ab0#assertunwindsafe
     let res = AssertUnwindSafe(controller::controller_main::run())
         .catch_unwind()
