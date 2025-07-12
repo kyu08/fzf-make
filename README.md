@@ -1,3 +1,4 @@
+bar
 <div align="center">
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
