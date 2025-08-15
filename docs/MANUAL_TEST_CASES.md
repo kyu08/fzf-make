@@ -50,7 +50,7 @@
             - [ ] multiple additional arguments
                 - [ ] can be executed properly
                 - [ ] can be saved properly
-        - [ ] task
+        - [ ] yarn
             - [ ] no additional argument
                 - [ ] can be executed properly
                 - [ ] can be saved properly
