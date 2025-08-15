@@ -50,7 +50,7 @@
             - [ ] multiple additional arguments
                 - [ ] can be executed properly
                 - [ ] can be saved properly
-        - [ ] yarn
+        - [ ] task
             - [ ] no additional argument
                 - [ ] can be executed properly
                 - [ ] can be saved properly
@@ -62,3 +62,18 @@
                 - [ ] can be saved properly
 - [ ] `fzf-make --repeat` executes the command the last one.
 - [ ] `fzf-make --history` launches fzf-make focusing history pane.
+- [ ] Task-specific features
+    - [ ] Taskfile detection
+        - [ ] Finds Taskfile.yml in current directory
+        - [ ] Finds taskfile.yml when Taskfile.yml doesn't exist
+        - [ ] Finds Taskfile.yaml when .yml variants don't exist
+        - [ ] Finds Taskfile.dist.yml in appropriate priority order
+    - [ ] Includes support
+        - [ ] File includes work properly (namespace:task format)
+        - [ ] Directory includes work properly (auto-detects Taskfile in directory)
+        - [ ] Nested includes work properly
+        - [ ] Root-level taskfile property works properly
+    - [ ] Task execution
+        - [ ] Tasks are executed with correct working directory
+        - [ ] Namespaced tasks (from includes) execute properly
+        - [ ] Task arguments are passed correctly
