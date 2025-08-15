@@ -17,13 +17,13 @@ const TASKFILE_EXTENSIONS: &[&str] = &["", ".yml", ".yaml"];
 // Official supported file names from https://taskfile.dev/docs/guide#supported-file-names
 // Listed in priority order (first match wins)
 const SUPPORTED_TASKFILE_NAMES: &[&str] = &[
-    "Taskfile.yml",      // Highest priority
-    "taskfile.yml", 
+    "Taskfile.yml", // Highest priority
+    "taskfile.yml",
     "Taskfile.yaml",
     "taskfile.yaml",
     "Taskfile.dist.yml",
     "taskfile.dist.yml",
-    "Taskfile.dist.yaml", 
+    "Taskfile.dist.yaml",
     "taskfile.dist.yaml", // Lowest priority
 ];
 
@@ -43,8 +43,8 @@ impl Task {
         let taskfile_path = Task::find_taskfile(target_dir.clone())
             .ok_or_else(|| anyhow!("Taskfile not found in directory: {}", target_dir.display()))?;
 
-        let commands = Task::parse_taskfile(taskfile_path.clone())
-            .map_err(|e| anyhow!("Failed to parse Taskfile: {}", e))?;
+        let commands =
+            Task::parse_taskfile(taskfile_path.clone()).map_err(|e| anyhow!("Failed to parse Taskfile: {}", e))?;
 
         Ok(Task {
             path: taskfile_path,
@@ -84,17 +84,17 @@ impl Task {
     /// If it's a file path without extension, tries common Taskfile extensions.
     fn resolve_taskfile_path(base_dir: &std::path::Path, taskfile_str: &str) -> Option<PathBuf> {
         let target_path = base_dir.join(taskfile_str);
-        
+
         // If the path points to a file and it exists, use it directly
         if target_path.is_file() {
             return Some(target_path);
         }
-        
+
         // If the path points to a directory, search for Taskfile in that directory
         if target_path.is_dir() {
             return Task::find_taskfile(target_path);
         }
-        
+
         // If the path doesn't exist, try to find it with common extensions
         if !target_path.exists() {
             // Try common Taskfile extensions
@@ -104,12 +104,12 @@ impl Task {
                 } else {
                     target_path.with_extension(&ext[1..]) // Remove the leading dot
                 };
-                
+
                 if file_path.is_file() {
                     return Some(file_path);
                 }
             }
-            
+
             // Fallback: search in parent directory
             if let Some(parent) = target_path.parent() {
                 if parent.is_dir() {
@@ -117,7 +117,7 @@ impl Task {
                 }
             }
         }
-        
+
         None
     }
 
@@ -152,7 +152,7 @@ impl Task {
     fn parse_main_tasks(
         yaml_value: &Value,
         content: &str,
-        taskfile_path: &PathBuf,
+        taskfile_path: &std::path::Path,
         commands: &mut Vec<CommandWithPreview>,
     ) {
         if let Some(tasks) = yaml_value.get("tasks").and_then(|t| t.as_object()) {
@@ -161,7 +161,7 @@ impl Task {
                 let command = CommandWithPreview::new(
                     RunnerType::Task,
                     task_name.clone(),
-                    taskfile_path.clone(),
+                    taskfile_path.to_path_buf(),
                     line_number,
                 );
                 commands.push(command);
@@ -169,11 +169,7 @@ impl Task {
         }
     }
 
-    fn parse_includes(
-        yaml_value: &Value,
-        taskfile_dir: &std::path::Path,
-        commands: &mut Vec<CommandWithPreview>,
-    ) {
+    fn parse_includes(yaml_value: &Value, taskfile_dir: &std::path::Path, commands: &mut Vec<CommandWithPreview>) {
         if let Some(includes) = yaml_value.get("includes").and_then(|i| i.as_object()) {
             for (namespace, include_def) in includes {
                 let included_taskfile_path = Task::resolve_include_path(taskfile_dir, include_def);
@@ -190,11 +186,7 @@ impl Task {
         }
     }
 
-    fn parse_root_taskfile(
-        yaml_value: &Value,
-        taskfile_dir: &std::path::Path,
-        commands: &mut Vec<CommandWithPreview>,
-    ) {
+    fn parse_root_taskfile(yaml_value: &Value, taskfile_dir: &std::path::Path, commands: &mut Vec<CommandWithPreview>) {
         if let Some(taskfile_path_value) = yaml_value.get("taskfile") {
             if let Some(taskfile_str) = taskfile_path_value.as_str() {
                 if let Some(included_taskfile_path) = Task::resolve_taskfile_path(taskfile_dir, taskfile_str) {
@@ -224,13 +216,13 @@ impl Task {
 
     fn find_task_line_number(content: &str, task_name: &str) -> Option<u32> {
         let lines: Vec<&str> = content.lines().collect();
-        
+
         // Look for the task definition pattern: "  task_name:" or "task_name:"
         let task_pattern = format!("{}:", task_name);
-        
+
         for (line_index, line) in lines.iter().enumerate() {
             let trimmed_line = line.trim();
-            
+
             // Check if this line defines the task
             if trimmed_line == task_pattern || trimmed_line.starts_with(&format!("{}: ", task_name)) {
                 // Check if we're inside the tasks section
@@ -239,7 +231,7 @@ impl Task {
                 }
             }
         }
-        
+
         None
     }
 
@@ -247,12 +239,12 @@ impl Task {
         // Look backwards from the task line to find the "tasks:" section
         for i in (0..task_line_index).rev() {
             let line = lines[i].trim();
-            
+
             // If we find "tasks:" at the beginning of a line, we're in the tasks section
             if line == "tasks:" {
                 return true;
             }
-            
+
             // If we find another top-level section (no indentation), we're not in tasks
             // Skip empty lines and comments
             if !line.is_empty() && !line.starts_with('#') {
@@ -264,7 +256,7 @@ impl Task {
                 }
             }
         }
-        
+
         false
     }
 }
@@ -386,7 +378,7 @@ mod test {
         for case in cases {
             let base_path = PathBuf::from(case.base_dir);
             let result = Task::resolve_taskfile_path(&base_path, case.taskfile_str);
-            
+
             if case.should_find {
                 assert!(result.is_some(), "Case: {} - Should find taskfile", case.title);
                 if let Some(path) = result {
@@ -403,18 +395,21 @@ mod test {
         // Create a subdirectory for testing
         let subdir = PathBuf::from("test_data/task/subdir");
         std::fs::create_dir_all(&subdir).expect("Failed to create test subdirectory");
-        
+
         // Test finding Taskfile from subdirectory (should find parent's Taskfile)
         let result = Task::find_taskfile(subdir.clone());
-        
+
         // Clean up
         let _ = std::fs::remove_dir(&subdir);
-        
+
         assert!(result.is_some(), "Should find Taskfile from subdirectory");
         if let Some(path) = result {
             assert!(path.exists(), "Found Taskfile should exist");
-            assert!(path.to_string_lossy().contains("test_data/task/Taskfile.yml"), 
-                   "Should find parent directory's Taskfile: {}", path.display());
+            assert!(
+                path.to_string_lossy().contains("test_data/task/Taskfile.yml"),
+                "Should find parent directory's Taskfile: {}",
+                path.display()
+            );
         }
     }
 
@@ -423,22 +418,45 @@ mod test {
         // Test parsing the main Taskfile which includes the nested directory
         let taskfile_path = PathBuf::from("test_data/task/Taskfile.yml");
         let result = Task::parse_taskfile(taskfile_path);
-        
+
         assert!(result.is_ok(), "Should parse Taskfile with directory include successfully");
-        
+
         let commands = result.unwrap();
         let task_names: Vec<String> = commands.iter().map(|c| c.args.clone()).collect();
-        
+
         // Should contain main tasks
         assert!(task_names.contains(&"build".to_string()), "Should contain build task");
         assert!(task_names.contains(&"test".to_string()), "Should contain test task");
         assert!(task_names.contains(&"clean".to_string()), "Should contain clean task");
-        
+
         // Should contain nested tasks with namespace prefix
         assert!(task_names.contains(&"nested:setup".to_string()), "Should contain nested:setup task");
         assert!(task_names.contains(&"nested:deploy".to_string()), "Should contain nested:deploy task");
-        
+
         // Should have 5 tasks total (3 main + 2 nested)
         assert_eq!(commands.len(), 5, "Should have exactly 5 tasks, found: {}", commands.len());
+    }
+
+    #[test]
+    fn parse_taskfile_with_taskfile_object_include_test() {
+        // Test parsing Taskfile with object-style include using taskfile: property
+        let taskfile_path = PathBuf::from("test_data/task/with_taskfile_include/Taskfile.yml");
+        let result = Task::parse_taskfile(taskfile_path);
+
+        assert!(result.is_ok(), "Should parse Taskfile with taskfile: object include successfully");
+
+        let commands = result.unwrap();
+        let task_names: Vec<String> = commands.iter().map(|c| c.args.clone()).collect();
+
+        // Should contain main tasks
+        assert!(task_names.contains(&"main-build".to_string()), "Should contain main-build task");
+        assert!(task_names.contains(&"main-test".to_string()), "Should contain main-test task");
+
+        // Should contain external tasks with namespace prefix
+        assert!(task_names.contains(&"external:compile".to_string()), "Should contain external:compile task");
+        assert!(task_names.contains(&"external:package".to_string()), "Should contain external:package task");
+
+        // Should have 4 tasks total (2 main + 2 external)
+        assert_eq!(commands.len(), 4, "Should have exactly 4 tasks, found: {}", commands.len());
     }
 }

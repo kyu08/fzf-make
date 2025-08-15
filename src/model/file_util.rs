@@ -24,7 +24,7 @@ pub fn find_file_in_ancestors_with_priority(current_dir: PathBuf, file_names: Ve
         if let Ok(entries) = PathBuf::from(path).read_dir() {
             // Collect entries first to avoid borrowing issues
             let entries: Vec<_> = entries.flatten().collect();
-            
+
             // Check files in priority order (first match wins)
             for target_name in &file_names {
                 for entry in &entries {

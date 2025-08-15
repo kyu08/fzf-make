@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  compile:
+    desc: Compile external module
+    cmds:
+      - echo "Compiling external module"
+
+  package:
+    desc: Package external module
+    cmds:
+      - echo "Packaging external module"
