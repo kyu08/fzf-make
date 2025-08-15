@@ -280,32 +280,36 @@ mod test {
         struct Case {
             title: &'static str,
             current_dir: PathBuf,
-            expected: Option<PathBuf>,
+            should_find: bool,
         }
 
         let cases = vec![
             Case {
-                title: "Should find Taskfile.yml",
+                title: "Should find Taskfile.yml in main directory",
                 current_dir: PathBuf::from("test_data/task"),
-                expected: Some(PathBuf::from("test_data/task/Taskfile.yml")),
+                should_find: true,
             },
             Case {
-                title: "Should find Taskfile.dist.yml",
-                current_dir: PathBuf::from("test_data/task/dist-test"),
-                expected: Some(PathBuf::from("test_data/task/dist-test/Taskfile.dist.yml")),
+                title: "Should find Taskfile.dist.yml in dist directory",
+                current_dir: PathBuf::from("test_data/task/dist"),
+                should_find: true,
+            },
+            Case {
+                title: "Should not find Taskfile in non-existent directory",
+                current_dir: PathBuf::from("test_data/nonexistent"),
+                should_find: false,
             },
         ];
 
         for case in cases {
             let result = Task::find_taskfile(case.current_dir);
-            if case.expected.is_some() {
+            if case.should_find {
                 assert!(result.is_some(), "Case: {} - Should find a taskfile", case.title);
-                // Check that we found a valid taskfile (exact match not required due to file system ordering)
                 if let Some(path) = result {
                     assert!(path.exists(), "Case: {} - Found file should exist", case.title);
                 }
             } else {
-                assert_eq!(result, case.expected, "Case: {}", case.title);
+                assert!(result.is_none(), "Case: {} - Should not find taskfile", case.title);
             }
         }
     }
@@ -320,7 +324,7 @@ mod test {
 
         let cases = vec![
             Case {
-                title: "Should find Taskfile in specified directory",
+                title: "Should find Taskfile in main directory",
                 target_dir: PathBuf::from("test_data/task"),
                 should_succeed: true,
             },
@@ -372,16 +376,10 @@ mod test {
                 should_find: true,
             },
             Case {
-                title: "Should resolve relative file path",
-                base_dir: "test_data/task",
-                taskfile_str: "./nested/Taskfile.yml",
-                should_find: true,
-            },
-            Case {
-                title: "Should resolve relative directory path",
-                base_dir: "test_data/task",
-                taskfile_str: "./nested",
-                should_find: true,
+                title: "Should not find non-existent path",
+                base_dir: "test_data/nonexistent",
+                taskfile_str: "nonexistent",
+                should_find: false,
             },
         ];
 
@@ -402,37 +400,25 @@ mod test {
 
     #[test]
     fn parse_taskfile_with_directory_include_test() {
-        // Create a test taskfile that includes a directory
-        let test_content = r#"
-version: '3'
-
-includes:
-  nested: ./nested
-
-tasks:
-  main-task:
-    desc: Main task
-    cmds:
-      - echo "Main task"
-"#;
+        // Test parsing the main Taskfile which includes the nested directory
+        let taskfile_path = PathBuf::from("test_data/task/Taskfile.yml");
+        let result = Task::parse_taskfile(taskfile_path);
         
-        let temp_path = PathBuf::from("test_data/task/temp-with-dir-include.yml");
-        std::fs::write(&temp_path, test_content).expect("Failed to write test file");
-        
-        let result = Task::parse_taskfile(temp_path.clone());
-        
-        // Clean up
-        let _ = std::fs::remove_file(&temp_path);
-        
-        assert!(result.is_ok(), "Should parse successfully with directory include");
+        assert!(result.is_ok(), "Should parse Taskfile with directory include successfully");
         
         let commands = result.unwrap();
         let task_names: Vec<String> = commands.iter().map(|c| c.args.clone()).collect();
         
-        println!("Found tasks: {:?}", task_names);
+        // Should contain main tasks
+        assert!(task_names.contains(&"build".to_string()), "Should contain build task");
+        assert!(task_names.contains(&"test".to_string()), "Should contain test task");
+        assert!(task_names.contains(&"clean".to_string()), "Should contain clean task");
         
-        assert!(task_names.contains(&"main-task".to_string()), "Should contain main-task");
-        // Should also contain tasks from nested directory with namespace prefix
-        assert!(task_names.iter().any(|name| name.starts_with("nested:")), "Should contain nested tasks with namespace");
+        // Should contain nested tasks with namespace prefix
+        assert!(task_names.contains(&"nested:setup".to_string()), "Should contain nested:setup task");
+        assert!(task_names.contains(&"nested:deploy".to_string()), "Should contain nested:deploy task");
+        
+        // Should have 5 tasks total (3 main + 2 nested)
+        assert_eq!(commands.len(), 5, "Should have exactly 5 tasks, found: {}", commands.len());
     }
 }

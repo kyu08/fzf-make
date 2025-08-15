@@ -6,12 +6,7 @@ tasks:
     cmds:
       - echo "Setting up nested environment"
 
-  configure:
-    desc: Configure nested settings
+  deploy:
+    desc: Deploy nested service
     cmds:
-      - echo "Configuring nested settings"
-
-  validate:
-    desc: Validate nested configuration
-    cmds:
-      - echo "Validating nested configuration"
+      - echo "Deploying nested service"

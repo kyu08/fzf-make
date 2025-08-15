@@ -1,26 +1,20 @@
 version: '3'
 
 includes:
-  docker: ./docker/Taskfile.yml
-  build: ./build/Taskfile.yml
-  nested:
-    taskfile: ./nested/Taskfile.yml
-    dir: ./nested
+  nested: ./nested
 
 tasks:
-  default:
-    desc: Default task
+  build:
+    desc: Build the project
     cmds:
-      - echo "Main Taskfile"
+      - echo "Building..."
 
   test:
     desc: Run tests
     cmds:
-      - echo "Running tests from main"
+      - echo "Testing..."
 
-  all:
-    desc: Run all tasks including imported ones
-    deps:
-      - docker:build
-      - build:compile
-      - nested:setup
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - echo "Cleaning..."

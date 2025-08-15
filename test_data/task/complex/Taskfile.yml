@@ -1,7 +1,0 @@
-version: '3'
-
-tasks:
-  complex-task:
-    desc: Complex task
-    cmds:
-      - echo "Complex task executed"
