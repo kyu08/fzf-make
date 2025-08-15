@@ -399,6 +399,26 @@ mod test {
     }
 
     #[test]
+    fn find_taskfile_from_subdirectory_test() {
+        // Create a subdirectory for testing
+        let subdir = PathBuf::from("test_data/task/subdir");
+        std::fs::create_dir_all(&subdir).expect("Failed to create test subdirectory");
+        
+        // Test finding Taskfile from subdirectory (should find parent's Taskfile)
+        let result = Task::find_taskfile(subdir.clone());
+        
+        // Clean up
+        let _ = std::fs::remove_dir(&subdir);
+        
+        assert!(result.is_some(), "Should find Taskfile from subdirectory");
+        if let Some(path) = result {
+            assert!(path.exists(), "Found Taskfile should exist");
+            assert!(path.to_string_lossy().contains("test_data/task/Taskfile.yml"), 
+                   "Should find parent directory's Taskfile: {}", path.display());
+        }
+    }
+
+    #[test]
     fn parse_taskfile_with_directory_include_test() {
         // Test parsing the main Taskfile which includes the nested directory
         let taskfile_path = PathBuf::from("test_data/task/Taskfile.yml");
