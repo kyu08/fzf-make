@@ -1,0 +1,7 @@
+version: '3'
+
+tasks:
+  simple-task:
+    desc: Simple task
+    cmds:
+      - echo "Simple task executed"

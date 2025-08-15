@@ -1,0 +1,7 @@
+version: '3'
+
+tasks:
+  deep-task:
+    desc: Deep nested task
+    cmds:
+      - echo "Deep nested task executed"

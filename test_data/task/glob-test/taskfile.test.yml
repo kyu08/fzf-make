@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  test-task:
+    desc: Test task
+    cmds:
+      - echo "Test task from taskfile.test.yml"
+
+  test-run:
+    desc: Run tests
+    cmds:
+      - echo "Running tests"

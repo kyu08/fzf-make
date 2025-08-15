@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
 
-`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just).
+`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just), [**task**](https://github.com/go-task/task).
 
 ![](https://shields.io/badge/-Rust-3776AB?style=flat&logo=rust)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/fzf-make)](https://crates.io/crates/fzf-make)
@@ -16,7 +16,7 @@
 </div>
 
 # 🛠️ Features
-- Select and execute a make target or (pnpm | yarn) scripts or just recipe using fuzzy-finder with a preview window by running `fzf-make`!
+- Select and execute a make target or (pnpm | yarn) scripts or just recipe or task using fuzzy-finder with a preview window by running `fzf-make`!
 - Execute the last executed command(By running `fzf-make --repeat`.)
 - Command history
 - Support [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just). **Scheduled to be developed: npm.** 

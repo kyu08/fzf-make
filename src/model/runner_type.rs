@@ -10,6 +10,7 @@ pub enum RunnerType {
     Make,
     JsPackageManager(JsPackageManager),
     Just,
+    Task,
 }
 
 #[derive(Hash, PartialEq, Debug, Clone, Serialize, Deserialize, Eq)]
@@ -36,6 +37,7 @@ impl RunnerType {
             // So yaml which is similar to just is used intensionally.
             RunnerType::Just => "yaml",
             RunnerType::JsPackageManager(_) => "json",
+            RunnerType::Task => "yaml",
         }
     }
 }
@@ -49,6 +51,7 @@ impl From<runner::Runner> for RunnerType {
                 js::JsPackageManager::JsYarn(_) => RunnerType::JsPackageManager(JsPackageManager::Yarn),
             },
             runner::Runner::Just(_) => RunnerType::Just,
+            runner::Runner::Task(_) => RunnerType::Task,
         }
     }
 }
@@ -62,6 +65,7 @@ impl fmt::Display for RunnerType {
                 JsPackageManager::Yarn => "yarn",
             },
             RunnerType::Just => "just",
+            RunnerType::Task => "task",
         };
         write!(f, "{}", name)
     }
@@ -85,6 +89,7 @@ impl<'de> Deserialize<'de> for RunnerType {
             "pnpm" => Ok(RunnerType::JsPackageManager(JsPackageManager::Pnpm)),
             "yarn" => Ok(RunnerType::JsPackageManager(JsPackageManager::Yarn)),
             "just" => Ok(RunnerType::Just),
+            "task" => Ok(RunnerType::Task),
             _ => Err(de::Error::custom(format!("Unknown runner type: {}", s))),
         }
     }
@@ -101,6 +106,7 @@ impl Serialize for RunnerType {
             RunnerType::JsPackageManager(JsPackageManager::Pnpm) => serializer.serialize_str("pnpm"),
             RunnerType::JsPackageManager(JsPackageManager::Yarn) => serializer.serialize_str("yarn"),
             RunnerType::Just => serializer.serialize_str("just"),
+            RunnerType::Task => serializer.serialize_str("task"),
         }
     }
 }

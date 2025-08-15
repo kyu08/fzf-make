@@ -6,3 +6,6 @@ test_data/history/
 .yarn
 .pnp.*
 node_modules
+
+# Crush directory
+.crush

@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  setup:
+    desc: Setup nested environment
+    cmds:
+      - echo "Setting up nested environment"
+
+  configure:
+    desc: Configure nested settings
+    cmds:
+      - echo "Configuring nested settings"
+
+  validate:
+    desc: Validate nested configuration
+    cmds:
+      - echo "Validating nested configuration"

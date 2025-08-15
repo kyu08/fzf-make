@@ -1,0 +1,16 @@
+version: '3'
+
+includes:
+  # Test different include formats
+  simple: ./simple.yml
+  complex:
+    taskfile: ./complex/Taskfile.yml
+    dir: ./complex
+  deep:
+    taskfile: ./deep/nested/Taskfile.yml
+
+tasks:
+  root:
+    desc: Root level task
+    cmds:
+      - echo "Root task"

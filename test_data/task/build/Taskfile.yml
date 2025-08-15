@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  compile:
+    desc: Compile the application
+    cmds:
+      - echo "Compiling application"
+
+  package:
+    desc: Package the application
+    cmds:
+      - echo "Packaging application"
+
+  deploy:
+    desc: Deploy the application
+    cmds:
+      - echo "Deploying application"
