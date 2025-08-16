@@ -8,7 +8,7 @@
     "test-app2": "echo test app2"
   },
   "devDependencies": {
-    "@babel/cli": "7.12.10"
+    "@babel/cli": "7.28.3"
   },
   "dependencies": {
     "firebase": "^8.6.8"
