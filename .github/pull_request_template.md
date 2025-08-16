@@ -1,4 +1,14 @@
-Resolves #
+## What
+<!-- Please describe what you have done in this pull request. -->
+
+## Why
+<!--
+    Please describe what is the motivation for this PR.
+    If there is an related issue, it's fine to just write the issue number if it describes the motivation of this PR well.
+-->
+
+## Testing
+<!-- Please describe what you have done to test this PR. -->
 
 <!--
 
