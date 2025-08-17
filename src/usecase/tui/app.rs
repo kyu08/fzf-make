@@ -375,7 +375,7 @@ impl SelectCommandState<'_> {
             if let Ok(just) = Just::new(current_dir.clone()) {
                 runners.push(Runner::Just(just));
             };
-            if let Ok(task) = Task::new_with_dir(current_dir.clone()) {
+            if let Ok(task) = Task::new(current_dir.clone()) {
                 runners.push(Runner::Task(task));
             };
             runners
