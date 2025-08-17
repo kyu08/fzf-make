@@ -60,5 +60,15 @@
             - [ ] multiple additional arguments
                 - [ ] can be executed properly
                 - [ ] can be saved properly
+        - [ ] task
+            - [ ] no additional argument
+                - [ ] can be executed properly
+                - [ ] can be saved properly
+            - [ ] one additional arguments
+                - [ ] can be executed properly
+                - [ ] can be saved properly
+            - [ ] multiple additional arguments
+                - [ ] can be executed properly
+                - [ ] can be saved properly
 - [ ] `fzf-make --repeat` executes the command the last one.
 - [ ] `fzf-make --history` launches fzf-make focusing history pane.

@@ -10,6 +10,7 @@ use crate::{
         make::make_main::Make,
         runner::{self, Runner},
         runner_type,
+        task::task_main::Task,
     },
 };
 use anyhow::{Result, anyhow, bail};
@@ -373,6 +374,9 @@ impl SelectCommandState<'_> {
             };
             if let Ok(just) = Just::new(current_dir.clone()) {
                 runners.push(Runner::Just(just));
+            };
+            if let Ok(task) = Task::new(current_dir.clone()) {
+                runners.push(Runner::Task(task));
             };
             runners
         };

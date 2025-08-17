@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  setup:
+    desc: Setup nested environment
+    cmds:
+      - echo "Setting up nested environment"
+
+  deploy:
+    desc: Deploy nested service
+    cmds:
+      - echo "Deploying nested service"

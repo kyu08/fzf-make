@@ -6,3 +6,4 @@ pub(super) mod just;
 pub(super) mod make;
 pub(super) mod runner;
 pub(super) mod runner_type;
+pub(super) mod task;

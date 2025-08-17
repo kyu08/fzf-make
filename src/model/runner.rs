@@ -1,6 +1,6 @@
 use super::{
     command, js_package_manager::js_package_manager_main::JsPackageManager, just::just_main::Just,
-    make::make_main::Make,
+    make::make_main::Make, task::task_main::Task,
 };
 use anyhow::Result;
 use colored::Colorize;
@@ -11,6 +11,7 @@ pub enum Runner {
     MakeCommand(Make),
     JsPackageManager(JsPackageManager),
     Just(Just),
+    Task(Task),
 }
 
 impl Runner {
@@ -19,6 +20,7 @@ impl Runner {
             Runner::MakeCommand(make) => make.to_commands(),
             Runner::JsPackageManager(js) => js.to_commands(),
             Runner::Just(just) => just.to_commands(),
+            Runner::Task(task) => task.to_commands(),
         }
     }
 
@@ -27,6 +29,7 @@ impl Runner {
             Runner::MakeCommand(make) => make.path.clone(),
             Runner::JsPackageManager(js) => js.path(),
             Runner::Just(just) => just.path(),
+            Runner::Task(task) => task.path(),
         }
     }
 
@@ -35,6 +38,7 @@ impl Runner {
             Runner::MakeCommand(make) => make.command_to_run(command),
             Runner::JsPackageManager(js) => js.command_to_run(command),
             Runner::Just(just) => just.command_to_run(command),
+            Runner::Task(task) => task.command_to_run(command),
         };
 
         println!(
@@ -50,6 +54,7 @@ impl Runner {
             Runner::MakeCommand(make) => make.execute(command),
             Runner::JsPackageManager(js) => js.execute(command),
             Runner::Just(just) => just.execute(command),
+            Runner::Task(task) => task.execute(command),
         }
     }
 }
