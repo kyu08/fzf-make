@@ -12,37 +12,37 @@ tools: tool-test tool-bump-version tool-spell-check
 .PHONY: tool-test
 tool-test:
 	@if ! which cargo-nextest > /dev/null; then \
-		cargo install --locked cargo-nextest; \
+		cargo install --locked cargo-nextest --version 0.9.72; \
 	fi
 
 .PHONY: tool-bump-version
 tool-bump-version:
 	@if ! which cargo-set-version > /dev/null; then \
-		cargo install --locked cargo-edit; \
+		cargo install --locked cargo-edit --version 0.13.7; \
 	fi
 
 .PHONY: tool-spell-check
 tool-spell-check:
 	@if ! which typos > /dev/null; then \
-		cargo install --locked typos-cli; \
+		cargo install --locked typos-cli --version 1.23.6; \
 	fi
 
 .PHONY: tool-detect-unused-dependencies
 tool-detect-unused-dependencies:
 	@if ! which cargo-machete > /dev/null; then \
-		cargo install --locked cargo-machete; \
+		cargo install --locked cargo-machete --version 0.8.0; \
 	fi
 
 .PHONY: tool-check-licenses
 tool-check-licenses:
 	@if ! which cargo-deny > /dev/null; then \
-		cargo install --locked cargo-deny; \
+		cargo install --locked cargo-deny --version 0.18.2; \
 	fi
 
 .PHONY: tool-update-license-file
 tool-update-license-file:
 	@if ! which cargo-about > /dev/null; then \
-		cargo install --locked cargo-about; \
+		cargo install --locked cargo-about --version 0.7.1; \
 	fi
 
 .PHONY: test-ci # for CI
