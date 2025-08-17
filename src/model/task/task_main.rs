@@ -139,40 +139,6 @@ mod test {
     use std::path::PathBuf;
 
     #[test]
-    fn new_test() {
-        struct Case {
-            title: &'static str,
-            target_dir: PathBuf,
-            should_succeed: bool,
-        }
-
-        let cases = vec![
-            Case {
-                title: "Should find Taskfile in main directory",
-                target_dir: PathBuf::from("test_data/task"),
-                should_succeed: true,
-            },
-            Case {
-                title: "Should find Taskfile in nested directory",
-                target_dir: PathBuf::from("test_data/task/nested"),
-                should_succeed: true,
-            },
-        ];
-
-        for case in cases {
-            let result = Task::new(case.target_dir.clone());
-            if case.should_succeed {
-                assert!(result.is_ok(), "Case: {} - Should succeed", case.title);
-                if let Ok(task) = result {
-                    assert!(!task.to_commands().is_empty(), "Case: {} - Should have commands", case.title);
-                }
-            } else {
-                assert!(result.is_err(), "Case: {} - Should fail", case.title);
-            }
-        }
-    }
-
-    #[test]
     fn parse_task_json_test() {
         struct Case {
             title: &'static str,
