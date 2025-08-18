@@ -11,7 +11,7 @@ jobs:
         if: ${{ !contains(github.ref, '-') }} # skip prereleases
         with:
           formula-name: fzf-make
-          base-branch: master
+          base-branch: main
           commit-message: |
             {{formulaName}} {{version}}
 
