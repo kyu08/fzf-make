@@ -3,9 +3,9 @@ Contributions are welcome!
 
 Submitting PRs isn't the only way to contribute! Requesting features or participating in discussions through issues and discussions are also valuable contributions.
 
-Please read below guidlines before writing code.
+Please read below guidelines before writing code.
 
-## Guildlines for AI-Assisted Contributions
+## Guidelines for AI-Assisted Contributions
 1. Using AI for PR creation is perfectly fine.
 1. We welcome PRs from developers who are not proficient in Rust. In fact, I([@kyu08](https://github.com/kyu08)) myself am just a casual Rust enthusiast. 😂
 1. **Please ensure you understand what your code does before submitting a PR.**
