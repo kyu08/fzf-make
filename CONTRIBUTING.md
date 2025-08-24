@@ -11,7 +11,7 @@ Please check the issues first before you submit a PR. If the issue you want to w
 ## Guidelines for AI-Assisted Contributions
 
 > [!IMPORTANT]
-> ### ⚠️ Please read this section carefully before submitting a PR.
+> **⚠️ Please read this section carefully before submitting a PR.**
 
 1. Using AI for PR creation is perfectly fine.
 1. We welcome PRs from developers who are not proficient in Rust. In fact, I([@kyu08](https://github.com/kyu08)) myself am just a casual Rust enthusiast. 😂
