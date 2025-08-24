@@ -26,6 +26,7 @@
 - [yarn] Support workspace(collect all scripts which is defined in `workspaces` field in root `package.json`.)
 - [just] Support execution inside of directory of justfile.
 - [task] Support `includes` with both file and directory paths, following [Taskfile schema](https://taskfile.dev/docs/reference/schema#taskfile). (fzf-make is just using output of `task --list-all --json`)
+    - **Note that the minimum supported task version is [`v3.44.0`](https://github.com/go-task/task/releases/tag/v3.44.0).**
 - **(Scheduled to be developed)** Support config file
 
 # 📦 Installation
