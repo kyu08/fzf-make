@@ -25,7 +25,7 @@
 - [pnpm] Support workspace(collect scripts all of `package.json` in the directory where fzf-make is launched.)
 - [yarn] Support workspace(collect all scripts which is defined in `workspaces` field in root `package.json`.)
 - [just] Support execution inside of directory of justfile.
-- [task] Support `includes` with both file and directory paths, following [Taskfile schema](https://taskfile.dev/docs/reference/schema#taskfile)
+- [task] Support `includes` with both file and directory paths, following [Taskfile schema](https://taskfile.dev/docs/reference/schema#taskfile). (fzf-make is just using output of `task --list-all --json`)
 - **(Scheduled to be developed)** Support config file
 
 # 📦 Installation
