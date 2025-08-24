@@ -44,3 +44,9 @@ If you add some feature, make sure to follow the checklist below for preventing 
 			- [ ] Preview is shown properly.
 
 -->
+
+## TODO
+<!-- Please check the items below before submitting a PR. -->
+- [ ] I have read and understand the content of [`CONTRIBUTING.md`](https://github.com/kyu08/fzf-make/blob/main/CONTRIBUTING.md).
+- [ ] I have double-checked my code for mistakes.
+- [ ] I have added comments to help maintainers understand my code if needed.
