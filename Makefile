@@ -67,7 +67,7 @@ run-watch:
 
 .PHONY: bump-fzf-make-version
 bump-fzf-make-version: tool-bump-version
-	@read -p "Really bump fzf-make version? y/n:" ans; \
+	@read -p "🚀 Ready to bump fzf-make version and create a new release? (y/n): " ans; \
 	if [ "$$ans" = y ]; then  \
 		git checkout main; \
 		git pull; \
