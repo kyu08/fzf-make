@@ -9,5 +9,8 @@
   ],
   "reviewers": [
     "kyu08"
+  ],
+  "ignorePaths": [
+    "./test_data/**"
   ]
 }
