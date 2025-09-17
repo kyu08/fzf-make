@@ -1,0 +1,21 @@
+name: Pinact
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+    - name: Run pinact
+      uses: suzuki-shunsuke/pinact-action@49cbd6acd0dbab6a6be2585d1dbdaa43b4410133 # v1.0.0
+      with:
+        skip_push: "true"
+    - name: Show pinact fix instruction
+      if: failure()
+      run: |
+        echo "Pinact check failed. Run 'pinact run' to pin workflow."
