@@ -25,6 +25,7 @@ impl Just {
         };
         let source_code = fs::read_to_string(&justfile_path)?;
 
+        // TODO: ここでjustfile構造体を返すべき？
         let commands = match Just::parse_justfile(justfile_path.clone(), source_code) {
             Some(c) => c,
             None => return Err(anyhow!("failed to parse justfile")),
@@ -89,6 +90,18 @@ impl Just {
         // But the elements wanted to be extracted here do not have names.
         // So we had no choice but to use `Node#children`.
         'recipe: for recipes_and_its_siblings in tree.root_node().named_children(&mut tree.walk()) {
+            if recipes_and_its_siblings.kind() == "module" {
+                // これでmoduleがとれることまでわかった。
+                // (module name: (identifier) (string))
+                // TODO: ↑ string部分はどうとるんだろう
+                for recipe_child in recipes_and_its_siblings.named_children(&mut tree.walk()) {
+                    if recipe_child.kind() == "identifier" {
+                        let mod_name = &source_code[recipe_child.byte_range()];
+                        panic!("mod_name is ... {}\n", mod_name);
+                    }
+                }
+                panic!("'mod' is not supported in justfile yet_{}_\n", recipes_and_its_siblings);
+            }
             if recipes_and_its_siblings.kind() == "recipe" {
                 let mut should_skip = false;
                 recipes_and_its_siblings.children(&mut tree.walk()).for_each(|attr| {
@@ -193,77 +206,106 @@ mod test {
             expected: Option<Vec<CommandWithPreview>>,
         }
         let cases = vec![
+            // Case {
+            //     name: "empty justfile",
+            //     source_code: "",
+            //     expected: None,
+            // },
+            //             Case {
+            //                 name: "justfile with multiple recipes",
+            //                 source_code: r#"
+            // #!/usr/bin/env -S just --justfile
+            //
+            // test:
+            //   cargo test --all
+            //
+            // [group: 'misc']
+            // run:
+            //   echo run
+            //
+            // [group: 'misc']
+            // build:
+            //   echo build
+            //
+            // [group: 'misc']
+            // fmt : # https://example.com
+            //   echo fmt
+            //
+            // [group: 'misc']
+            // [private ]
+            // fmt-private:
+            //   echo fmt
+            //
+            // # everyone's favorite animate paper clip
+            // [group: 'check']
+            // clippy:
+            //   echo clippy
+            //         "#,
+            //                 expected: Some(vec![
+            //                     CommandWithPreview {
+            //                         runner_type: RunnerType::Just,
+            //                         args: "test".to_string(),
+            //                         file_path: PathBuf::from("justfile"),
+            //                         line_number: 4,
+            //                     },
+            //                     CommandWithPreview {
+            //                         runner_type: RunnerType::Just,
+            //                         args: "run".to_string(),
+            //                         file_path: PathBuf::from("justfile"),
+            //                         line_number: 8,
+            //                     },
+            //                     CommandWithPreview {
+            //                         runner_type: RunnerType::Just,
+            //                         args: "build".to_string(),
+            //                         file_path: PathBuf::from("justfile"),
+            //                         line_number: 12,
+            //                     },
+            //                     CommandWithPreview {
+            //                         runner_type: RunnerType::Just,
+            //                         args: "fmt".to_string(),
+            //                         file_path: PathBuf::from("justfile"),
+            //                         line_number: 16,
+            //                     },
+            //                     CommandWithPreview {
+            //                         runner_type: RunnerType::Just,
+            //                         args: "clippy".to_string(),
+            //                         file_path: PathBuf::from("justfile"),
+            //                         line_number: 26,
+            //                     },
+            //                 ]),
+            //             },
+            //             Case {
+            //                 name: "justfile with recipes including a recipe with argument",
+            //                 source_code: r#"#!/usr/bin/env -S just --justfile
+            //
+            // [group: 'misc']
+            // run arg:
+            //   echo "run {{arg}}"
+            //
+            // [group: 'misc']
+            // build:
+            //   echo build
+            //         "#,
+            //                 expected: Some(vec![
+            //                     CommandWithPreview {
+            //                         runner_type: RunnerType::Just,
+            //                         args: "run".to_string(),
+            //                         file_path: PathBuf::from("justfile"),
+            //                         line_number: 4,
+            //                     },
+            //                     CommandWithPreview {
+            //                         runner_type: RunnerType::Just,
+            //                         args: "build".to_string(),
+            //                         file_path: PathBuf::from("justfile"),
+            //                         line_number: 8,
+            //                     },
+            //                 ]),
+            //             },
             Case {
-                name: "empty justfile",
-                source_code: "",
-                expected: None,
-            },
-            Case {
-                name: "justfile with multiple recipes",
-                source_code: r#"
-#!/usr/bin/env -S just --justfile
-
-test:
-  cargo test --all
-
-[group: 'misc']
-run:
-  echo run
-
-[group: 'misc']
-build:
-  echo build
-
-[group: 'misc']
-fmt : # https://example.com
-  echo fmt
-
-[group: 'misc']
-[private ]
-fmt-private:
-  echo fmt
-
-# everyone's favorite animate paper clip
-[group: 'check']
-clippy:
-  echo clippy
-        "#,
-                expected: Some(vec![
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "test".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 4,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "run".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 8,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "build".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 12,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "fmt".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 16,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "clippy".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 26,
-                    },
-                ]),
-            },
-            Case {
-                name: "justfile with recipes including a recipe with argument",
+                name: "justfile with mod",
                 source_code: r#"#!/usr/bin/env -S just --justfile
+
+mod other1 './other1'
 
 [group: 'misc']
 run arg:
