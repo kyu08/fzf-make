@@ -24,7 +24,6 @@ pub struct Just {
 #[derive(Debug, Clone, PartialEq)]
 struct Module {
     mod_name: String,
-    mod_path: Option<PathBuf>,
     content: Just,
 }
 
@@ -100,11 +99,10 @@ impl Just {
         // So we had no choice but to use `Node#children`.
         'recipe: for recipes_and_its_siblings in tree.root_node().named_children(&mut tree.walk()) {
             if recipes_and_its_siblings.kind() == "module" {
-                // should parse this: `(module name: (identifier) (string))`
+                // Parse `mod` directive.
+                // Its format is like `(module name: (identifier) (string))`.
                 let mut mod_name = String::new();
                 let mut mod_path: Option<PathBuf> = None;
-
-                // If field name doesn't work, iterate through children
                 if mod_name.is_empty() {
                     for recipe_child in recipes_and_its_siblings.named_children(&mut tree.walk()) {
                         match recipe_child.kind() {
@@ -122,20 +120,23 @@ impl Just {
                     }
                 }
 
-                // TODO: ここで再帰的に module の中身をパースしてmodulesにpushする。
+                // Retrieve the justfile for the modules recursively.
                 for path in Just::calc_justfile_path_from_mod_info(mod_name.clone(), mod_path) {
-                    // TODO: fileが見つからなかったらcontinueする
-                    let file_content = String::from("TODO: retrieve actual file content from the path");
-                    if let Some(j) = Just::parse_justfile(path.clone(), file_content) {
-                        modules.push(Module {
-                            mod_name: mod_name.clone(),
-                            // TODO: pathは構造体のにフィールドから削除してもいいかも
-                            mod_path: Some(path),
-                            content: j,
-                        })
-                    };
+                    if let Ok(content) = file_util::path_to_content(path.clone()) {
+                        if let Some(just) = Just::parse_justfile(path.clone(), content) {
+                            modules.push(Module {
+                                mod_name: mod_name.clone(),
+                                content: just,
+                            })
+                        };
+                        break;
+                    } else {
+                        continue;
+                    }
                 }
             }
+
+            // Retrieve recipe names.
             if recipes_and_its_siblings.kind() == "recipe" {
                 let mut should_skip = false;
                 recipes_and_its_siblings.children(&mut tree.walk()).for_each(|attr| {
