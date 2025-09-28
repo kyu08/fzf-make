@@ -123,8 +123,6 @@ impl Just {
                 }
 
                 // TODO: ここで再帰的に module の中身をパースしてmodulesにpushする。
-                // mod_nameとmod_pathから可能性のあるpathを優先度順に生成する
-                // for loopで先頭から試していく
                 for path in Just::calc_justfile_path_from_mod_info(mod_name.clone(), mod_path) {
                     // TODO: fileが見つからなかったらcontinueする
                     let file_content = String::from("TODO: retrieve actual file content from the path");
@@ -183,15 +181,32 @@ impl Just {
         }
     }
 
+    // TODO: Is it better to make this function responsible for searching the path instead of just returning a list of possible paths?
+    // Because the caller needs to know which one is case-insensitive or not, it feels nonsense.
     fn calc_justfile_path_from_mod_info(mod_name: String, mod_path: Option<PathBuf>) -> Vec<PathBuf> {
+        // TODO: path can be absolute and relative.
         match mod_path {
             Some(mod_path) => {
-                // TODO: mod_pathありのパターン
-                vec![]
+                // Both mod_name and mod_path are specified.
+                let base_path = PathBuf::from(&mod_path);
+                vec![
+                    base_path.clone(),
+                    // TODO: declare as constant
+                    base_path.join("mod.just"),
+                    base_path.join("justfile"),
+                    base_path.join(".justfile"),
+                ]
             }
             None => {
-                // TODO: mod_nameのみのパターン
-                vec![]
+                // Only mod_name is specified.
+                let base_path = PathBuf::from(&mod_name);
+                vec![
+                    // TODO: declare as constant
+                    base_path.with_extension("just"),
+                    base_path.join("mod.just"),
+                    base_path.join("justfile"),
+                    base_path.join(".justfile"),
+                ]
             }
         }
     }
@@ -401,10 +416,17 @@ build:
         "#,
                 expected: Some(Just {
                     path: PathBuf::from("justfile"),
-                    modules: vec![Module {
-                        mod_name: String::from("other1"),
-                        mod_path: None,
-                    }],
+                    // modules: vec![Module {
+                    //     mod_name: String::from("other1"),
+                    //     mod_path: None,
+                    //     content: Just {
+                    //         path: PathBuf::from("other1.just"),
+                    //         modules: vec![],
+                    //         commands: vec![],
+                    //     },
+                    // }],
+                    // TODO: Comment in later.
+                    modules: vec![],
                     commands: vec![
                         CommandWithPreview {
                             runner_type: RunnerType::Just,
@@ -437,10 +459,17 @@ build:
         "#,
                 expected: Some(Just {
                     path: PathBuf::from("justfile"),
-                    modules: vec![Module {
-                        mod_name: String::from("other1"),
-                        mod_path: None,
-                    }],
+                    // modules: vec![Module {
+                    //     mod_name: String::from("other1"),
+                    //     mod_path: None,
+                    //     content: Just {
+                    //         path: PathBuf::from("other1.just"),
+                    //         modules: vec![],
+                    //         commands: vec![],
+                    //     },
+                    // }],
+                    // TODO: Comment in later.
+                    modules: vec![],
                     commands: vec![
                         CommandWithPreview {
                             runner_type: RunnerType::Just,
@@ -473,10 +502,17 @@ build:
         "#,
                 expected: Some(Just {
                     path: PathBuf::from("justfile"),
-                    modules: vec![Module {
-                        mod_name: String::from("other1"),
-                        mod_path: Some(String::from("./other1.just")),
-                    }],
+                    // modules: vec![Module {
+                    //     mod_name: String::from("other1"),
+                    //     mod_path: Some(PathBuf::from("./other1.just")),
+                    //     content: Just {
+                    //         path: PathBuf::from("other1.just"),
+                    //         modules: vec![],
+                    //         commands: vec![],
+                    //     },
+                    // }],
+                    // TODO: Comment in later.
+                    modules: vec![],
                     commands: vec![
                         CommandWithPreview {
                             runner_type: RunnerType::Just,
@@ -509,10 +545,17 @@ build:
         "#,
                 expected: Some(Just {
                     path: PathBuf::from("justfile"),
-                    modules: vec![Module {
-                        mod_name: String::from("other1"),
-                        mod_path: Some(String::from("./other1.just")),
-                    }],
+                    // modules: vec![Module {
+                    //     mod_name: String::from("other1"),
+                    //     mod_path: Some(PathBuf::from("./other1.just")),
+                    //     content: Just {
+                    //         path: PathBuf::from("other1.just"),
+                    //         modules: vec![],
+                    //         commands: vec![],
+                    //     },
+                    // }],
+                    // TODO: Comment in later.
+                    modules: vec![],
                     commands: vec![
                         CommandWithPreview {
                             runner_type: RunnerType::Just,
@@ -547,8 +590,12 @@ build:
                     path: PathBuf::from("justfile"),
                     // modules: vec![Module {
                     //     mod_name: String::from("other1"),
-                    //     mod_path: Some(String::from("./other1.just")),
-                    //     content: foo,
+                    //     mod_path: Some(PathBuf::from("./other1.just")),
+                    //     content: Just {
+                    //         path: PathBuf::from("other1.just"),
+                    //         modules: vec![],
+                    //         commands: vec![],
+                    //     },
                     // }],
                     // TODO: Comment in above code. At the time, we should use temp file to test
                     // it.
@@ -573,9 +620,62 @@ build:
 
         for case in cases {
             assert_eq!(
-                1, 1,
-                // Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string()),
-                // case.expected,
+                Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string()),
+                case.expected,
+                "{}",
+                case.name
+            );
+        }
+    }
+
+    #[test]
+    fn test_calc_justfile_path_from_mod_info() {
+        struct Case {
+            name: &'static str,
+            mod_name: &'static str,
+            mod_path: Option<PathBuf>,
+            expected: Vec<PathBuf>,
+        }
+        let cases = vec![
+            Case {
+                name: "mod_path == None",
+                mod_name: "backend",
+                mod_path: None,
+                expected: vec![
+                    PathBuf::from("backend.just"),
+                    PathBuf::from("backend/mod.just"),
+                    PathBuf::from("backend/justfile"),
+                    PathBuf::from("backend/.justfile"),
+                ],
+            },
+            Case {
+                name: "mod_path == Some(rel_path)",
+                mod_name: "backend",
+                mod_path: Some(PathBuf::from("./backend")),
+                expected: vec![
+                    PathBuf::from("./backend"),
+                    PathBuf::from("./backend/mod.just"),
+                    PathBuf::from("./backend/justfile"),
+                    PathBuf::from("./backend/.justfile"),
+                ],
+            },
+            Case {
+                name: "mod_path == Some(abs_path)",
+                mod_name: "backend",
+                mod_path: Some(PathBuf::from("/Users/user/backend")),
+                expected: vec![
+                    PathBuf::from("/Users/user/backend"),
+                    PathBuf::from("/Users/user/backend/mod.just"),
+                    PathBuf::from("/Users/user/backend/justfile"),
+                    PathBuf::from("/Users/user/backend/.justfile"),
+                ],
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                Just::calc_justfile_path_from_mod_info(case.mod_name.to_string(), case.mod_path),
+                case.expected,
                 "{}",
                 case.name
             );
