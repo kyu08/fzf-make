@@ -11,6 +11,11 @@ use std::{
 };
 use tree_sitter::Parser;
 
+const JUSTFILE_EXTENSION: &str = "just";
+const JUSTFILE_NAME_MOD_JUST: &str = "mod.just";
+const JUSTFILE_NAME_JUSTFILE: &str = "justfile";
+const JUSTFILE_NAME_DOT_JUSTFILE: &str = ".justfile";
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Just {
     // path represents the path to the justfile.
@@ -185,28 +190,25 @@ impl Just {
     // TODO: Is it better to make this function responsible for searching the path instead of just returning a list of possible paths?
     // Because the caller needs to know which one is case-insensitive or not, it feels nonsense.
     fn calc_justfile_path_from_mod_info(mod_name: String, mod_path: Option<PathBuf>) -> Vec<PathBuf> {
-        // TODO: path can be absolute and relative.
         match mod_path {
             Some(mod_path) => {
                 // Both mod_name and mod_path are specified.
                 let base_path = PathBuf::from(&mod_path);
                 vec![
                     base_path.clone(),
-                    // TODO: declare as constant
-                    base_path.join("mod.just"),
-                    base_path.join("justfile"),
-                    base_path.join(".justfile"),
+                    base_path.join(JUSTFILE_NAME_MOD_JUST),
+                    base_path.join(JUSTFILE_NAME_JUSTFILE),
+                    base_path.join(JUSTFILE_NAME_DOT_JUSTFILE),
                 ]
             }
             None => {
                 // Only mod_name is specified.
                 let base_path = PathBuf::from(&mod_name);
                 vec![
-                    // TODO: declare as constant
-                    base_path.with_extension("just"),
-                    base_path.join("mod.just"),
-                    base_path.join("justfile"),
-                    base_path.join(".justfile"),
+                    base_path.with_extension(JUSTFILE_EXTENSION),
+                    base_path.join(JUSTFILE_NAME_MOD_JUST),
+                    base_path.join(JUSTFILE_NAME_JUSTFILE),
+                    base_path.join(JUSTFILE_NAME_DOT_JUSTFILE),
                 ]
             }
         }
