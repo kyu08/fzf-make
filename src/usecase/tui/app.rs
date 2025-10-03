@@ -84,7 +84,7 @@ impl Model<'_> {
                 match s.current_pane {
                     CurrentPane::Main => match (key.code, is_ctrl_pressed) {
                         (KeyCode::Tab, _) => Some(Message::MoveToNextPane),
-                        (KeyCode::Esc, _) => Some(Message::Quit),
+                        (KeyCode::Esc, _) | (KeyCode::Char('c'), true) => Some(Message::Quit),
                         (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
                         (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
                         (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
@@ -93,8 +93,7 @@ impl Model<'_> {
                     },
                     CurrentPane::History => match (key.code, is_ctrl_pressed) {
                         (KeyCode::Tab, _) => Some(Message::MoveToNextPane),
-                        (KeyCode::Esc, _) => Some(Message::Quit),
-                        (KeyCode::Char('q'), _) => Some(Message::Quit),
+                        (KeyCode::Esc, _) | (KeyCode::Char('c'), true) | (KeyCode::Char('q'), _) => Some(Message::Quit),
                         (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
                         (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
                         (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
