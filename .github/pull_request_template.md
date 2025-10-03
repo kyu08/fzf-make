@@ -28,7 +28,7 @@ If you add some feature, make sure to follow the checklist below for preventing 
 
 -->
 
-## TODO
+## Pre-submission Checklist
 <!-- Please check the items below before submitting a PR. -->
 - [ ] I have read and followed the guidelines in [`CONTRIBUTING.md`](https://github.com/kyu08/fzf-make/blob/main/CONTRIBUTING.md).
 - [ ] I have double-checked my code for mistakes.
