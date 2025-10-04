@@ -11,10 +11,25 @@ use std::{
 };
 use tree_sitter::Parser;
 
+const JUSTFILE_EXTENSION: &str = "just";
+const JUSTFILE_NAME_MOD_JUST: &str = "mod.just";
+const JUSTFILE_NAME_JUSTFILE: &str = "justfile";
+const JUSTFILE_NAME_DOT_JUSTFILE: &str = ".justfile";
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Just {
+    // path represents the path to the justfile.
     path: PathBuf,
+    // Just can declare modules to import by `mod` directive.
+    // ref: https://github.com/casey/just#modules1190
+    modules: Vec<Module>,
     commands: Vec<command::CommandWithPreview>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Module {
+    mod_name: String,
+    content: Just,
 }
 
 impl Just {
@@ -25,15 +40,10 @@ impl Just {
         };
         let source_code = fs::read_to_string(&justfile_path)?;
 
-        let commands = match Just::parse_justfile(justfile_path.clone(), source_code) {
-            Some(c) => c,
-            None => return Err(anyhow!("failed to parse justfile")),
-        };
-
-        Ok(Just {
-            path: justfile_path,
-            commands,
-        })
+        match Just::parse_justfile(justfile_path.clone(), source_code) {
+            Some(c) => Ok(c),
+            None => Err(anyhow!("failed to parse justfile")),
+        }
     }
 
     pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
@@ -67,13 +77,16 @@ impl Just {
         file_util::find_file_in_ancestors(current_dir, vec!["justfile", ".justfile"])
     }
 
-    fn parse_justfile(justfile_path: PathBuf, source_code: String) -> Option<Vec<CommandWithPreview>> {
+    fn parse_justfile(justfile_path: PathBuf, source_code: String) -> Option<Just> {
         let mut parser = Parser::new();
         parser.set_language(&tree_sitter_just::language()).unwrap();
         let tree = parser.parse(&source_code, None).unwrap();
         // source_file
         // ├── shebang
         // │   └── language
+        // ├── module
+        //     └── name: identifier
+        //     └── string
         // └── recipe (multiple))
         //     ├── recipe_header
         //     │   └── name: identifier
@@ -84,11 +97,57 @@ impl Just {
         //         ├── identifier
         //         └── argument: string
         let mut commands = vec![];
+        let mut modules = vec![];
 
         // At first, it seemed that it is more readable if we can use `Node#children_by_field_name` instead of `Node#children`.
         // But the elements wanted to be extracted here do not have names.
         // So we had no choice but to use `Node#children`.
         'recipe: for recipes_and_its_siblings in tree.root_node().named_children(&mut tree.walk()) {
+            if recipes_and_its_siblings.kind() == "module" {
+                // Parse `mod` directive.
+                // Its format is like `(module name: (identifier) (string))`.
+                let mut mod_name = String::new();
+                let mut mod_path: Option<PathBuf> = None;
+                if mod_name.is_empty() {
+                    for recipe_child in recipes_and_its_siblings.named_children(&mut tree.walk()) {
+                        match recipe_child.kind() {
+                            "identifier" => {
+                                mod_name = source_code[recipe_child.byte_range()].to_string();
+                            }
+                            "string" => {
+                                let raw_path = &source_code[recipe_child.byte_range()];
+                                // Remove surrounding quotes
+                                mod_path =
+                                    Some(PathBuf::from(raw_path.trim_matches(|c| c == '\'' || c == '"').to_string()));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+
+                // Retrieve the justfile for the modules recursively.
+                // TODO: add test for this.
+                ここから
+                ここから
+                ここから
+                ここから
+                ここから。先に手動で動作確認してもいいかも。
+                for path in Just::calc_justfile_path_from_mod_info(mod_name.clone(), mod_path) {
+                    if let Ok(content) = file_util::path_to_content(path.clone()) {
+                        if let Some(just) = Just::parse_justfile(path.clone(), content) {
+                            modules.push(Module {
+                                mod_name: mod_name.clone(),
+                                content: just,
+                            })
+                        };
+                        break;
+                    } else {
+                        continue;
+                    }
+                }
+            }
+
+            // Retrieve recipe names.
             if recipes_and_its_siblings.kind() == "recipe" {
                 let mut should_skip = false;
                 recipes_and_its_siblings.children(&mut tree.walk()).for_each(|attr| {
@@ -100,7 +159,6 @@ impl Just {
                 if should_skip {
                     continue;
                 }
-
                 for recipe_child in recipes_and_its_siblings.named_children(&mut tree.walk()) {
                     if recipe_child.kind() == "recipe_header" {
                         // `recipe_name` has format like: `fmt:`
@@ -124,7 +182,42 @@ impl Just {
             }
         }
 
-        if commands.is_empty() { None } else { Some(commands) }
+        if commands.is_empty() {
+            None
+        } else {
+            Some(Just {
+                path: justfile_path,
+                modules,
+                commands,
+            })
+        }
+    }
+
+    // TODO: Is it better to make this function responsible for searching the path instead of just returning a list of possible paths?
+    // Because the caller needs to know which one is case-insensitive or not, it feels nonsense.
+    fn calc_justfile_path_from_mod_info(mod_name: String, mod_path: Option<PathBuf>) -> Vec<PathBuf> {
+        match mod_path {
+            Some(mod_path) => {
+                // Both mod_name and mod_path are specified.
+                let base_path = PathBuf::from(&mod_path);
+                vec![
+                    base_path.clone(),
+                    base_path.join(JUSTFILE_NAME_MOD_JUST),
+                    base_path.join(JUSTFILE_NAME_JUSTFILE),
+                    base_path.join(JUSTFILE_NAME_DOT_JUSTFILE),
+                ]
+            }
+            None => {
+                // Only mod_name is specified.
+                let base_path = PathBuf::from(&mod_name);
+                vec![
+                    base_path.with_extension(JUSTFILE_EXTENSION),
+                    base_path.join(JUSTFILE_NAME_MOD_JUST),
+                    base_path.join(JUSTFILE_NAME_JUSTFILE),
+                    base_path.join(JUSTFILE_NAME_DOT_JUSTFILE),
+                ]
+            }
+        }
     }
 }
 
@@ -190,7 +283,7 @@ mod test {
         struct Case {
             name: &'static str,
             source_code: &'static str,
-            expected: Option<Vec<CommandWithPreview>>,
+            expected: Option<Just>,
         }
         let cases = vec![
             Case {
@@ -228,38 +321,42 @@ fmt-private:
 clippy:
   echo clippy
         "#,
-                expected: Some(vec![
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "test".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 4,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "run".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 8,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "build".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 12,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "fmt".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 16,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "clippy".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 26,
-                    },
-                ]),
+                expected: Some(Just {
+                    path: PathBuf::from("justfile"),
+                    modules: vec![],
+                    commands: vec![
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "test".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 4,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "run".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 8,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "build".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 12,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "fmt".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 16,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "clippy".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 26,
+                        },
+                    ],
+                }),
             },
             Case {
                 name: "justfile with recipes including a recipe with argument",
@@ -273,26 +370,230 @@ run arg:
 build:
   echo build
         "#,
-                expected: Some(vec![
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "run".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 4,
-                    },
-                    CommandWithPreview {
-                        runner_type: RunnerType::Just,
-                        args: "build".to_string(),
-                        file_path: PathBuf::from("justfile"),
-                        line_number: 8,
-                    },
-                ]),
+                expected: Some(Just {
+                    path: PathBuf::from("justfile"),
+                    modules: vec![],
+                    commands: vec![
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "run".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 4,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "build".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 8,
+                        },
+                    ],
+                }),
             },
         ];
 
         for case in cases {
-            let commands = Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string());
-            assert_eq!(commands, case.expected, "{}", case.name);
+            assert_eq!(
+                Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string()),
+                case.expected,
+                "{}",
+                case.name
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_justfile_retrieve_mod_recursively() {
+        struct Case {
+            name: &'static str,
+            source_code: &'static str,
+            expected: Option<Just>,
+        }
+        let cases = vec![
+            Case {
+                name: "empty justfile",
+                source_code: "",
+                expected: None,
+            },
+            Case {
+                name: "justfile with multiple recipes",
+                source_code: r#"
+#!/usr/bin/env -S just --justfile
+
+test:
+  cargo test --all
+
+[group: 'misc']
+run:
+  echo run
+
+[group: 'misc']
+build:
+  echo build
+
+[group: 'misc']
+fmt : # https://example.com
+  echo fmt
+
+[group: 'misc']
+[private ]
+fmt-private:
+  echo fmt
+
+# everyone's favorite animate paper clip
+[group: 'check']
+clippy:
+  echo clippy
+        "#,
+                expected: Some(Just {
+                    path: PathBuf::from("justfile"),
+                    modules: vec![],
+                    commands: vec![
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "test".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 4,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "run".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 8,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "build".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 12,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "fmt".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 16,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "clippy".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 26,
+                        },
+                    ],
+                }),
+            },
+            Case {
+                name: "justfile with recipes including a recipe with argument",
+                source_code: r#"#!/usr/bin/env -S just --justfile
+
+[group: 'misc']
+run arg:
+  echo "run {{arg}}"
+
+[group: 'misc']
+build:
+  echo build
+        "#,
+                expected: Some(Just {
+                    path: PathBuf::from("justfile"),
+                    modules: vec![],
+                    commands: vec![
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "run".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 4,
+                        },
+                        CommandWithPreview {
+                            runner_type: RunnerType::Just,
+                            args: "build".to_string(),
+                            file_path: PathBuf::from("justfile"),
+                            line_number: 8,
+                        },
+                    ],
+                }),
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string()),
+                case.expected,
+                "{}",
+                case.name
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_justfile_parse_mod_directive() {
+        // struct Case {
+        //     name: &'static str,
+        //     source_code: &'static str,
+        //     expected: Option<Just>,
+        // }
+        // let cases: Vec<_> = vec![];
+
+        // for case in cases {
+        //     // assert_eq!(
+        //     //     Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string()),
+        //     //     case.expected,
+        //     //     "{}",
+        //     //     case.name
+        //     // );
+        // }
+    }
+
+    #[test]
+    fn test_calc_justfile_path_from_mod_info() {
+        struct Case {
+            name: &'static str,
+            mod_name: &'static str,
+            mod_path: Option<PathBuf>,
+            expected: Vec<PathBuf>,
+        }
+        let cases = vec![
+            Case {
+                name: "mod_path == None",
+                mod_name: "backend",
+                mod_path: None,
+                expected: vec![
+                    PathBuf::from("backend.just"),
+                    PathBuf::from("backend/mod.just"),
+                    PathBuf::from("backend/justfile"),
+                    PathBuf::from("backend/.justfile"),
+                ],
+            },
+            Case {
+                name: "mod_path == Some(rel_path)",
+                mod_name: "backend",
+                mod_path: Some(PathBuf::from("./backend")),
+                expected: vec![
+                    PathBuf::from("./backend"),
+                    PathBuf::from("./backend/mod.just"),
+                    PathBuf::from("./backend/justfile"),
+                    PathBuf::from("./backend/.justfile"),
+                ],
+            },
+            Case {
+                name: "mod_path == Some(abs_path)",
+                mod_name: "backend",
+                mod_path: Some(PathBuf::from("/Users/user/backend")),
+                expected: vec![
+                    PathBuf::from("/Users/user/backend"),
+                    PathBuf::from("/Users/user/backend/mod.just"),
+                    PathBuf::from("/Users/user/backend/justfile"),
+                    PathBuf::from("/Users/user/backend/.justfile"),
+                ],
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                Just::calc_justfile_path_from_mod_info(case.mod_name.to_string(), case.mod_path),
+                case.expected,
+                "{}",
+                case.name
+            );
         }
     }
 }
