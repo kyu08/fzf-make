@@ -127,6 +127,11 @@ impl Just {
 
                 // Retrieve the justfile for the modules recursively.
                 // TODO: add test for this.
+                ここから
+                ここから
+                ここから
+                ここから
+                ここから。先に手動で動作確認してもいいかも。
                 for path in Just::calc_justfile_path_from_mod_info(mod_name.clone(), mod_path) {
                     if let Ok(content) = file_util::path_to_content(path.clone()) {
                         if let Some(just) = Just::parse_justfile(path.clone(), content) {
