@@ -16,14 +16,23 @@ jobs:
           for i in {1..3}; do
             echo "Attempt $i"
             if make update-license-file; then
-              echo "Success on attempt $i"
-              break
+              if git diff --exit-code; then
+                echo "No changes detected on attempt $i"
+                break
+              else
+                if [ $i -eq 3 ]; then
+                  echo "Still have changes after 3 attempts"
+                  exit 1
+                fi
+                echo "Changes detected on attempt $i, retrying..."
+                sleep 2
+              fi
             else
               if [ $i -eq 3 ]; then
-                echo "Failed after 3 attempts"
+                echo "Make command failed after 3 attempts"
                 exit 1
               fi
-              echo "Failed attempt $i, retrying..."
+              echo "Make command failed on attempt $i, retrying..."
               sleep 2
             fi
           done
