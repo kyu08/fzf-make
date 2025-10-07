@@ -3,17 +3,17 @@ This page lists the licenses of the projects used in fzf-make.
 
 ## Overview of licenses
 {{#each overview}}
-- [{{name}}](#{{id}}) ({{count}})
+- [{{{name}}}](#{{id}}) ({{count}})
 {{/each}}
 
 ## All license text:
 {{#each licenses}}
-### {{name}}
+### {{{name}}}
 #### Used by:
 {{#each used_by}}
 - [{{crate.name}} {{crate.version}}]({{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}})
 {{/each}}
 ```
-{{text}}
+{{{text}}}
 ```
 {{/each}}
