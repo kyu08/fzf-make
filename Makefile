@@ -42,7 +42,7 @@ tool-check-licenses:
 .PHONY: tool-update-license-file
 tool-update-license-file:
 	@if ! which cargo-about > /dev/null; then \
-		cargo install --locked cargo-about --version 0.7.1; \
+		cargo install --locked cargo-about --version 0.8.2; \
 	fi
 
 .PHONY: test-ci # for CI
@@ -90,7 +90,7 @@ detect-unused-dependencies: tool-detect-unused-dependencies
 
 .PHONY: update-license-file
 update-license-file: tool-update-license-file
-	cargo about generate about.hbs > CREDITS.html
+	cargo about generate --locked --fail about.hbs > CREDITS.html
 
 .PHONY: check-licenses
 check-licenses: tool-check-licenses
