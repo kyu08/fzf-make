@@ -13,13 +13,13 @@ jobs:
       
       # For some reason, below diff is shown and only in CI and CI fails but not in local machine.
       # As a workaround, we added a line break reluctantly.
-      # https://github.com/kyu08/fzf-make/pull/540/commits/fa617f413e1248f45b2c6cff1bd165b869c12bc7
+      # https://github.com/kyu08/fzf-make/commit/22c6f4a15b57c53796ad6ffb6892224f852f3ad1 
       #
-      # diff --git a/CREDITS.html b/CREDITS.html
-      # index ea33347..503b190 100644
-      # --- a/CREDITS.html
-      # +++ b/CREDITS.html
-      # @@ -2978,6 +2978,7 @@ Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
+      # diff --git a/CREDITS.md b/CREDITS.md
+      # index d5a747f..665491e 100644
+      # --- a/CREDITS.md
+      # +++ b/CREDITS.md
+      # @@ -2776,6 +2776,7 @@ Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
       #  Copyright (c) 2017 Frommi
       #  Copyright (c) 2017-2024 oyvindln
       #  
