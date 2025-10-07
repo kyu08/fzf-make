@@ -11,22 +11,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
       
-      - name: Check and update license file with retry
+      - name: Check and update license file
         run: |
-          for i in {1..3}; do
-            echo "Attempt $i"
-            if make update-license-file; then
-              echo "Success on attempt $i"
-              break
-            else
-              if [ $i -eq 3 ]; then
-                echo "Failed after 3 attempts"
-                exit 1
-              fi
-              echo "Failed attempt $i, retrying..."
-              sleep 2
-            fi
-          done
+          make update-license-file
       
       - name: Check diff
         run: |
