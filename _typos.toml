@@ -2,4 +2,4 @@
 ratatui = "ratatui"
 
 [files]
-extend-exclude = ["CREDITS.html"]
+extend-exclude = ["CREDITS.md"]
