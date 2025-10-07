@@ -12,3 +12,4 @@ accepted = [
     "Zlib",
 ]
 workarounds = ["ring"]
+no-clearly-defined = true
