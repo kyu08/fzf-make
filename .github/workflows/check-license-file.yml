@@ -1,7 +1,5 @@
 name: Check license file
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
 
 jobs:
@@ -10,10 +8,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
-      
+        with:
+          fetch-depth: 0
+
+      # Currently, we specify this workflow as one of "Status checks that are required".
+      # So if we don't run this workflow using paths: Cargo.lock,
+      # PRs that don't change Cargo.lock will be blocked unnecessarily.
+      # So we check if Cargo.lock changed and skip the rest of the steps if not
+      # intentionally instead of using `paths`.
+      - name: Check if Cargo.lock changed
+        id: check-changes
+        run: |
+          if git diff --name-only origin/main...HEAD | grep -q "^Cargo.lock$"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
       # For some reason, below diff is shown and only in CI and CI fails but not in local machine.
       # As a workaround, we added a line break reluctantly.
-      # https://github.com/kyu08/fzf-make/commit/22c6f4a15b57c53796ad6ffb6892224f852f3ad1 
+      # https://github.com/kyu08/fzf-make/commit/22c6f4a15b57c53796ad6ffb6892224f852f3ad1
       #
       # diff --git a/CREDITS.md b/CREDITS.md
       # index d5a747f..665491e 100644
@@ -22,16 +36,18 @@ jobs:
       # @@ -2776,6 +2776,7 @@ Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
       #  Copyright (c) 2017 Frommi
       #  Copyright (c) 2017-2024 oyvindln
-      #  
+      #
       # +
       #  Permission is hereby granted, free of charge, to any person obtaining a copy
       #  of this software and associated documentation files (the &quot;Software&quot;), to deal
       #  in the Software without restriction, including without limitation the rights
       - name: Check and update license file
+        if: steps.check-changes.outputs.changed == 'true'
         run: |
           make update-license-file
-      
+
       - name: Check diff
+        if: steps.check-changes.outputs.changed == 'true'
         run: |
           git add .
           git diff --cached --exit-code
