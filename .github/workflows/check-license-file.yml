@@ -11,6 +11,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Currently, we specify this workflow as one of "Status checks that are required".
+      # So if we don't run this workflow using paths: Cargo.lock,
+      # PRs that don't change Cargo.lock will be blocked unnecessarily.
+      # So we check if Cargo.lock changed and skip the rest of the steps if not
+      # intentionally instead of using `paths`.
       - name: Check if Cargo.lock changed
         id: check-changes
         run: |
