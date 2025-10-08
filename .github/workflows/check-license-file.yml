@@ -13,10 +13,8 @@ jobs:
 
       - name: Check if Cargo.lock changed
         id: check-changes
-        env:
-           BASE_REF: ${{ github.base_ref }}
         run: |
-          if git diff --name-only "origin/$BASE_REF...HEAD" | grep -q "^Cargo.lock$"; then
+          if git diff --name-only origin/main...HEAD | grep -q "^Cargo.lock$"; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
