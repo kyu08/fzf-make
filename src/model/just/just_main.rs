@@ -32,6 +32,12 @@ struct Module {
     content: Just,
 }
 
+#[derive(PartialEq, Debug)]
+struct PossiblePaths {
+    current: PathBuf,
+    child: Vec<PathBuf>,
+}
+
 impl Just {
     pub fn new(current_dir: PathBuf) -> Result<Just> {
         let justfile_path = match Just::find_justfile(current_dir.clone()) {
@@ -125,26 +131,28 @@ impl Just {
                     }
                 }
 
-                // Retrieve the justfile for the modules recursively.
+                // Retrieve the justfiles for the modules recursively.
                 // TODO: add test for this.
-                ここから
-                ここから
-                ここから
-                ここから
-                ここから。先に手動で動作確認してもいいかも。
-                for path in Just::calc_justfile_path_from_mod_info(mod_name.clone(), mod_path) {
-                    if let Ok(content) = file_util::path_to_content(path.clone()) {
-                        if let Some(just) = Just::parse_justfile(path.clone(), content) {
-                            modules.push(Module {
-                                mod_name: mod_name.clone(),
-                                content: just,
-                            })
-                        };
-                        break;
-                    } else {
-                        continue;
-                    }
-                }
+                // ここから
+                // ここから
+                // ここから
+                // ここから
+                // ここから。先に手動で動作確認してもいいかも。
+                // FIXME: justfileがcase-insensitiveなのでpossible_pathsでfor loopを回すのではなく
+                // 可能性のあるディレクトリの全要素をloopする必要がある。
+                // for possible_path in Just::calc_possible_justfile_path_from_mod_info(mod_name.clone(), mod_path) {
+                //     if let Ok(content) = file_util::path_to_content(possible_path.clone()) {
+                //         if let Some(just) = Just::parse_justfile(possible_path.clone(), content) {
+                //             modules.push(Module {
+                //                 mod_name: mod_name.clone(),
+                //                 content: just,
+                //             })
+                //         };
+                //         break;
+                //     } else {
+                //         continue;
+                //     }
+                // }
             }
 
             // Retrieve recipe names.
@@ -195,27 +203,31 @@ impl Just {
 
     // TODO: Is it better to make this function responsible for searching the path instead of just returning a list of possible paths?
     // Because the caller needs to know which one is case-insensitive or not, it feels nonsense.
-    fn calc_justfile_path_from_mod_info(mod_name: String, mod_path: Option<PathBuf>) -> Vec<PathBuf> {
+    fn calc_possible_justfile_path_from_mod_info(mod_name: String, mod_path: Option<PathBuf>) -> PossiblePaths {
         match mod_path {
             Some(mod_path) => {
-                // Both mod_name and mod_path are specified.
+                // Both mod_name and mod_path are specified. e.g. mod backend "./api"
                 let base_path = PathBuf::from(&mod_path);
-                vec![
-                    base_path.clone(),
-                    base_path.join(JUSTFILE_NAME_MOD_JUST),
-                    base_path.join(JUSTFILE_NAME_JUSTFILE),
-                    base_path.join(JUSTFILE_NAME_DOT_JUSTFILE),
-                ]
+                PossiblePaths {
+                    current: base_path.clone(),
+                    child: vec![
+                        base_path.join(JUSTFILE_NAME_MOD_JUST),
+                        base_path.join(JUSTFILE_NAME_JUSTFILE),
+                        base_path.join(JUSTFILE_NAME_DOT_JUSTFILE),
+                    ],
+                }
             }
             None => {
-                // Only mod_name is specified.
+                // Only mod_name is specified. e.g. `mod backend`
                 let base_path = PathBuf::from(&mod_name);
-                vec![
-                    base_path.with_extension(JUSTFILE_EXTENSION),
-                    base_path.join(JUSTFILE_NAME_MOD_JUST),
-                    base_path.join(JUSTFILE_NAME_JUSTFILE),
-                    base_path.join(JUSTFILE_NAME_DOT_JUSTFILE),
-                ]
+                PossiblePaths {
+                    current: base_path.with_extension(JUSTFILE_EXTENSION),
+                    child: vec![
+                        base_path.join(JUSTFILE_NAME_MOD_JUST),
+                        base_path.join(JUSTFILE_NAME_JUSTFILE),
+                        base_path.join(JUSTFILE_NAME_DOT_JUSTFILE),
+                    ],
+                }
             }
         }
     }
@@ -549,47 +561,53 @@ build:
             name: &'static str,
             mod_name: &'static str,
             mod_path: Option<PathBuf>,
-            expected: Vec<PathBuf>,
+            expected: PossiblePaths,
         }
         let cases = vec![
             Case {
                 name: "mod_path == None",
                 mod_name: "backend",
                 mod_path: None,
-                expected: vec![
-                    PathBuf::from("backend.just"),
-                    PathBuf::from("backend/mod.just"),
-                    PathBuf::from("backend/justfile"),
-                    PathBuf::from("backend/.justfile"),
-                ],
+                expected: PossiblePaths {
+                    current: PathBuf::from("backend.just"),
+                    child: vec![
+                        PathBuf::from("backend/mod.just"),
+                        PathBuf::from("backend/justfile"),
+                        PathBuf::from("backend/.justfile"),
+                    ],
+                },
             },
             Case {
                 name: "mod_path == Some(rel_path)",
                 mod_name: "backend",
                 mod_path: Some(PathBuf::from("./backend")),
-                expected: vec![
-                    PathBuf::from("./backend"),
-                    PathBuf::from("./backend/mod.just"),
-                    PathBuf::from("./backend/justfile"),
-                    PathBuf::from("./backend/.justfile"),
-                ],
+                expected: PossiblePaths {
+                    current: PathBuf::from("./backend"),
+                    child: vec![
+                        PathBuf::from("./backend/mod.just"),
+                        PathBuf::from("./backend/justfile"),
+                        PathBuf::from("./backend/.justfile"),
+                    ],
+                },
             },
             Case {
                 name: "mod_path == Some(abs_path)",
                 mod_name: "backend",
                 mod_path: Some(PathBuf::from("/Users/user/backend")),
-                expected: vec![
-                    PathBuf::from("/Users/user/backend"),
-                    PathBuf::from("/Users/user/backend/mod.just"),
-                    PathBuf::from("/Users/user/backend/justfile"),
-                    PathBuf::from("/Users/user/backend/.justfile"),
-                ],
+                expected: PossiblePaths {
+                    current: PathBuf::from("/Users/user/backend"),
+                    child: vec![
+                        PathBuf::from("/Users/user/backend/mod.just"),
+                        PathBuf::from("/Users/user/backend/justfile"),
+                        PathBuf::from("/Users/user/backend/.justfile"),
+                    ],
+                },
             },
         ];
 
         for case in cases {
             assert_eq!(
-                Just::calc_justfile_path_from_mod_info(case.mod_name.to_string(), case.mod_path),
+                Just::calc_possible_justfile_path_from_mod_info(case.mod_name.to_string(), case.mod_path),
                 case.expected,
                 "{}",
                 case.name
