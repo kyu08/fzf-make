@@ -488,12 +488,7 @@ build:
 
         for case in cases {
             assert_eq!(
-                Just::parse_justfile(
-                    // TODO: fix
-                    PathBuf::from("FIXME_PATH"),
-                    PathBuf::from("justfile"),
-                    case.source_code.to_string()
-                ),
+                Just::parse_justfile(PathBuf::from("path"), PathBuf::from("justfile"), case.source_code.to_string()),
                 case.expected,
                 "{}",
                 case.name
@@ -616,12 +611,7 @@ build:
 
         for case in cases {
             assert_eq!(
-                Just::parse_justfile(
-                    // TODO: fix
-                    PathBuf::from("FIXME_PATH"),
-                    PathBuf::from("justfile"),
-                    case.source_code.to_string()
-                ),
+                Just::parse_justfile(PathBuf::from("path"), PathBuf::from("justfile"), case.source_code.to_string()),
                 case.expected,
                 "{}",
                 case.name
@@ -759,7 +749,6 @@ build:
             let expected = fs::canonicalize(&dot_justfile).unwrap_or(dot_justfile);
             assert_eq!(result, Some(expected));
         }
-        // TODO:  case-insensitiveであることを確認？
 
         // Test case 5: mod_path is Some(relative path), and the path is a file
         {
