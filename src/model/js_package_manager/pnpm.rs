@@ -74,6 +74,11 @@ impl Pnpm {
 
         // Collect all scripts defined in given `package.json` paths.
         for path in workspace_package_json_paths {
+            // Skip the current directory's package.json to avoid duplication
+            if path == current_dir.join(js::METADATA_FILE_NAME) {
+                continue;
+            }
+
             if let Ok(c) = path_to_content::path_to_content(&path) {
                 if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
                     for (key, value, line_number) in parsing_result {
