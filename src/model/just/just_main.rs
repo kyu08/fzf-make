@@ -103,7 +103,7 @@ impl Just {
         //         ├── identifier
         //         └── argument: string
         let mut commands = vec![];
-        let modules = vec![];
+        let mut modules = vec![];
 
         let _ = File::create("debug_info.txt");
         // At first, it seemed that it is more readable if we can use `Node#children_by_field_name` instead of `Node#children`.
@@ -133,8 +133,15 @@ impl Just {
                 }
 
                 // Retrieve the justfiles for the modules recursively.
-                if let Some(_path) = Just::get_mod_file_path(current_dir.clone(), mod_name.clone(), mod_path) {
-                    // TODO: ファイル内容を取得する
+                if let Some(path) = Just::get_mod_file_path(current_dir.clone(), mod_name.clone(), mod_path) {
+                    if let Ok(mod_source_code) = fs::read_to_string(&path) {
+                        if let Some(parsed) = Just::parse_justfile(current_dir.clone(), path, mod_source_code) {
+                            modules.push(Module {
+                                mod_name: mod_name.clone(),
+                                content: parsed,
+                            });
+                        }
+                    }
                 }
             }
 
