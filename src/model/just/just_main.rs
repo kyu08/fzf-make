@@ -630,25 +630,6 @@ build:
     }
 
     #[test]
-    fn test_parse_justfile_parse_mod_directive() {
-        // struct Case {
-        //     name: &'static str,
-        //     source_code: &'static str,
-        //     expected: Option<Just>,
-        // }
-        // let cases: Vec<_> = vec![];
-
-        // for case in cases {
-        //     // assert_eq!(
-        //     //     Just::parse_justfile(PathBuf::from("justfile"), case.source_code.to_string()),
-        //     //     case.expected,
-        //     //     "{}",
-        //     //     case.name
-        //     // );
-        // }
-    }
-
-    #[test]
     fn test_calc_justfile_path_from_mod_info() {
         struct Case {
             name: &'static str,
