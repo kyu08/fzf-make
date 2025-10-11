@@ -1,2 +1,2 @@
-c:
-  @echo C
+other2:
+  @echo other2

@@ -1,2 +1,2 @@
-mod:
-  @echo Mod
+other1:
+  @echo other1
