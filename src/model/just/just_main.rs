@@ -300,10 +300,11 @@ impl Just {
                         // justfile and .justfile are case-insensitive.
                         // Though mod.just is case-sensitive, it is not problem because it is
                         // already lowercase.
-                        let file_name_string = e.unwrap().file_name().to_str().unwrap().to_lowercase();
+                        let original_file_name = e.unwrap().file_name();
+                        let lower_file_name_string = original_file_name.to_str().unwrap().to_lowercase();
                         for possible_path in &possible_paths.child {
-                            if file_name_string == possible_path.file_name().unwrap().to_str().unwrap() {
-                                let found_path = target_path.join(file_name_string);
+                            if lower_file_name_string == possible_path.file_name().unwrap().to_str().unwrap() {
+                                let found_path = target_path.join(original_file_name);
                                 return Some(fs::canonicalize(&found_path).unwrap_or(found_path));
                             }
                         }
