@@ -5,7 +5,7 @@ use crate::model::{
 };
 use anyhow::{Result, anyhow, bail};
 use std::{
-    fs::{self, File},
+    fs::{self},
     path::PathBuf,
     process,
 };
@@ -53,7 +53,23 @@ impl Just {
     }
 
     pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
-        self.commands.clone()
+        let mut result = self.commands.clone();
+
+        // Add commands from modules with module name prefix (recursively)
+        for module in &self.modules {
+            // Get all commands from the module (including nested modules)
+            let module_commands = module.content.to_commands();
+            for cmd in module_commands {
+                result.push(CommandWithPreview::new(
+                    RunnerType::Just,
+                    format!("{}::{}", module.mod_name, cmd.args),
+                    cmd.file_path.clone(),
+                    cmd.line_number,
+                ));
+            }
+        }
+
+        result
     }
 
     pub fn path(&self) -> PathBuf {
@@ -105,7 +121,6 @@ impl Just {
         let mut commands = vec![];
         let mut modules = vec![];
 
-        let _ = File::create("debug_info.txt");
         // At first, it seemed that it is more readable if we can use `Node#children_by_field_name` instead of `Node#children`.
         // But the elements wanted to be extracted here do not have names.
         // So we had no choice but to use `Node#children`.
@@ -134,8 +149,11 @@ impl Just {
 
                 // Retrieve the justfiles for the modules recursively.
                 if let Some(path) = Just::get_mod_file_path(current_dir.clone(), mod_name.clone(), mod_path) {
-                    if let Ok(mod_source_code) = fs::read_to_string(&path) {
-                        if let Some(parsed) = Just::parse_justfile(current_dir.clone(), path, mod_source_code) {
+                    // Ensure the path is absolute
+                    let absolute_path = fs::canonicalize(&path).unwrap_or(path);
+                    if let Ok(mod_source_code) = fs::read_to_string(&absolute_path) {
+                        if let Some(parsed) = Just::parse_justfile(current_dir.clone(), absolute_path, mod_source_code)
+                        {
                             modules.push(Module {
                                 mod_name: mod_name.clone(),
                                 content: parsed,
@@ -889,5 +907,158 @@ build:
 
         // Cleanup
         let _ = std::fs::remove_dir_all(&test_root_dir);
+    }
+
+    #[test]
+    fn test_to_commands() {
+        // Test case 1: Just with only root level commands (no modules)
+        {
+            let just = Just {
+                path: PathBuf::from("justfile"),
+                modules: vec![],
+                commands: vec![
+                    CommandWithPreview::new(RunnerType::Just, "test".to_string(), PathBuf::from("justfile"), 1),
+                    CommandWithPreview::new(RunnerType::Just, "build".to_string(), PathBuf::from("justfile"), 5),
+                ],
+            };
+
+            let result = just.to_commands();
+            assert_eq!(result.len(), 2);
+            assert_eq!(result[0].args, "test");
+            assert_eq!(result[1].args, "build");
+        }
+
+        // Test case 2: Just with modules
+        {
+            let just = Just {
+                path: PathBuf::from("justfile"),
+                modules: vec![Module {
+                    mod_name: "backend".to_string(),
+                    content: Just {
+                        path: PathBuf::from("backend.just"),
+                        modules: vec![],
+                        commands: vec![
+                            CommandWithPreview::new(
+                                RunnerType::Just,
+                                "start".to_string(),
+                                PathBuf::from("backend.just"),
+                                1,
+                            ),
+                            CommandWithPreview::new(
+                                RunnerType::Just,
+                                "stop".to_string(),
+                                PathBuf::from("backend.just"),
+                                5,
+                            ),
+                        ],
+                    },
+                }],
+                commands: vec![CommandWithPreview::new(
+                    RunnerType::Just,
+                    "test".to_string(),
+                    PathBuf::from("justfile"),
+                    1,
+                )],
+            };
+
+            let result = just.to_commands();
+            assert_eq!(result.len(), 3);
+            assert_eq!(result[0].args, "test");
+            assert_eq!(result[0].file_path, PathBuf::from("justfile"));
+            assert_eq!(result[1].args, "backend::start");
+            assert_eq!(result[1].file_path, PathBuf::from("backend.just"));
+            assert_eq!(result[2].args, "backend::stop");
+            assert_eq!(result[2].file_path, PathBuf::from("backend.just"));
+        }
+
+        // Test case 3: Just with multiple modules
+        {
+            let just = Just {
+                path: PathBuf::from("justfile"),
+                modules: vec![
+                    Module {
+                        mod_name: "backend".to_string(),
+                        content: Just {
+                            path: PathBuf::from("backend.just"),
+                            modules: vec![],
+                            commands: vec![CommandWithPreview::new(
+                                RunnerType::Just,
+                                "start".to_string(),
+                                PathBuf::from("backend.just"),
+                                1,
+                            )],
+                        },
+                    },
+                    Module {
+                        mod_name: "frontend".to_string(),
+                        content: Just {
+                            path: PathBuf::from("frontend.just"),
+                            modules: vec![],
+                            commands: vec![CommandWithPreview::new(
+                                RunnerType::Just,
+                                "serve".to_string(),
+                                PathBuf::from("frontend.just"),
+                                1,
+                            )],
+                        },
+                    },
+                ],
+                commands: vec![CommandWithPreview::new(
+                    RunnerType::Just,
+                    "test".to_string(),
+                    PathBuf::from("justfile"),
+                    1,
+                )],
+            };
+
+            let result = just.to_commands();
+            assert_eq!(result.len(), 3);
+            assert_eq!(result[0].args, "test");
+            assert_eq!(result[1].args, "backend::start");
+            assert_eq!(result[2].args, "frontend::serve");
+        }
+
+        // Test case 4: Nested modules
+        {
+            let just = Just {
+                path: PathBuf::from("justfile"),
+                modules: vec![Module {
+                    mod_name: "backend".to_string(),
+                    content: Just {
+                        path: PathBuf::from("backend.just"),
+                        modules: vec![Module {
+                            mod_name: "api".to_string(),
+                            content: Just {
+                                path: PathBuf::from("backend/api.just"),
+                                modules: vec![],
+                                commands: vec![CommandWithPreview::new(
+                                    RunnerType::Just,
+                                    "deploy".to_string(),
+                                    PathBuf::from("backend/api.just"),
+                                    1,
+                                )],
+                            },
+                        }],
+                        commands: vec![CommandWithPreview::new(
+                            RunnerType::Just,
+                            "start".to_string(),
+                            PathBuf::from("backend.just"),
+                            1,
+                        )],
+                    },
+                }],
+                commands: vec![],
+            };
+
+            let result = just.to_commands();
+            // backend::start (1) + backend::api::deploy (1) = 2
+            // But since backend module's to_commands() is called recursively,
+            // it returns both "start" and "api::deploy", so we get:
+            // - backend::start
+            // - backend::api::deploy
+            assert_eq!(result.len(), 2);
+            assert_eq!(result[0].args, "backend::start");
+            assert_eq!(result[1].args, "backend::api::deploy");
+        }
     }
 }
