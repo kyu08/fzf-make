@@ -1,5 +1,8 @@
 #!/usr/bin/env -S just --justfile
 
+mod other1 './other1'
+mod other2 './other2.just'
+
 test:
   cargo test --all
 
