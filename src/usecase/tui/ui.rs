@@ -22,14 +22,6 @@ use syntect::{
 };
 use syntect_tui::into_span;
 
-/// helper function to create a centered rect using up certain percentage of the available rect `r`
-fn popup_area(area: Rect, x: u16, y: u16) -> Rect {
-    let vertical = Layout::vertical([Constraint::Length(y)]).flex(Flex::Center);
-    let horizontal = Layout::horizontal([Constraint::Percentage(x)]).flex(Flex::Center);
-    let [area] = vertical.areas(area);
-    let [area] = horizontal.areas(area);
-    area
-}
 pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectCommand(model) = &mut model.app_state {
         let main_and_key_bindings = Layout::default()
@@ -313,6 +305,15 @@ fn render_history_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ra
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
         &mut model.history_list_state,
     );
+}
+
+/// helper function to create a centered rect using up certain percentage of the available rect `r`
+fn popup_area(area: Rect, x: u16, y: u16) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(y)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Percentage(x)]).flex(Flex::Center);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
 }
 
 fn render_additional_arguments_popup(model: &mut SelectCommandState, f: &mut Frame) {
