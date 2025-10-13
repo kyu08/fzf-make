@@ -1,0 +1,2 @@
+- Write comments in English.
+- Respond in the language used by the user.
