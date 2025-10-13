@@ -80,7 +80,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
     }
 }
 
-const HEIGHT_THRESHOLD_TO_HIDE_PREVIEW_WINDOW: u16 = 25;
+const HEIGHT_THRESHOLD_TO_HIDE_PREVIEW_WINDOW: u16 = 20;
 const FG_COLOR_SELECTED: ratatui::style::Color = Color::Rgb(161, 220, 156);
 const FG_COLOR_NOT_SELECTED: ratatui::style::Color = Color::DarkGray;
 const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Thick;
