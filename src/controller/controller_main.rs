@@ -9,7 +9,7 @@ pub async fn run() {
     let usecase = args_to_usecase(command_line_args);
 
     if let Err(e) = usecase.run().await {
-        // print_error(&e);
+        print_error(&e);
         std::process::exit(1);
     }
 }
