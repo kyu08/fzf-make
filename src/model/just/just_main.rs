@@ -151,15 +151,14 @@ impl Just {
                 if let Some(path) = Just::get_mod_file_path(current_dir.clone(), mod_name.clone(), mod_path) {
                     // Ensure the path is absolute
                     let absolute_path = fs::canonicalize(&path).unwrap_or(path);
-                    if let Ok(mod_source_code) = fs::read_to_string(&absolute_path) {
-                        if let Some(parsed) = Just::parse_justfile(current_dir.clone(), absolute_path, mod_source_code)
+                    if let Ok(mod_source_code) = fs::read_to_string(&absolute_path)
+                        && let Some(parsed) = Just::parse_justfile(current_dir.clone(), absolute_path, mod_source_code)
                         {
                             modules.push(Module {
                                 mod_name: mod_name.clone(),
                                 content: parsed,
                             });
                         }
-                    }
                 }
             }
 
@@ -272,11 +271,10 @@ impl Just {
 
         // Check if possible_paths.current is an existing file.
         // This is for the 1. mentioned above in both patterns.
-        if let Ok(metadata) = fs::metadata(&possible_paths.current) {
-            if metadata.is_file() {
+        if let Ok(metadata) = fs::metadata(&possible_paths.current)
+            && metadata.is_file() {
                 return Some(possible_paths.current);
             }
-        }
 
         // This is for the 2. - 4. mentioned above in both patterns.
         let target_path = match mod_path.clone() {
