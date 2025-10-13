@@ -306,7 +306,7 @@ mod test {
                 },
             },
             Case {
-                title: "Truncate when length exceeds 10",
+                title: "Truncate when length exceeds 50",
                 before: History {
                     path: path.clone(),
                     commands: vec![
@@ -350,18 +350,178 @@ mod test {
                             runner_type: runner_type::RunnerType::Make,
                             args: "history9".to_string(),
                         },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history10".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history11".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history12".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history13".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history14".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history15".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history16".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history17".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history18".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history19".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history20".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history21".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history22".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history23".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history24".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history25".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history26".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history27".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history28".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history29".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history30".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history31".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history32".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history33".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history34".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history35".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history36".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history37".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history38".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history39".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history40".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history41".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history42".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history43".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history44".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history45".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history46".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history47".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history48".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history49".to_string(),
+                        },
                     ],
                 },
                 command_to_append: command::CommandForExec {
                     runner_type: runner_type::RunnerType::Make,
-                    args: "history10".to_string(),
+                    args: "history50".to_string(),
                 },
                 after: History {
                     path: path.clone(),
                     commands: vec![
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
-                            args: "history10".to_string(),
+                            args: "history50".to_string(),
                         },
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
@@ -398,6 +558,166 @@ mod test {
                         HistoryCommand {
                             runner_type: runner_type::RunnerType::Make,
                             args: "history8".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history9".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history10".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history11".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history12".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history13".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history14".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history15".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history16".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history17".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history18".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history19".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history20".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history21".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history22".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history23".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history24".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history25".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history26".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history27".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history28".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history29".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history30".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history31".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history32".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history33".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history34".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history35".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history36".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history37".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history38".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history39".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history40".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history41".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history42".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history43".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history44".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history45".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history46".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history47".to_string(),
+                        },
+                        HistoryCommand {
+                            runner_type: runner_type::RunnerType::Make,
+                            args: "history48".to_string(),
                         },
                     ],
                 },
