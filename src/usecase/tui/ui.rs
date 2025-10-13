@@ -60,7 +60,7 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
             let preview_and_commands = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-                .split(main[10]);
+                .split(main[0]);
 
             // Render the preview window only when the window height is enough.
             render_preview_block(model, f, preview_and_commands[0]);
