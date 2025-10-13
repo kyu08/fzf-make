@@ -190,11 +190,19 @@ pub async fn main(config: config::Config) -> Result<()> {
         Ok(Ok(None)) => Ok(()), // no command was selected
         Ok(Err(e)) => Err(e),   // Model::new or run returned Err
         Err(e) => {
-            #[cfg(debug_assertions)]
-            {
-                use colored::Colorize;
-                eprintln!("{}", "Panic details have been written to debug_info.txt".red());
+            use colored::Colorize;
+
+            // Get panic info that was saved in panic hook
+            if let Some((location, message)) = crate::panic_info::get_and_clear_panic_info() {
+                eprintln!("{}", format!("thread 'main' panicked at {}", location).red());
+                eprintln!("{}", message.red());
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!("\n{}", "Panic details have been written to debug_info.txt".red());
+                }
             }
+
             Err(anyhow!(any_to_string::any_to_string(&*e))) // panic occurred
         }
     }
