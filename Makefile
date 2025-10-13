@@ -78,7 +78,7 @@ bump-fzf-make-version: tool-bump-version
 		git commit -m "chore(release): bump to v$${CURRENT_VERSION}"; \
 		git push origin HEAD; \
 		gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | sed 's@releases/tag@releases/edit@' | xargs open; \
-	fi; \
+	fi
 
 .PHONY: spell-check
 spell-check: tool-spell-check
