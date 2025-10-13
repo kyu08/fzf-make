@@ -2,7 +2,7 @@
 This page lists the licenses of the projects used in fzf-make.
 
 ## Overview of licenses
-- MIT License (190)
+- MIT License (191)
 - Unicode License v3 (19)
 - Apache License 2.0 (4)
 - ISC License (3)
@@ -1526,7 +1526,7 @@ DEALINGS IN THE SOFTWARE.
 
 ### MIT License
 #### Used by:
-- [indexmap 2.9.0](https://github.com/indexmap-rs/indexmap)
+- [indexmap 2.11.4](https://github.com/indexmap-rs/indexmap)
 
 ```
 Copyright (c) 2016--2017
@@ -2296,15 +2296,15 @@ SOFTWARE.
 
 ### MIT License
 #### Used by:
-- [serde_spanned 0.6.8](https://github.com/toml-rs/toml)
+- [serde_spanned 1.0.3](https://github.com/toml-rs/toml)
 
-- [toml 0.8.22](https://github.com/toml-rs/toml)
+- [toml 0.9.8](https://github.com/toml-rs/toml)
 
-- [toml_datetime 0.6.9](https://github.com/toml-rs/toml)
+- [toml_datetime 0.7.3](https://github.com/toml-rs/toml)
 
-- [toml_edit 0.22.26](https://github.com/toml-rs/toml)
+- [toml_parser 1.0.4](https://github.com/toml-rs/toml)
 
-- [toml_write 0.1.1](https://github.com/toml-rs/toml)
+- [toml_writer 1.0.4](https://github.com/toml-rs/toml)
 
 ```
 Copyright (c) Individual contributors
@@ -3128,9 +3128,11 @@ SOFTWARE.
 
 - [semver 1.0.26](https://github.com/dtolnay/semver)
 
-- [serde 1.0.219](https://github.com/serde-rs/serde)
+- [serde 1.0.228](https://github.com/serde-rs/serde)
 
-- [serde_derive 1.0.219](https://github.com/serde-rs/serde)
+- [serde_core 1.0.228](https://github.com/serde-rs/serde)
+
+- [serde_derive 1.0.228](https://github.com/serde-rs/serde)
 
 - [serde_json 1.0.140](https://github.com/serde-rs/json)
 
@@ -3206,7 +3208,7 @@ DEALINGS IN THE SOFTWARE.
 
 ### MIT License
 #### Used by:
-- [winnow 0.7.10](https://github.com/winnow-rs/winnow)
+- [winnow 0.7.13](https://github.com/winnow-rs/winnow)
 
 ```
 Permission is hereby granted, free of charge, to any person obtaining
