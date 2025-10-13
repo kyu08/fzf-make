@@ -22,14 +22,6 @@ use syntect::{
 };
 use syntect_tui::into_span;
 
-/// helper function to create a centered rect using up certain percentage of the available rect `r`
-fn popup_area(area: Rect, x: u16, y: u16) -> Rect {
-    let vertical = Layout::vertical([Constraint::Length(y)]).flex(Flex::Center);
-    let horizontal = Layout::horizontal([Constraint::Percentage(x)]).flex(Flex::Center);
-    let [area] = vertical.areas(area);
-    let [area] = horizontal.areas(area);
-    area
-}
 pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectCommand(model) = &mut model.app_state {
         let main_and_key_bindings = Layout::default()
@@ -56,24 +48,39 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         render_notification_block(model, f, notification_and_current_version[0]);
         render_current_version_block(f, notification_and_current_version[1]);
 
-        let preview_and_commands = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-            .split(main[0]);
-        render_preview_block(model, f, preview_and_commands[0]);
+        let commands = if f.area().height < HEIGHT_THRESHOLD_TO_HIDE_PREVIEW_WINDOW {
+            let preview_and_commands = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(100)])
+                .split(main[0]);
+            // When the window height is too small to show the preview window.
 
-        let commands = Layout::default()
+            preview_and_commands[0]
+        } else {
+            let preview_and_commands = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+                .split(main[0]);
+
+            // Render the preview window only when the window height is enough.
+            render_preview_block(model, f, preview_and_commands[0]);
+
+            preview_and_commands[1]
+        };
+
+        let commands_and_history = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(preview_and_commands[1]);
-        render_commands_block(model, f, commands[0]);
-        render_history_block(model, f, commands[1]);
+            .split(commands);
 
+        render_commands_block(model, f, commands_and_history[0]);
+        render_history_block(model, f, commands_and_history[1]);
         // Render additional arguments popup if needed.
         render_additional_arguments_popup(model, f);
     }
 }
 
+const HEIGHT_THRESHOLD_TO_HIDE_PREVIEW_WINDOW: u16 = 20;
 const FG_COLOR_SELECTED: ratatui::style::Color = Color::Rgb(161, 220, 156);
 const FG_COLOR_NOT_SELECTED: ratatui::style::Color = Color::DarkGray;
 const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Thick;
@@ -313,6 +320,15 @@ fn render_history_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ra
         // NOTE: It is against TEA's way to update the model value on the UI side, but it is unavoidable so it is allowed.
         &mut model.history_list_state,
     );
+}
+
+/// helper function to create a centered rect using up certain percentage of the available rect `r`
+fn popup_area(area: Rect, x: u16, y: u16) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(y)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Percentage(x)]).flex(Flex::Center);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
 }
 
 fn render_additional_arguments_popup(model: &mut SelectCommandState, f: &mut Frame) {
