@@ -2,7 +2,7 @@
 This page lists the licenses of the projects used in fzf-make.
 
 ## Overview of licenses
-- MIT License (190)
+- MIT License (191)
 - Unicode License v3 (19)
 - Apache License 2.0 (4)
 - ISC License (3)
