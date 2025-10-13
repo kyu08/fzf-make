@@ -2,15 +2,15 @@
 This page lists the licenses of the projects used in fzf-make.
 
 ## Overview of licenses
-- [MIT License](#MIT) (189)
-- [Unicode License v3](#Unicode-3.0) (19)
-- [Apache License 2.0](#Apache-2.0) (4)
-- [ISC License](#ISC) (3)
-- [Community Data License Agreement Permissive 2.0](#CDLA-Permissive-2.0) (2)
-- [BSD 2-Clause "Simplified" License](#BSD-2-Clause) (1)
-- [BSD 3-Clause "New" or "Revised" License](#BSD-3-Clause) (1)
-- [Mozilla Public License 2.0](#MPL-2.0) (1)
-- [zlib License](#Zlib) (1)
+- MIT License (189)
+- Unicode License v3 (19)
+- Apache License 2.0 (4)
+- ISC License (3)
+- Community Data License Agreement Permissive 2.0 (2)
+- BSD 2-Clause "Simplified" License (1)
+- BSD 3-Clause "New" or "Revised" License (1)
+- Mozilla Public License 2.0 (1)
+- zlib License (1)
 
 ## All license text:
 ### Apache License 2.0
