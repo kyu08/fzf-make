@@ -45,7 +45,13 @@ use update_informer::{Check, registry};
 // See: https://www.youtube.com/watch?v=IcgmSRJHu_8
 #[derive(PartialEq, Debug)]
 pub enum AppState<'a> {
-    SelectCommand(SelectCommandState<'a>),
+    // Box the largest variant to reduce enum size (1176 bytes → ~8 bytes)
+    // When there's a large size difference between variants, the entire enum
+    // always allocates memory for the largest variant, which leads to:
+    // - Poor memory efficiency
+    // - Increased risk of stack overflow
+    // See: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
+    SelectCommand(Box<SelectCommandState<'a>>),
     ExecuteCommand(ExecuteCommandState),
     ShouldQuit,
 }
@@ -59,7 +65,7 @@ impl Model<'_> {
     pub fn new(config: config::Config) -> Result<Self> {
         match SelectCommandState::new(config) {
             Ok(s) => Ok(Model {
-                app_state: AppState::SelectCommand(s),
+                app_state: AppState::SelectCommand(Box::new(s)),
             }),
             Err(e) => Err(e),
         }
@@ -221,12 +227,11 @@ async fn run<'a, B: Backend>(
     tokio::spawn(get_latest_version(cloned_hash_map));
 
     loop {
-        if let AppState::SelectCommand(s) = &mut model.app_state {
-            if s.latest_version.is_none() {
-                if let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY) {
-                    s.latest_version = Some(new_version.to_string());
-                }
-            }
+        if let AppState::SelectCommand(s) = &mut model.app_state
+            && s.latest_version.is_none()
+            && let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY)
+        {
+            s.latest_version = Some(new_version.to_string());
         }
 
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
@@ -594,10 +599,10 @@ impl SelectCommandState<'_> {
     }
 
     fn open_additional_arguments_popup(&mut self) {
-        if let Some(command) = self.get_selected_command() {
-            if self.additional_arguments_popup_state.is_none() {
-                self.additional_arguments_popup_state = Some(AdditionalWindowState::new(command));
-            }
+        if let Some(command) = self.get_selected_command()
+            && self.additional_arguments_popup_state.is_none()
+        {
+            self.additional_arguments_popup_state = Some(AdditionalWindowState::new(command));
         }
     }
 
@@ -784,41 +789,41 @@ mod test {
             Case {
                 title: "MoveToNextPane(Main -> History)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::Main,
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::MoveToNextPane),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "MoveToNextPane(History -> Main)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::MoveToNextPane),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::Main,
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "Quit",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::Quit),
                 expect_model: Model {
@@ -828,107 +833,107 @@ mod test {
             Case {
                 title: "SearchTextAreaKeyInput(a)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(KeyCode::Char('a')))),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         search_text_area: {
                             let mut text_area = TextArea::default();
                             text_area.input(KeyEvent::from(KeyCode::Char('a')));
                             TextArea_(text_area)
                         },
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "when BackSpace is inputted, the selection should be reset",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(KeyCode::Backspace))),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "Next(0 -> 1)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::NextCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "Next(2 -> 0)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(2)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::NextCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "Previous(1 -> 0)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::PreviousCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "Previous(0 -> 2)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::PreviousCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(2)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "ExecuteCommand(Main)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::ExecuteCommand(command::CommandForExec {
                     runner_type: runner_type::RunnerType::Make,
@@ -947,11 +952,11 @@ mod test {
             Case {
                 title: "ExecuteCommand(History)",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::ExecuteCommand(command::CommandForExec {
                     runner_type: runner_type::RunnerType::Make,
@@ -971,14 +976,14 @@ mod test {
                 title: "Selecting position should be reset if some kind of char
                     was inputted when the command located not in top of the commands",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::SearchTextAreaKeyInput(KeyEvent::from(KeyCode::Char('a')))),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         search_text_area: {
                             let mut text_area = TextArea::default();
@@ -986,17 +991,17 @@ mod test {
                             TextArea_(text_area)
                         },
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "NextCommand when there is no commands to select, panic should not occur",
                 model: {
                     let mut m = Model {
-                        app_state: AppState::SelectCommand(SelectCommandState {
+                        app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                             commands_list_state: ListState::with_selected(ListState::default(), None),
                             ..SelectCommandState::new_for_test()
-                        }),
+                        })),
                     };
                     update(
                         // There should not be commands because init_model has ["target0", "target1", "target2"] as command.
@@ -1007,7 +1012,7 @@ mod test {
                 },
                 message: Some(Message::NextCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), None),
                         search_text_area: {
                             let mut text_area = TextArea::default();
@@ -1015,7 +1020,7 @@ mod test {
                             TextArea_(text_area)
                         },
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
@@ -1023,10 +1028,10 @@ mod test {
                     panic should not occur",
                 model: {
                     let mut m = Model {
-                        app_state: AppState::SelectCommand(SelectCommandState {
+                        app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                             commands_list_state: ListState::with_selected(ListState::default(), None),
                             ..SelectCommandState::new_for_test()
-                        }),
+                        })),
                     };
                     update(
                         // There should not be commands because init_model has ["target0", "target1", "target2"] as command.
@@ -1037,7 +1042,7 @@ mod test {
                 },
                 message: Some(Message::PreviousCommand),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         commands_list_state: ListState::with_selected(ListState::default(), None),
                         search_text_area: {
                             let mut text_area = TextArea::default();
@@ -1045,81 +1050,81 @@ mod test {
                             TextArea_(text_area)
                         },
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "NextHistory",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::NextHistory),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "PreviousHistory",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::NextHistory),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(1)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "When the last history is selected and NextHistory is received,
                     it returns to the beginning.",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(2)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::NextHistory),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
             Case {
                 title: "When the first history is selected and PreviousHistory is received,
                     it moves to the last history.",
                 model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(0)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
                 message: Some(Message::PreviousHistory),
                 expect_model: Model {
-                    app_state: AppState::SelectCommand(SelectCommandState {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
                         current_pane: CurrentPane::History,
                         history_list_state: ListState::with_selected(ListState::default(), Some(2)),
                         ..SelectCommandState::new_for_test()
-                    }),
+                    })),
                 },
             },
         ];
