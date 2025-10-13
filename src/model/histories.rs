@@ -54,7 +54,7 @@ impl History {
         updated_commands.retain(|t| *t != HistoryCommand::from(executed_command.clone()));
         updated_commands.insert(0, HistoryCommand::from(executed_command.clone()));
 
-        const MAX_LENGTH: usize = 10;
+        const MAX_LENGTH: usize = 50;
         if MAX_LENGTH < updated_commands.len() {
             updated_commands.truncate(MAX_LENGTH);
         }
