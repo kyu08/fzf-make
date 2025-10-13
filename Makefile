@@ -30,7 +30,7 @@ tool-spell-check:
 .PHONY: tool-detect-unused-dependencies
 tool-detect-unused-dependencies:
 	@if ! which cargo-machete > /dev/null; then \
-		cargo install --locked cargo-machete --version 0.8.0; \
+		cargo install --locked --git https://github.com/bnjbvr/cargo-machete --rev 744a6d5e0db5d189ad36edb08c5f77107cc42310 cargo-machete
 	fi
 
 .PHONY: tool-check-licenses
