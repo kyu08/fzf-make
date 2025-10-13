@@ -113,18 +113,19 @@ impl Yarn {
         if let Ok(workspace_package_json_paths) = package_json_in_workspace {
             for path in workspace_package_json_paths {
                 if let Ok(c) = path_to_content::path_to_content(&path)
-                    && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
-                        for (key, _, line_number) in parsing_result {
-                            result.push(command::CommandWithPreview::new(
-                                runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
-                                // yarn executes workspace script following format: `yarn workspace {package_name} {script_name}`
-                                // e.g. `yarn workspace app4 build`
-                                format!("workspace {} {}", name.clone(), key.as_str()),
-                                path.clone(),
-                                line_number,
-                            ));
-                        }
-                    };
+                    && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c)
+                {
+                    for (key, _, line_number) in parsing_result {
+                        result.push(command::CommandWithPreview::new(
+                            runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
+                            // yarn executes workspace script following format: `yarn workspace {package_name} {script_name}`
+                            // e.g. `yarn workspace app4 build`
+                            format!("workspace {} {}", name.clone(), key.as_str()),
+                            path.clone(),
+                            line_number,
+                        ));
+                    }
+                };
             }
         };
 

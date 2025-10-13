@@ -229,9 +229,10 @@ async fn run<'a, B: Backend>(
     loop {
         if let AppState::SelectCommand(s) = &mut model.app_state
             && s.latest_version.is_none()
-                && let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY) {
-                    s.latest_version = Some(new_version.to_string());
-                }
+            && let Some(new_version) = shared_version_hash_map.lock().unwrap().get(VERSION_KEY)
+        {
+            s.latest_version = Some(new_version.to_string());
+        }
 
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
             return Err(anyhow!(e));
@@ -599,9 +600,10 @@ impl SelectCommandState<'_> {
 
     fn open_additional_arguments_popup(&mut self) {
         if let Some(command) = self.get_selected_command()
-            && self.additional_arguments_popup_state.is_none() {
-                self.additional_arguments_popup_state = Some(AdditionalWindowState::new(command));
-            }
+            && self.additional_arguments_popup_state.is_none()
+        {
+            self.additional_arguments_popup_state = Some(AdditionalWindowState::new(command));
+        }
     }
 
     fn close_additional_arguments_popup(&mut self) {

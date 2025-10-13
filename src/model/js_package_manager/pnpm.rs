@@ -80,21 +80,22 @@ impl Pnpm {
             }
 
             if let Ok(c) = path_to_content::path_to_content(&path)
-                && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
-                    for (key, value, line_number) in parsing_result {
-                        if Self::use_filtering(value) {
-                            continue;
-                        }
-                        result.push(command::CommandWithPreview::new(
-                            runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
-                            // pnpm executes workspace script following format: `pnpm --filter {package_name} {script_name}`
-                            // e.g. `pnpm --filter app4 build`
-                            format!("--filter {} {}", name.clone(), key.as_str()),
-                            path.clone(),
-                            line_number,
-                        ));
+                && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c)
+            {
+                for (key, value, line_number) in parsing_result {
+                    if Self::use_filtering(value) {
+                        continue;
                     }
-                };
+                    result.push(command::CommandWithPreview::new(
+                        runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
+                        // pnpm executes workspace script following format: `pnpm --filter {package_name} {script_name}`
+                        // e.g. `pnpm --filter app4 build`
+                        format!("--filter {} {}", name.clone(), key.as_str()),
+                        path.clone(),
+                        line_number,
+                    ));
+                }
+            };
         }
 
         Some(result)

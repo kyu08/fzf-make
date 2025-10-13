@@ -20,15 +20,16 @@ impl Targets {
                 }
                 LineType::Normal => {
                     if define_block_depth == 0
-                        && let Some(t) = line_to_target(line.to_string()) {
-                            let command = command::CommandWithPreview::new(
-                                runner_type::RunnerType::Make,
-                                t,
-                                path.clone(),
-                                i as u32 + 1,
-                            );
-                            result.push(command);
-                        }
+                        && let Some(t) = line_to_target(line.to_string())
+                    {
+                        let command = command::CommandWithPreview::new(
+                            runner_type::RunnerType::Make,
+                            t,
+                            path.clone(),
+                            i as u32 + 1,
+                        );
+                        result.push(command);
+                    }
                 }
             }
         }
