@@ -1,6 +1,6 @@
 [package]
 name = "fzf-make"
-version = "0.63.0"
+version = "0.64.0"
 edition = "2024"
 authors = ["kyu08"]
 description = "A command line tool that executes commands using fuzzy finder with preview window for make, pnpm, yarn, just, and task."
