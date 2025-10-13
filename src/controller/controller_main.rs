@@ -1,4 +1,10 @@
-use crate::usecase::{fzf_make, fzf_make::FzfMake, help, history, invalid_arg, repeat, usecase_main, version};
+use crate::{
+    panic_info,
+    usecase::{
+        fzf_make::{self, FzfMake},
+        help, history, invalid_arg, repeat, usecase_main, version,
+    },
+};
 use colored::Colorize;
 use std::{collections::HashMap, env, sync::Arc};
 
@@ -7,7 +13,11 @@ pub async fn run() {
     let usecase = args_to_usecase(command_line_args);
 
     if let Err(e) = usecase.run().await {
-        print_error(&e);
+        // If there was panic info of tui recorded, the error is printed
+        // by the panic hook defined in main.rs.
+        if panic_info::get_panic_info().is_none() {
+            print_error(&e);
+        }
         std::process::exit(1);
     }
 }

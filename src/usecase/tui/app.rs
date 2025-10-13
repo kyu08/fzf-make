@@ -187,9 +187,26 @@ pub async fn main(config: config::Config) -> Result<()> {
             runner.show_command(&command);
             runner.execute(&command)
         }
-        Ok(Ok(None)) => Ok(()),                                    // no command was selected
-        Ok(Err(e)) => Err(e),                                      // Model::new or run returned Err
-        Err(e) => Err(anyhow!(any_to_string::any_to_string(&*e))), // panic occurred
+        Ok(Ok(None)) => Ok(()), // no command was selected
+        Ok(Err(e)) => Err(e),   // Model::new or run returned Err
+        Err(e) => {
+            // Since panic content is printed by the panic hook defined in main.rs once,
+            // it occurs before terminal is shutdown, so we should print it here again.
+            use colored::Colorize;
+
+            // Get panic info that was saved in panic hook
+            if let Some((location, message)) = crate::panic_info::get_panic_info() {
+                eprintln!("{}", format!("thread 'main' panicked at {}", location).red());
+                eprintln!("{}", message.red());
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!("\n{}", "Panic details have been appended to `debug_info.txt`".red());
+                }
+            }
+
+            Err(anyhow!(any_to_string::any_to_string(&*e))) // panic occurred
+        }
     }
 }
 

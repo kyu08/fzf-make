@@ -2269,7 +2269,7 @@ SOFTWARE.
 
 ### MIT License
 #### Used by:
-- [deranged 0.4.0](https://github.com/jhpratt/deranged)
+- [deranged 0.5.4](https://github.com/jhpratt/deranged)
 
 ```
 Copyright (c) 2024 Jacob Pratt et al.
@@ -2331,9 +2331,9 @@ SOFTWARE.
 
 ### MIT License
 #### Used by:
-- [time-core 0.1.4](https://github.com/time-rs/time)
+- [time-core 0.1.6](https://github.com/time-rs/time)
 
-- [time 0.3.41](https://github.com/time-rs/time)
+- [time 0.3.44](https://github.com/time-rs/time)
 
 ```
 Copyright (c) Jacob Pratt et al.
