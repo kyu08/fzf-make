@@ -48,24 +48,40 @@ pub fn ui(f: &mut Frame, model: &mut Model) {
         render_notification_block(model, f, notification_and_current_version[0]);
         render_current_version_block(f, notification_and_current_version[1]);
 
-        let preview_and_commands = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-            .split(main[0]);
-        render_preview_block(model, f, preview_and_commands[0]);
+        if f.area().height < HEIGHT_THRESHOLD_TO_HIDE_PREVIEW_WINDOW {
+            let preview_and_commands = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(100)])
+                .split(main[0]);
+            // render_preview_block(model, f, preview_and_commands[0]);
 
-        let commands = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(preview_and_commands[1]);
-        render_commands_block(model, f, commands[0]);
-        render_history_block(model, f, commands[1]);
+            let commands = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(preview_and_commands[0]);
+            render_commands_block(model, f, commands[0]);
+            render_history_block(model, f, commands[1]);
+        } else {
+            let preview_and_commands = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+                .split(main[0]);
+            render_preview_block(model, f, preview_and_commands[0]);
+
+            let commands = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(preview_and_commands[1]);
+            render_commands_block(model, f, commands[0]);
+            render_history_block(model, f, commands[1]);
+        }
 
         // Render additional arguments popup if needed.
         render_additional_arguments_popup(model, f);
     }
 }
 
+const HEIGHT_THRESHOLD_TO_HIDE_PREVIEW_WINDOW: u16 = 18;
 const FG_COLOR_SELECTED: ratatui::style::Color = Color::Rgb(161, 220, 156);
 const FG_COLOR_NOT_SELECTED: ratatui::style::Color = Color::DarkGray;
 const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Thick;
