@@ -6,3 +6,5 @@ test_data/history/
 .yarn
 .pnp.*
 node_modules
+
+debug_info.txt

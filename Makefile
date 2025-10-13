@@ -4,7 +4,7 @@ ci: test-ci check fmt-check detect-unused-dependencies check-licenses update-lic
 
 .PHONY: run
 run:
-	@cargo run
+	@RUST_BACKTRACE=full cargo run
 
 .PHONY: tools
 tools: tool-test tool-bump-version tool-spell-check
