@@ -91,6 +91,8 @@ detect-unused-dependencies: tool-detect-unused-dependencies
 .PHONY: update-license-file
 update-license-file: tool-update-license-file
 	cargo about generate --locked --fail about.hbs > CREDITS.md
+	@# Normalize consecutive blank lines to avoid CI/local environment differences
+	perl -i -0pe 's/\n\n\n+/\n\n/g' CREDITS.md
 
 .PHONY: check-licenses
 check-licenses: tool-check-licenses
