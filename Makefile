@@ -115,7 +115,7 @@ build:
 
 .PHONY: fmt
  fmt:
-	@cargo +nightly fmt
+	@cargo fmt
 
 .PHONY: fmt-check
  fmt-check:

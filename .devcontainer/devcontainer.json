@@ -21,7 +21,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "rustup toolchain install nightly && rustup component add rustfmt --toolchain nightly"
+	// "postCreateCommand": "rustup toolchain install nightly && rustup component add rustfmt --toolchain nightly"
 
 	// Configure tool-specific properties.
 	// "customizations": {},
