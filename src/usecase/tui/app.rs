@@ -199,7 +199,7 @@ pub async fn main(config: config::Config) -> Result<()> {
 
                 #[cfg(debug_assertions)]
                 {
-                    eprintln!("\n{}", "Panic details have been written to debug_info.txt".red());
+                    eprintln!("\n{}", "Panic details have been appended to `debug_info.txt`".red());
                 }
             }
 

@@ -9,7 +9,7 @@ mod usecase;
 
 #[tokio::main]
 async fn main() {
-    // Set panic hook to capture backtrace
+    // Set panic hook to capture and output backtrace to the debug file.
     std::panic::set_hook(Box::new(|panic_info| {
         use colored::Colorize;
 
@@ -46,7 +46,7 @@ async fn main() {
                 timestamp, message, location, backtrace
             );
             let _ = model::file_util::write_debug_info_to_file(&debug_info);
-            eprintln!("\n{}", "Panic details have been written to debug_info.txt".red());
+            eprintln!("\n{}", "Panic details have been appended to `debug_info.txt`".red());
         }
     }));
 
