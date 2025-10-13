@@ -193,7 +193,7 @@ pub async fn main(config: config::Config) -> Result<()> {
             use colored::Colorize;
 
             // Get panic info that was saved in panic hook
-            if let Some((location, message)) = crate::panic_info::get_and_clear_panic_info() {
+            if let Some((location, message)) = crate::panic_info::get_panic_info() {
                 eprintln!("{}", format!("thread 'main' panicked at {}", location).red());
                 eprintln!("{}", message.red());
 
