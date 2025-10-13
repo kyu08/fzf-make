@@ -3134,7 +3134,7 @@ SOFTWARE.
 
 - [serde_derive 1.0.228](https://github.com/serde-rs/serde)
 
-- [serde_json 1.0.140](https://github.com/serde-rs/json)
+- [serde_json 1.0.143](https://github.com/serde-rs/json)
 
 - [syn 2.0.101](https://github.com/dtolnay/syn)
 
