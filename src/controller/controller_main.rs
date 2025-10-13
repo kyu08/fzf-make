@@ -3,8 +3,6 @@ use colored::Colorize;
 use std::{collections::HashMap, env, sync::Arc};
 
 pub async fn run() {
-    // let v = vec![1, 2];
-    // println!("{}", v[2]);
     let command_line_args = env::args().collect();
     let usecase = args_to_usecase(command_line_args);
 
