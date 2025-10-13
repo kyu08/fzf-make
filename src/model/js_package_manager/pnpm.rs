@@ -79,8 +79,8 @@ impl Pnpm {
                 continue;
             }
 
-            if let Ok(c) = path_to_content::path_to_content(&path) {
-                if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
+            if let Ok(c) = path_to_content::path_to_content(&path)
+                && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
                     for (key, value, line_number) in parsing_result {
                         if Self::use_filtering(value) {
                             continue;
@@ -94,8 +94,7 @@ impl Pnpm {
                             line_number,
                         ));
                     }
-                }
-            };
+                };
         }
 
         Some(result)
@@ -163,7 +162,7 @@ impl Pnpm {
         let has_filtering_or_dir_option = args
             .iter()
             .any(|arg| *arg == "-F" || *arg == "--filter" || *arg == "-C" || *arg == "--dir");
-        let has_run = args.iter().any(|arg| *arg == "run");
+        let has_run = args.contains(&"run");
 
         start_with_pnpm && has_filtering_or_dir_option && !has_run
     }

@@ -112,8 +112,8 @@ impl Yarn {
         // Collect all scripts defined in given `package.json` paths.
         if let Ok(workspace_package_json_paths) = package_json_in_workspace {
             for path in workspace_package_json_paths {
-                if let Ok(c) = path_to_content::path_to_content(&path) {
-                    if let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
+                if let Ok(c) = path_to_content::path_to_content(&path)
+                    && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c) {
                         for (key, _, line_number) in parsing_result {
                             result.push(command::CommandWithPreview::new(
                                 runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn),
@@ -124,8 +124,7 @@ impl Yarn {
                                 line_number,
                             ));
                         }
-                    }
-                };
+                    };
             }
         };
 

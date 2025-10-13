@@ -221,7 +221,7 @@ fn load_syntax_highlighting_theme() -> Result<PathBuf> {
 }
 
 fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (usize, usize) {
-    let middle_row_index = if row_count % 2 == 0 {
+    let middle_row_index = if row_count.is_multiple_of(2) {
         row_count / 2 - 1
     } else {
         row_count.div_ceil(2) - 1
