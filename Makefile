@@ -125,6 +125,10 @@ build:
  check:
 	@cargo clippy -- -D warnings
 
+.PHONY: check-fix
+ check-fix:
+	@cargo clippy --fix -- -D warnings
+
 .PHONY: build-release
 build-release:
 	@cargo build --verbose --release
