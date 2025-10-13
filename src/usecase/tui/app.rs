@@ -189,7 +189,14 @@ pub async fn main(config: config::Config) -> Result<()> {
         }
         Ok(Ok(None)) => Ok(()),                                    // no command was selected
         Ok(Err(e)) => Err(e),                                      // Model::new or run returned Err
-        Err(e) => Err(anyhow!(any_to_string::any_to_string(&*e))), // panic occurred
+        Err(e) => {
+            #[cfg(debug_assertions)]
+            {
+                eprintln!("=== Debug information has been output ===");
+                eprintln!("Panic in TUI: {:?}", e);
+            }
+            Err(anyhow!(any_to_string::any_to_string(&*e))) // panic occurred
+        }
     }
 }
 

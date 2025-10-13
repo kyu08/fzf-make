@@ -11,11 +11,26 @@ pub fn path_to_content(path: PathBuf) -> Result<String> {
 
 pub fn find_file_in_ancestors(current_dir: PathBuf, file_names: Vec<&str>) -> Option<PathBuf> {
     for path in current_dir.ancestors() {
-        for entry in PathBuf::from(path).read_dir().unwrap() {
-            let entry = entry.unwrap();
-            let file_name = entry.file_name().to_string_lossy().to_lowercase();
-            if file_names.contains(&file_name.as_str()) {
-                return Some(entry.path());
+        match PathBuf::from(path).read_dir() {
+            Ok(entries) => {
+                for entry_result in entries {
+                    match entry_result {
+                        Ok(entry) => {
+                            let file_name = entry.file_name().to_string_lossy().to_lowercase();
+                            if file_names.contains(&file_name.as_str()) {
+                                return Some(entry.path());
+                            }
+                        }
+                        Err(e) => {
+                            #[cfg(debug_assertions)]
+                            eprintln!("[find_file_in_ancestors] Failed to read entry in {:?}: {}", path, e);
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                #[cfg(debug_assertions)]
+                eprintln!("[find_file_in_ancestors] Failed to read directory {:?}: {}", path, e);
             }
         }
     }

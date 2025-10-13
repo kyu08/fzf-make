@@ -14,6 +14,11 @@ async fn main() {
         .await;
 
     if let Err(e) = res {
+        #[cfg(debug_assertions)]
+        {
+            eprintln!("=== Debug information has been output ===");
+            eprintln!("Panic occurred: {:?}", e);
+        }
         println!("{}", err::any_to_string::any_to_string(&*e));
         std::process::exit(1);
     }
