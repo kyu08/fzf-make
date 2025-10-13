@@ -190,6 +190,8 @@ pub async fn main(config: config::Config) -> Result<()> {
         Ok(Ok(None)) => Ok(()), // no command was selected
         Ok(Err(e)) => Err(e),   // Model::new or run returned Err
         Err(e) => {
+            // Since panic content is printed by the panic hook defined in main.rs once,
+            // it occurs before terminal is shutdown, so we should print it here again.
             use colored::Colorize;
 
             // Get panic info that was saved in panic hook

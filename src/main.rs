@@ -55,7 +55,7 @@ async fn main() {
         .catch_unwind()
         .await;
 
-    if let Err(_e) = res {
+    if res.is_err() {
         std::process::exit(1);
     }
 }
