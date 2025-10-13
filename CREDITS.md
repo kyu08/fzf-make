@@ -2,7 +2,7 @@
 This page lists the licenses of the projects used in fzf-make.
 
 ## Overview of licenses
-- MIT License (189)
+- MIT License (190)
 - Unicode License v3 (19)
 - Apache License 2.0 (4)
 - ISC License (3)
@@ -2961,7 +2961,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### MIT License
 #### Used by:
-- [tokio 1.45.1](https://github.com/tokio-rs/tokio)
+- [tokio 1.47.1](https://github.com/tokio-rs/tokio)
 
 ```
 MIT License
@@ -3044,6 +3044,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+```
+
+### MIT License
+#### Used by:
+- [io-uring 0.7.10](https://github.com/tokio-rs/io-uring)
+
+```
+MIT License
+Copyright (c) 2019 quininer@live.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ```
 
