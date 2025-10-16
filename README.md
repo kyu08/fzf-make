@@ -70,9 +70,9 @@ nix run nixpkgs#fzf-make
 ## OS-independent method
 ### Cargo
 ```sh
-cargo install --locked fzf-make
-# Or build from HEAD
-cargo install  --git  https://github.com/kyu08/fzf-make/
+cargo +1.90.0 install --locked fzf-make
+# Or build from the latest source
+cargo +1.90.0 install --git https://github.com/kyu08/fzf-make/
 ```
 
 # 💡 Usage
