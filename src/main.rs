@@ -1,10 +1,10 @@
 mod controller;
 use futures::FutureExt;
 use std::panic::AssertUnwindSafe;
-mod err;
+mod error;
 mod file;
 mod model;
-mod panic_info;
+use error::panic_info;
 mod usecase;
 
 #[tokio::main]
