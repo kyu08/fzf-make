@@ -1,6 +1,6 @@
 use super::{config, ui::ui};
 use crate::{
-    err::any_to_string,
+    error::any_to_string,
     file::toml,
     model::{
         command::{self},
