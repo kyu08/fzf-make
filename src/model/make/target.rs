@@ -6,12 +6,12 @@ use std::path::PathBuf;
 pub struct Targets(pub Vec<command::CommandWithPreview>);
 
 impl Targets {
-    pub fn new(content: String, path: PathBuf) -> Targets {
+    pub fn new(content: String, path: PathBuf, recipe_prefix: Option<char>) -> Targets {
         let mut result: Vec<command::CommandWithPreview> = Vec::new();
         let mut define_block_depth = 0;
 
         for (i, line) in content.lines().enumerate() {
-            match get_line_type(line) {
+            match get_line_type(line, recipe_prefix) {
                 LineType::DefineStart => {
                     define_block_depth += 1;
                 }
@@ -31,6 +31,9 @@ impl Targets {
                         result.push(command);
                     }
                 }
+                LineType::Recipe => {
+                    // Skip recipe lines - they're not targets
+                }
             }
         }
 
@@ -47,9 +50,18 @@ enum LineType {
     Normal,
     DefineStart,
     DefineEnd,
+    Recipe,
 }
 
-fn get_line_type(line: &str) -> LineType {
+fn get_line_type(line: &str, recipe_prefix: Option<char>) -> LineType {
+    if let Some(prefix) = recipe_prefix {
+        if line.starts_with(prefix) {
+            return LineType::Recipe;
+        }
+    } else if line.starts_with('\t') {
+        return LineType::Recipe;
+    }
+
     let words: Vec<&str> = line.split_whitespace().collect();
 
     if words.is_empty() {
@@ -231,7 +243,7 @@ endef
         for case in cases {
             assert_eq!(
                 case.expect,
-                Targets::new(case.contents.to_string(), PathBuf::from("")),
+                Targets::new(case.contents.to_string(), PathBuf::from(""), None),
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
@@ -280,7 +292,96 @@ endef
         ];
 
         for case in cases {
-            assert_eq!(case.expect, get_line_type(case.line), "\nFailed: 🚨{:?}🚨\n", case.title,);
+            assert_eq!(case.expect, get_line_type(case.line, None), "\nFailed: 🚨{:?}🚨\n", case.title,);
+        }
+    }
+
+    #[test]
+    fn get_line_type_with_recipe_prefix_test() {
+        struct Case {
+            title: &'static str,
+            line: &'static str,
+            recipe_prefix: Option<char>,
+            expect: LineType,
+        }
+
+        let cases = vec![
+            Case {
+                title: "recipe line with > prefix",
+                line: ">echo test",
+                recipe_prefix: Some('>'),
+                expect: LineType::Recipe,
+            },
+            Case {
+                title: "recipe line with tab (default)",
+                line: "\techo test",
+                recipe_prefix: None,
+                expect: LineType::Recipe,
+            },
+            Case {
+                title: "normal line with > prefix set but line doesn't start with >",
+                line: "target:",
+                recipe_prefix: Some('>'),
+                expect: LineType::Normal,
+            },
+            Case {
+                title: "target line should not be recipe even with tab",
+                line: "target:",
+                recipe_prefix: None,
+                expect: LineType::Normal,
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(case.expect, get_line_type(case.line, case.recipe_prefix), "\nFailed: 🚨{:?}🚨\n", case.title,);
+        }
+    }
+
+    #[test]
+    fn content_to_targets_with_recipe_prefix_test() {
+        struct Case {
+            title: &'static str,
+            contents: &'static str,
+            recipe_prefix: Option<char>,
+            expect: Targets,
+        }
+        let cases = vec![Case {
+            title: "makefile with .RECIPEPREFIX = >",
+            contents: "\
+.RECIPEPREFIX = >
+
+.PHONY: test
+
+test:
+>echo \"This uses > instead of tab\"
+>echo \"Another line\"
+
+build:
+>cargo build",
+            recipe_prefix: Some('>'),
+            expect: Targets(vec![
+                command::CommandWithPreview::new(
+                    runner_type::RunnerType::Make,
+                    "test".to_string(),
+                    PathBuf::from(""),
+                    5,
+                ),
+                command::CommandWithPreview::new(
+                    runner_type::RunnerType::Make,
+                    "build".to_string(),
+                    PathBuf::from(""),
+                    9,
+                ),
+            ]),
+        }];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                Targets::new(case.contents.to_string(), PathBuf::from(""), case.recipe_prefix),
+                "\nFailed: 🚨{:?}🚨\n",
+                case.title,
+            );
         }
     }
 
