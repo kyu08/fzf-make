@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/logo.png" />
 
-`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just), [**task**](https://github.com/go-task/task).
+`fzf-make` is a command line tool that executes commands using fuzzy finder with preview window. Currently supporting [**make**](https://www.gnu.org/software/make/), [**npm**](https://docs.npmjs.com/about-npm), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just), [**task**](https://github.com/go-task/task).
 
 [![](https://shields.io/badge/-Rust-3776AB?style=flat&logo=rust)](https://www.rust-lang.org/)
 [![Built With Ratatui](https://img.shields.io/badge/Built_With_Ratatui-000?logo=ratatui&logoColor=fff)](https://ratatui.rs/)
@@ -18,12 +18,14 @@
 </div>
 
 # 🛠️ Features
-- Select and execute a make target or (pnpm | yarn) scripts or just recipe or task using fuzzy-finder with a preview window by running `fzf-make`!
+- Select and execute a make target or (npm | pnpm | yarn) scripts or just recipe or task using fuzzy-finder with a preview window by running `fzf-make`!
 - Execute the last executed command(By running `fzf-make --repeat`.)
 - Command history
-- Support [**make**](https://www.gnu.org/software/make/), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just), [**task**](https://github.com/go-task/task). **Scheduled to be developed: npm.** 
+- Support [**make**](https://www.gnu.org/software/make/), [**npm**](https://docs.npmjs.com/about-npm), [**pnpm**](https://github.com/pnpm/pnpm), [**yarn**](https://github.com/yarnpkg/berry), [**just**](https://github.com/casey/just), [**task**](https://github.com/go-task/task).
 - Support passing additional arguments to the command using popup window. The UI looks like: https://github.com/kyu08/fzf-make/pull/447
 - [make] Support `include` directive
+- [npm] Support workspace (collect scripts from all `package.json` files in the workspace using `npm query`).
+  - **Note that the minimum supported npm version for workspace support is `8.16.0` (required for `npm query`).**
 - [pnpm] Support workspace(collect scripts all of `package.json` in the directory where fzf-make is launched.)
 - [yarn] Support workspace(collect all scripts which is defined in `workspaces` field in root `package.json`.)
 - [just] Support execution inside of directory of justfile.
@@ -77,13 +79,13 @@ cargo +1.90.0 install --git https://github.com/kyu08/fzf-make/
 
 # 💡 Usage
 ## Run target using fuzzy finder
-1. Execute `fzf-make` in the directory you want to run make target, or (pnpm | yarn) scripts or just recipe.
+1. Execute `fzf-make` in the directory you want to run make target, or (npm | pnpm | yarn) scripts or just recipe.
 1. Select command you want to execute. If you type some characters, the list will be filtered.
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-main.png"> 
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-type-characters.png"> 
 
 ## Run target from history
-1. Execute `fzf-make` in the directory you want to run make target, or (pnpm | yarn) scripts or just recipe.(For just, we support execution inside of directory of justfile.)
+1. Execute `fzf-make` in the directory you want to run make target, or (npm | pnpm | yarn) scripts or just recipe.(For just, we support execution inside of directory of justfile.)
 1. Press `Tab` to move to the history pane.
 1. Select command you want to execute.
     <img width="752" alt="demo" src="https://raw.githubusercontent.com/kyu08/fzf-make/main/static/usage-history.png"> 
@@ -91,6 +93,9 @@ cargo +1.90.0 install --git https://github.com/kyu08/fzf-make/
 ## How fzf-make judges which command runner can be used
 ### make
 Whether makefile(file name should be one of `GNUmakefile`, `makefile`, `Makefile`) is in the current directory.
+
+### npm
+Whether `package.json` and `package-lock.json` are in the current directory or `package-lock.json` exists in an ancestor directory.
 
 ### pnpm
 Whether `package.json` and `pnpm-lock.yaml` are in the current directory.

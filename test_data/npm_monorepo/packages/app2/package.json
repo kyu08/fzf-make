@@ -1,0 +1,9 @@
+{
+  "name": "app2",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo app2 build",
+    "test": "echo app2 test",
+    "lint": "echo app2 lint"
+  }
+}

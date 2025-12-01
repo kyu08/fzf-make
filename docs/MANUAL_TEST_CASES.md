@@ -50,6 +50,16 @@
             - [ ] multiple additional arguments
                 - [ ] can be executed properly
                 - [ ] can be saved properly
+        - [ ] npm
+            - [ ] no additional argument
+                - [ ] can be executed properly
+                - [ ] can be saved properly
+            - [ ] one additional arguments
+                - [ ] can be executed properly
+                - [ ] can be saved properly
+            - [ ] multiple additional arguments
+                - [ ] can be executed properly
+                - [ ] can be saved properly
         - [ ] yarn
             - [ ] no additional argument
                 - [ ] can be executed properly

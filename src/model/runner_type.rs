@@ -16,6 +16,7 @@ pub enum RunnerType {
 #[derive(Hash, PartialEq, Debug, Clone, Serialize, Deserialize, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum JsPackageManager {
+    Npm,
     Pnpm,
     Yarn,
 }
@@ -47,6 +48,7 @@ impl From<runner::Runner> for RunnerType {
         match runner {
             runner::Runner::MakeCommand(_) => RunnerType::Make,
             runner::Runner::JsPackageManager(js) => match js {
+                js::JsPackageManager::JsNpm(_) => RunnerType::JsPackageManager(JsPackageManager::Npm),
                 js::JsPackageManager::JsPnpm(_) => RunnerType::JsPackageManager(JsPackageManager::Pnpm),
                 js::JsPackageManager::JsYarn(_) => RunnerType::JsPackageManager(JsPackageManager::Yarn),
             },
@@ -61,6 +63,7 @@ impl fmt::Display for RunnerType {
         let name = match self {
             RunnerType::Make => "make",
             RunnerType::JsPackageManager(js) => match js {
+                JsPackageManager::Npm => "npm",
                 JsPackageManager::Pnpm => "pnpm",
                 JsPackageManager::Yarn => "yarn",
             },
@@ -86,6 +89,7 @@ impl<'de> Deserialize<'de> for RunnerType {
 
         match s.as_str() {
             "make" => Ok(RunnerType::Make),
+            "npm" => Ok(RunnerType::JsPackageManager(JsPackageManager::Npm)),
             "pnpm" => Ok(RunnerType::JsPackageManager(JsPackageManager::Pnpm)),
             "yarn" => Ok(RunnerType::JsPackageManager(JsPackageManager::Yarn)),
             "just" => Ok(RunnerType::Just),
@@ -103,6 +107,7 @@ impl Serialize for RunnerType {
     {
         match self {
             RunnerType::Make => serializer.serialize_str("make"),
+            RunnerType::JsPackageManager(JsPackageManager::Npm) => serializer.serialize_str("npm"),
             RunnerType::JsPackageManager(JsPackageManager::Pnpm) => serializer.serialize_str("pnpm"),
             RunnerType::JsPackageManager(JsPackageManager::Yarn) => serializer.serialize_str("yarn"),
             RunnerType::Just => serializer.serialize_str("just"),
