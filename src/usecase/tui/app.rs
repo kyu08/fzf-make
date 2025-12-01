@@ -16,7 +16,7 @@ use crate::{
 use anyhow::{Result, anyhow, bail};
 use arboard::Clipboard;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -304,7 +304,7 @@ enum Message {
 fn handle_event(model: &Model) -> io::Result<Option<Message>> {
     if crossterm::event::poll(std::time::Duration::from_millis(500))? {
         match crossterm::event::read()? {
-            crossterm::event::Event::Key(key) => Ok(model.handle_key_input(key)),
+            crossterm::event::Event::Key(key) if key.kind == KeyEventKind::Press => Ok(model.handle_key_input(key)),
             _ => Ok(None),
         }
     } else {
@@ -685,6 +685,10 @@ impl SelectCommandState<'_> {
                     runner_type::RunnerType::JsPackageManager(runner_type_js),
                     runner::Runner::JsPackageManager(runner_js),
                 ) => match (runner_type_js, runner_js) {
+                    (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsNpm(_)) => {
+                        return Some(runner.clone());
+                    }
+
                     (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsPnpm(_)) => {
                         return Some(runner.clone());
                     }
@@ -694,7 +698,11 @@ impl SelectCommandState<'_> {
                     }
 
                     // _ patterns. To prevent omission of corrections, _ is not used.
-                    (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsYarn(_))
+                    (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsPnpm(_))
+                    | (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsYarn(_))
+                    | (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsNpm(_))
+                    | (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsYarn(_))
+                    | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsNpm(_))
                     | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsPnpm(_)) => return None,
                 },
                 _ => continue,
