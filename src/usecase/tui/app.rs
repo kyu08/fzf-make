@@ -14,6 +14,7 @@ use crate::{
     },
 };
 use anyhow::{Result, anyhow, bail};
+use arboard::Clipboard;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
     execute,
@@ -321,7 +322,13 @@ fn update(model: &mut Model, message: Option<Message>) {
             }
             Some(Message::NextCommand) => s.next_command(),
             Some(Message::PreviousCommand) => s.previous_command(),
-            Some(Message::MoveToNextPane) => s.move_to_next_pane(),
+            Some(Message::MoveToNextPane) => {
+                let mut clipboard = Clipboard::new().unwrap();
+                let the_string = "Hello, world!";
+                clipboard.set_text(the_string).unwrap();
+
+                s.move_to_next_pane()
+            }
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
             Some(Message::Quit) => model.transition_to_should_quit_state(),
@@ -344,6 +351,10 @@ pub struct SelectCommandState<'a> {
     pub history_list_state: ListState,
     pub additional_arguments_popup_state: Option<AdditionalWindowState<'a>>,
     pub latest_version: Option<String>,
+    // This is intentionally defined as String because we need to get command from
+    // the preview pane or the history pane.
+    // In the history pane, we don't have file_path and line_number info.
+    // copied_command: Option<String>,
 }
 
 impl PartialEq for SelectCommandState<'_> {
