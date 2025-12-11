@@ -70,5 +70,12 @@
             - [ ] multiple additional arguments
                 - [ ] can be executed properly
                 - [ ] can be saved properly
+    - [ ] Copy command to clipboard
+        - [ ] main pane
+            - [ ] `ctrl-y` copies the command to clipboard
+            - [ ] A notification is shown after copying
+        - [ ] history pane
+            - [ ] `ctrl-y` copies the command to clipboard
+            - [ ] A notification is shown after copying
 - [ ] `fzf-make --repeat` executes the command the last one.
 - [ ] `fzf-make --history` launches fzf-make focusing history pane.

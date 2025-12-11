@@ -12,6 +12,7 @@ allow = [
     "OpenSSL",
     "CDLA-Permissive-2.0",
     "Zlib",
+    "BSL-1.0",
 ]
 confidence-threshold = 0.8
 exceptions = []
