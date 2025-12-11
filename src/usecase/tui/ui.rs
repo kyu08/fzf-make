@@ -275,22 +275,34 @@ fn render_input_block(model: &mut SelectCommandState, f: &mut Frame, chunk: rata
 }
 
 fn render_notification_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
-    let text = match &model.latest_version {
-        Some(has_update) => {
-            if format!("v{}", env!("CARGO_PKG_VERSION")) != *has_update {
-                format!("📦️ A new release is available! v{} → {}.", env!("CARGO_PKG_VERSION"), has_update.as_str())
-            } else {
-                "".to_string()
+    let text = {
+        if let Some(s) = &model.copy_command_state {
+            match s {
+                Ok(c) => format!("📋 Command copied to clipboard: {}", c),
+                Err(e) => format!("⚠️ Failed to copy command to clipboard: {}", e),
+            }
+        } else {
+            match &model.latest_version {
+                Some(has_update) => {
+                    if format!("v{}", env!("CARGO_PKG_VERSION")) != *has_update {
+                        format!(
+                            "📦️ A new release is available! v{} → {}.",
+                            env!("CARGO_PKG_VERSION"),
+                            has_update.as_str()
+                        )
+                    } else {
+                        String::new()
+                    }
+                }
+                None => String::new(),
             }
         }
-        None => "".to_string(),
     };
-    let notification = Span::styled(text, Style::default());
 
+    let notification = Span::styled(text, Style::default());
     let block = Block::default()
         .padding(ratatui::widgets::Padding::new(1, 0, 1, 1))
         .style(Style::new().add_modifier(Modifier::BOLD).fg(Color::Yellow));
-
     let key_notes_footer = Paragraph::new(notification).wrap(Wrap { trim: true }).block(block);
     f.render_widget(key_notes_footer, chunk);
 }

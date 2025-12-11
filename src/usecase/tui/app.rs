@@ -353,7 +353,7 @@ pub struct SelectCommandState<'a> {
     // This is intentionally defined as String because we need to get command from
     // the preview pane or the history pane.
     // In the history pane, we don't have file_path and line_number info.
-    copy_command_state: Option<Result<String, String>>,
+    pub copy_command_state: Option<Result<String, String>>,
 }
 
 impl PartialEq for SelectCommandState<'_> {
