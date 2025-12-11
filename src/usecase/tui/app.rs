@@ -638,16 +638,13 @@ impl SelectCommandState<'_> {
         };
 
         match Clipboard::new() {
-            Ok(mut clipboard) => {
-                // FIXME: get the actual command string
-                match clipboard.set_text(&command) {
-                    Ok(_) => self.copy_command_state = Some(Ok(command.to_string())),
-                    Err(e) => {
-                        self.copy_command_state = Some(Err(e.to_string()));
-                        panic!("{}", e.to_string());
-                    }
+            Ok(mut clipboard) => match clipboard.set_text(&command) {
+                Ok(_) => self.copy_command_state = Some(Ok(command.to_string())),
+                Err(e) => {
+                    self.copy_command_state = Some(Err(e.to_string()));
+                    panic!("{}", e.to_string());
                 }
-            }
+            },
             Err(e) => {
                 self.copy_command_state = Some(Err(e.to_string()));
                 panic!("{}", e.to_string());
