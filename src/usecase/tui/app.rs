@@ -95,6 +95,7 @@ impl Model<'_> {
                         (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextCommand),
                         (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
                         (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
+                        (KeyCode::Char('y'), true) => Some(Message::CopyCommandToClipboard),
                         (KeyCode::Enter, _) => Some(Message::ExecuteCommand(s.get_selected_command().unwrap())),
                         _ => Some(Message::SearchTextAreaKeyInput(key)),
                     },
@@ -104,6 +105,7 @@ impl Model<'_> {
                         (KeyCode::Down, _) | (KeyCode::Char('n'), true) => Some(Message::NextHistory),
                         (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
                         (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
+                        (KeyCode::Char('y'), true) => Some(Message::CopyCommandToClipboard),
                         (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => {
                             Some(Message::ExecuteCommand(s.get_selected_command().unwrap()))
                         }
@@ -289,11 +291,13 @@ enum Message {
     MoveToNextPane,
     NextHistory,
     PreviousHistory,
+    Quit,
     // Additional arguments
     OpenAdditionalArgumentsWindow,
     CloseAdditionalArgumentsWindow,
     AdditionalArgumentsKeyInput(KeyEvent),
-    Quit,
+    // Copy command to clipboard
+    CopyCommandToClipboard,
 }
 
 // TODO: make this method Model's method
@@ -322,19 +326,14 @@ fn update(model: &mut Model, message: Option<Message>) {
             }
             Some(Message::NextCommand) => s.next_command(),
             Some(Message::PreviousCommand) => s.previous_command(),
-            Some(Message::MoveToNextPane) => {
-                let mut clipboard = Clipboard::new().unwrap();
-                let the_string = "Hello, world!";
-                clipboard.set_text(the_string).unwrap();
-
-                s.move_to_next_pane()
-            }
+            Some(Message::MoveToNextPane) => s.move_to_next_pane(),
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
             Some(Message::Quit) => model.transition_to_should_quit_state(),
             Some(Message::OpenAdditionalArgumentsWindow) => s.open_additional_arguments_popup(),
             Some(Message::CloseAdditionalArgumentsWindow) => s.close_additional_arguments_popup(),
             Some(Message::AdditionalArgumentsKeyInput(key_event)) => s.handle_additional_arguments_key_input(key_event),
+            Some(Message::CopyCommandToClipboard) => s.copy_command_to_clipboard(),
             None => {}
         }
     }
@@ -354,7 +353,7 @@ pub struct SelectCommandState<'a> {
     // This is intentionally defined as String because we need to get command from
     // the preview pane or the history pane.
     // In the history pane, we don't have file_path and line_number info.
-    // copied_command: Option<String>,
+    copy_command_state: Option<Result<String, String>>,
 }
 
 impl PartialEq for SelectCommandState<'_> {
@@ -428,6 +427,7 @@ impl SelectCommandState<'_> {
                 history_list_state: ListState::with_selected(ListState::default(), Some(0)),
                 additional_arguments_popup_state: None,
                 latest_version: None,
+                copy_command_state: None,
             })
         }
     }
@@ -629,6 +629,32 @@ impl SelectCommandState<'_> {
         }
     }
 
+    fn copy_command_to_clipboard(&mut self) {
+        let command = match self.get_selected_command() {
+            Some(c) => c.to_string(),
+            None => {
+                return;
+            }
+        };
+
+        match Clipboard::new() {
+            Ok(mut clipboard) => {
+                // FIXME: get the actual command string
+                match clipboard.set_text(&command) {
+                    Ok(_) => self.copy_command_state = Some(Ok(command.to_string())),
+                    Err(e) => {
+                        self.copy_command_state = Some(Err(e.to_string()));
+                        panic!("{}", e.to_string());
+                    }
+                }
+            }
+            Err(e) => {
+                self.copy_command_state = Some(Err(e.to_string()));
+                panic!("{}", e.to_string());
+            }
+        }
+    }
+
     fn store_history(&self, command: command::CommandForExec) {
         // NOTE: self.get_selected_command should be called before self.append_history.
         // Because self.histories_list_state.selected keeps the selected index of the history list
@@ -713,6 +739,7 @@ impl SelectCommandState<'_> {
             history_list_state: ListState::with_selected(ListState::default(), Some(0)),
             additional_arguments_popup_state: None,
             latest_version: None,
+            copy_command_state: None,
         }
     }
 }
