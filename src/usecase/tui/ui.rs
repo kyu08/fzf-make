@@ -359,7 +359,7 @@ fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratat
     } else {
         match model.current_pane {
             CurrentPane::Main => {
-                "Execute the selected command: <enter> | Select command: ↑(<c-p>)/↓(<c-n>) | Narrow down command: (type any character) |  Quit: <c-c>/<esc> | Move to next tab: <tab> | Pass additional arguments: <c-o>"
+                "Execute the selected command: <enter> | Select command: ↑(<c-p>)/↓(<c-n>) | Narrow down command: (type any character) | Quit: <c-c>/<esc> | Move to next tab: <tab> | Pass additional arguments: <c-o>"
             }
             CurrentPane::History => {
                 "Execute the selected command: <enter> | Select command: ↑/↓ | Quit: <c-c>/q/<esc> | Move to next tab: <tab> | Pass additional arguments: <c-o>"
