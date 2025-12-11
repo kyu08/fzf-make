@@ -350,7 +350,7 @@ pub struct SelectCommandState<'a> {
     pub history_list_state: ListState,
     pub additional_arguments_popup_state: Option<AdditionalWindowState<'a>>,
     pub latest_version: Option<String>,
-    // This is intentionally defined as String because we need to get command from
+    // The first type variable of Result is intentionally defined as String because we need to get command from
     // the preview pane or the history pane.
     // In the history pane, we don't have file_path and line_number info.
     pub copy_command_state: Option<Result<String, String>>,
