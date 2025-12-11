@@ -642,12 +642,10 @@ impl SelectCommandState<'_> {
                 Ok(_) => self.copy_command_state = Some(Ok(command.to_string())),
                 Err(e) => {
                     self.copy_command_state = Some(Err(e.to_string()));
-                    panic!("{}", e.to_string());
                 }
             },
             Err(e) => {
                 self.copy_command_state = Some(Err(e.to_string()));
-                panic!("{}", e.to_string());
             }
         }
     }
