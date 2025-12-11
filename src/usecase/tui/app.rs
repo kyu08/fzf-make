@@ -653,6 +653,10 @@ impl SelectCommandState<'_> {
                     runner_type::RunnerType::JsPackageManager(runner_type_js),
                     runner::Runner::JsPackageManager(runner_js),
                 ) => match (runner_type_js, runner_js) {
+                    (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsNpm(_)) => {
+                        return Some(runner.clone());
+                    }
+
                     (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsPnpm(_)) => {
                         return Some(runner.clone());
                     }
@@ -662,7 +666,11 @@ impl SelectCommandState<'_> {
                     }
 
                     // _ patterns. To prevent omission of corrections, _ is not used.
-                    (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsYarn(_))
+                    (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsPnpm(_))
+                    | (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsYarn(_))
+                    | (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsNpm(_))
+                    | (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsYarn(_))
+                    | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsNpm(_))
                     | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsPnpm(_)) => return None,
                 },
                 _ => continue,

@@ -1,0 +1,8 @@
+{
+  "name": "app3",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "echo app3 dev",
+    "build": "echo app3 build"
+  }
+}

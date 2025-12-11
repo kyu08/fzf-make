@@ -11,6 +11,7 @@ run-with-arg:
 	echo $(ARG1)
 
 include ./makefiles/test.mk
+include ./makefiles/recipeprefix.mk
 
 .PHONY: cmd
 cmd:
