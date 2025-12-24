@@ -62,6 +62,7 @@ impl Make {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
         let file_content = file_util::path_to_content(path.clone())?;
+        let recipe_prefix = extract_recipe_prefix(&file_content);
         let include_files = content_to_include_file_paths(file_content.clone())
             .iter()
             .map(|included_file_path| Make::new_internal(included_file_path.clone()))
@@ -71,7 +72,7 @@ impl Make {
         Ok(Make {
             path: path.clone(),
             include_files,
-            targets: Targets::new(file_content, path),
+            targets: Targets::new(file_content, path, recipe_prefix),
         })
     }
 
@@ -149,6 +150,20 @@ fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
     }
 
     result
+}
+
+/// Extract the recipe prefix from .RECIPEPREFIX directive.
+/// Returns None if no .RECIPEPREFIX is set (default to tab character).
+/// Pattern: .RECIPEPREFIX = >
+fn extract_recipe_prefix(content: &str) -> Option<char> {
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if let Some(after_prefix) = trimmed.strip_prefix(".RECIPEPREFIX") {
+            let after_equals = after_prefix.trim().strip_prefix('=')?;
+            return after_equals.trim().chars().next();
+        }
+    }
+    None
 }
 
 /// The line that is only include directive is ignored.
@@ -552,6 +567,51 @@ mod test {
                 "\nFailed: 🚨{:?}🚨\n",
                 case.title,
             );
+        }
+    }
+
+    #[test]
+    fn extract_recipe_prefix_test() {
+        struct Case {
+            title: &'static str,
+            content: &'static str,
+            expect: Option<char>,
+        }
+        let cases = vec![
+            Case {
+                title: ".RECIPEPREFIX = >",
+                content: ".RECIPEPREFIX = >",
+                expect: Some('>'),
+            },
+            Case {
+                title: ".RECIPEPREFIX => (no spaces)",
+                content: ".RECIPEPREFIX=>",
+                expect: Some('>'),
+            },
+            Case {
+                title: ".RECIPEPREFIX = > (with leading spaces)",
+                content: "  .RECIPEPREFIX = >",
+                expect: Some('>'),
+            },
+            Case {
+                title: "no .RECIPEPREFIX directive",
+                content: ".PHONY: test\ntest:\n\t@echo hello",
+                expect: None,
+            },
+            Case {
+                title: ".RECIPEPREFIX with different character",
+                content: ".RECIPEPREFIX = @",
+                expect: Some('@'),
+            },
+            Case {
+                title: "multi-line content with .RECIPEPREFIX",
+                content: ".PHONY: test\n.RECIPEPREFIX = >\ntest:\n>echo hello",
+                expect: Some('>'),
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(case.expect, extract_recipe_prefix(case.content), "\nFailed: 🚨{:?}🚨\n", case.title,);
         }
     }
 }
