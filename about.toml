@@ -10,6 +10,7 @@ accepted = [
     "OpenSSL",
     "CDLA-Permissive-2.0",
     "Zlib",
+    "BSL-1.0",
 ]
 workarounds = ["ring"]
 no-clearly-defined = true

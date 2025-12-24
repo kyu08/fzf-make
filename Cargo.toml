@@ -49,6 +49,7 @@ tree-sitter = "=0.24.4"
 tree-sitter-just = "=0.1.0"
 rust-embed = "8.5.0"
 time = { version = "0.3.44", features = ["formatting"] }
+arboard = "3.6.1"
 
 [dev-dependencies]
 uuid = { version = "1.10.0", features = ["serde", "v4"] }
