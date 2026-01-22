@@ -1,4 +1,4 @@
-use super::{pnpm, yarn};
+use super::{npm, pnpm, yarn};
 use crate::model::command;
 use anyhow::Result;
 use codespan::Files;
@@ -9,9 +9,10 @@ pub(super) const METADATA_FILE_NAME: &str = "package.json";
 const METADATA_PACKAGE_NAME_KEY: &str = "name";
 const METADATA_COMMAND_KEY: &str = "scripts";
 
-#[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum JsPackageManager {
+    JsNpm(npm::Npm),
     JsPnpm(pnpm::Pnpm),
     JsYarn(yarn::Yarn),
 }
@@ -19,6 +20,7 @@ pub enum JsPackageManager {
 impl JsPackageManager {
     pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
         match self {
+            JsPackageManager::JsNpm(npm) => npm.command_to_run(command),
             JsPackageManager::JsPnpm(pnpm) => pnpm.command_to_run(command),
             JsPackageManager::JsYarn(yarn) => yarn.command_to_run(command),
         }
@@ -26,6 +28,7 @@ impl JsPackageManager {
 
     pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         match self {
+            JsPackageManager::JsNpm(npm) => npm.to_commands(),
             JsPackageManager::JsPnpm(pnpm) => pnpm.to_commands(),
             JsPackageManager::JsYarn(yarn) => yarn.to_commands(),
         }
@@ -33,6 +36,7 @@ impl JsPackageManager {
 
     pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
         match self {
+            JsPackageManager::JsNpm(npm) => npm.execute(command),
             JsPackageManager::JsPnpm(pnpm) => pnpm.execute(command),
             JsPackageManager::JsYarn(yarn) => yarn.execute(command),
         }
@@ -40,6 +44,7 @@ impl JsPackageManager {
 
     pub fn path(&self) -> PathBuf {
         match self {
+            JsPackageManager::JsNpm(npm) => npm.path.clone(),
             JsPackageManager::JsPnpm(pnpm) => pnpm.path.clone(),
             JsPackageManager::JsYarn(yarn) => yarn.path.clone(),
         }
@@ -48,6 +53,10 @@ impl JsPackageManager {
     fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
         if let Some(r) = pnpm::Pnpm::new(current_dir.clone(), file_names.clone()) {
             return Some(JsPackageManager::JsPnpm(r));
+        }
+
+        if let Some(r) = npm::Npm::new(current_dir.clone(), file_names.clone()) {
+            return Some(JsPackageManager::JsNpm(r));
         }
 
         if let Some(r) = yarn::Yarn::new(current_dir, file_names) {

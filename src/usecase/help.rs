@@ -30,7 +30,7 @@ pub fn get_help() -> String {
     r#"A command line tool that executes commands using fuzzy finder with preview window. Currently supporting make, pnpm, yarn, just, and task.
 
 USAGE:
-    Run `fzf-make` in the directory where you want to execute make, pnpm, yarn, just, or task command exists or `fzf-make [SUBCOMMAND]`.
+    Run `fzf-make` in the directory where you want to execute make, npm, pnpm, yarn, just, or task command exists or `fzf-make [SUBCOMMAND]`.
 
 SUBCOMMANDS:
     repeat, --repeat, -r
