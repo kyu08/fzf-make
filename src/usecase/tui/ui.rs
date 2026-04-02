@@ -152,13 +152,19 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                             0
                         },
                     });
-                    let mut h = HighlightLines::new(syntax, theme);
-                    let mut spans: Vec<Span> = h
-                        .highlight_line(line, &ss)
-                        .unwrap()
-                        .into_iter()
-                        .filter_map(|segment| into_span(segment).ok())
-                        .collect();
+                    // Skip syntax highlighting for lines that cause catastrophic
+                    // backtracking in syntect's Makefile grammar (e.g. nested
+                    // $(eval ... $(shell ...)) constructs).
+                    let mut spans: Vec<Span> = if line.contains("$(eval") && line.contains("$(shell") {
+                        vec![Span::raw(line.to_string())]
+                    } else {
+                        let mut h = HighlightLines::new(syntax, theme);
+                        h.highlight_line(line, &ss)
+                            .unwrap()
+                            .into_iter()
+                            .filter_map(|segment| into_span(segment).ok())
+                            .collect()
+                    };
 
                     // add row number
                     spans.insert(0, Span::styled(format!("{:5} ", start_index + index + 1), Style::default()));

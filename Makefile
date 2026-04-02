@@ -132,3 +132,8 @@ build:
 .PHONY: build-release
 build-release:
 	@cargo build --verbose --release
+
+# For reproducing a performance issue with syntect's Makefile grammar.
+deploy:
+	$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))
+	docker compose rm -fsv $(RESOLVED_TARGETS)
