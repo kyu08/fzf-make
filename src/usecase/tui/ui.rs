@@ -453,7 +453,7 @@ mod test {
         assert_eq!(end, 9);
     }
 
-    const HIGHLIGHT_THRESHOLD: Duration = Duration::from_millis(800);
+    const HIGHLIGHT_THRESHOLD: Duration = Duration::from_millis(500);
     const NORMAL_MAKEFILE_LINES: &[&str] = &[
         ".PHONY: build",
         "build:",
