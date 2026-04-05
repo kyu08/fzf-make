@@ -157,7 +157,10 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                     // $(eval ... $(shell ...)) constructs).
                     let mut spans: Vec<Span> = if line.contains("$(eval") && line.contains("$(shell") {
                         if (start_index + index) == command_row_index {
-                            vec![Span::styled(line.to_string(), Style::default().bg(Color::Rgb(94, 120, 200)))]
+                            vec![Span::styled(
+                                line.to_string(),
+                                Style::default().bg(Color::Rgb(94, 120, 200)),
+                            )]
                         } else {
                             vec![Span::raw(line.to_string())]
                         }
@@ -429,8 +432,7 @@ fn commands_block(
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::sync::mpsc;
-    use std::time::Duration;
+    use std::{sync::mpsc, time::Duration};
 
     const HIGHLIGHT_THRESHOLD: Duration = Duration::from_millis(800);
 
@@ -443,8 +445,7 @@ mod test {
         "\tRUST_BACKTRACE=full cargo nextest run",
     ];
 
-    const PATHOLOGICAL_LINE: &str =
-        "\t$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
+    const PATHOLOGICAL_LINE: &str = "\t$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
 
     fn load_makefile_syntax() -> (SyntaxSet, syntect::highlighting::Theme) {
         let ss = SyntaxSet::load_defaults_newlines();
@@ -500,9 +501,7 @@ mod test {
 
         let start = std::time::Instant::now();
         // Reproduce the skip guard logic from render_preview_block.
-        let _spans: Vec<Span> = if PATHOLOGICAL_LINE.contains("$(eval")
-            && PATHOLOGICAL_LINE.contains("$(shell")
-        {
+        let _spans: Vec<Span> = if PATHOLOGICAL_LINE.contains("$(eval") && PATHOLOGICAL_LINE.contains("$(shell") {
             vec![Span::raw(PATHOLOGICAL_LINE.to_string())]
         } else {
             let mut h = HighlightLines::new(syntax, &theme);
