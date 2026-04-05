@@ -134,7 +134,8 @@ build-release:
 	@cargo build --verbose --release
 
 # For reproducing a performance issue with syntect's Makefile grammar.
-.PHONY: deploy
-deploy:
+# https://github.com/kyu08/fzf-make/issues/595
+.PHONY: repro-syntect-highlight-hang
+repro-syntect-highlight-hang:
 	$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))
 	docker compose rm -fsv $(RESOLVED_TARGETS)
