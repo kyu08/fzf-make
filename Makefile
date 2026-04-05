@@ -30,7 +30,7 @@ tool-spell-check:
 .PHONY: tool-detect-unused-dependencies
 tool-detect-unused-dependencies:
 	@if ! which cargo-machete > /dev/null; then \
-		cargo install --locked --git https://github.com/bnjbvr/cargo-machete --rev 744a6d5e0db5d189ad36edb08c5f77107cc42310 cargo-machete
+		cargo install --locked --git https://github.com/bnjbvr/cargo-machete --rev 744a6d5e0db5d189ad36edb08c5f77107cc42310 cargo-machete; \
 	fi
 
 .PHONY: tool-check-licenses
@@ -132,3 +132,10 @@ build:
 .PHONY: build-release
 build-release:
 	@cargo build --verbose --release
+
+# For reproducing a performance issue with syntect's Makefile grammar.
+# https://github.com/kyu08/fzf-make/issues/595
+.PHONY: repro-syntect-highlight-hang
+repro-syntect-highlight-hang:
+	$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))
+	docker compose rm -fsv $(RESOLVED_TARGETS)

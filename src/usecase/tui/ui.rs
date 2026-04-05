@@ -152,13 +152,27 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                             0
                         },
                     });
-                    let mut h = HighlightLines::new(syntax, theme);
-                    let mut spans: Vec<Span> = h
-                        .highlight_line(line, &ss)
-                        .unwrap()
-                        .into_iter()
-                        .filter_map(|segment| into_span(segment).ok())
-                        .collect();
+                    // Skip syntax highlighting for lines that cause catastrophic
+                    // backtracking in syntect's Makefile grammar (e.g. nested
+                    // $(eval ... $(shell ...)) constructs).
+                    // For more details, see https://github.com/kyu08/fzf-make/issues/595.
+                    let mut spans: Vec<Span> = if line.contains("$(eval") && line.contains("$(shell") {
+                        if (start_index + index) == command_row_index {
+                            vec![Span::styled(
+                                line.to_string(),
+                                Style::default().bg(Color::Rgb(94, 120, 200)),
+                            )]
+                        } else {
+                            vec![Span::raw(line.to_string())]
+                        }
+                    } else {
+                        let mut h = HighlightLines::new(syntax, theme);
+                        h.highlight_line(line, &ss)
+                            .unwrap()
+                            .into_iter()
+                            .filter_map(|segment| into_span(segment).ok())
+                            .collect()
+                    };
 
                     // add row number
                     spans.insert(0, Span::styled(format!("{:5} ", start_index + index + 1), Style::default()));
@@ -419,6 +433,8 @@ fn commands_block(
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::time::Duration;
+
     #[test]
     fn test_determine_rendering_position() {
         // start is greater than 0(row_count is odd number)
@@ -435,5 +451,55 @@ mod test {
         let (start, end) = determine_rendering_position(10, 1);
         assert_eq!(start, 0);
         assert_eq!(end, 9);
+    }
+
+    const HIGHLIGHT_THRESHOLD: Duration = Duration::from_millis(500);
+    const NORMAL_MAKEFILE_LINES: &[&str] = &[
+        ".PHONY: build",
+        "build:",
+        "\t@cargo build --verbose --release",
+        "test: tool-test",
+        "\trm -rf $(TEST_HISTORY_DIR)",
+        "\tRUST_BACKTRACE=full cargo nextest run",
+    ];
+    const PATHOLOGICAL_LINE: &str = "\t$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
+    fn load_makefile_syntax() -> (SyntaxSet, syntect::highlighting::Theme) {
+        let ss = SyntaxSet::load_defaults_newlines();
+        let ts = ThemeSet::load_defaults();
+        let theme = ts.themes["base16-ocean.dark"].clone();
+        (ss, theme)
+    }
+
+    #[test]
+    fn highlight_normal_lines_within_threshold() {
+        let (ss, theme) = load_makefile_syntax();
+        let syntax = ss
+            .find_syntax_by_extension("mk")
+            .unwrap_or_else(|| ss.find_syntax_plain_text());
+
+        let start = std::time::Instant::now();
+        for line in NORMAL_MAKEFILE_LINES {
+            let mut h = HighlightLines::new(syntax, &theme);
+            let _ = h.highlight_line(line, &ss);
+        }
+        let elapsed = start.elapsed();
+
+        assert!(
+            elapsed < HIGHLIGHT_THRESHOLD,
+            "Highlighting normal Makefile lines took {elapsed:?}, which exceeds the threshold of {HIGHLIGHT_THRESHOLD:?}",
+        );
+    }
+
+    #[test]
+    fn highlight_pathological_line_with_skip_guard() {
+        let start = std::time::Instant::now();
+        // Reproduce the skip guard logic from render_preview_block.
+        let _spans: Vec<Span> = vec![Span::raw(PATHOLOGICAL_LINE.to_string())];
+        let elapsed = start.elapsed();
+
+        assert!(
+            elapsed < HIGHLIGHT_THRESHOLD,
+            "Highlighting pathological line with skip guard took {elapsed:?}, which exceeds the threshold of {HIGHLIGHT_THRESHOLD:?}",
+        );
     }
 }
