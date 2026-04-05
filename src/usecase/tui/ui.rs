@@ -435,26 +435,6 @@ mod test {
     use super::*;
     use std::time::Duration;
 
-    const HIGHLIGHT_THRESHOLD: Duration = Duration::from_millis(800);
-
-    const NORMAL_MAKEFILE_LINES: &[&str] = &[
-        ".PHONY: build",
-        "build:",
-        "\t@cargo build --verbose --release",
-        "test: tool-test",
-        "\trm -rf $(TEST_HISTORY_DIR)",
-        "\tRUST_BACKTRACE=full cargo nextest run",
-    ];
-
-    const PATHOLOGICAL_LINE: &str = "\t$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
-
-    fn load_makefile_syntax() -> (SyntaxSet, syntect::highlighting::Theme) {
-        let ss = SyntaxSet::load_defaults_newlines();
-        let ts = ThemeSet::load_defaults();
-        let theme = ts.themes["base16-ocean.dark"].clone();
-        (ss, theme)
-    }
-
     #[test]
     fn test_determine_rendering_position() {
         // start is greater than 0(row_count is odd number)
@@ -471,6 +451,23 @@ mod test {
         let (start, end) = determine_rendering_position(10, 1);
         assert_eq!(start, 0);
         assert_eq!(end, 9);
+    }
+
+    const HIGHLIGHT_THRESHOLD: Duration = Duration::from_millis(800);
+    const NORMAL_MAKEFILE_LINES: &[&str] = &[
+        ".PHONY: build",
+        "build:",
+        "\t@cargo build --verbose --release",
+        "test: tool-test",
+        "\trm -rf $(TEST_HISTORY_DIR)",
+        "\tRUST_BACKTRACE=full cargo nextest run",
+    ];
+    const PATHOLOGICAL_LINE: &str = "\t$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
+    fn load_makefile_syntax() -> (SyntaxSet, syntect::highlighting::Theme) {
+        let ss = SyntaxSet::load_defaults_newlines();
+        let ts = ThemeSet::load_defaults();
+        let theme = ts.themes["base16-ocean.dark"].clone();
+        (ss, theme)
     }
 
     #[test]
