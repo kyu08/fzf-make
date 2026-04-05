@@ -155,6 +155,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                     // Skip syntax highlighting for lines that cause catastrophic
                     // backtracking in syntect's Makefile grammar (e.g. nested
                     // $(eval ... $(shell ...)) constructs).
+                    // For more details, see https://github.com/kyu08/fzf-make/issues/595.
                     let mut spans: Vec<Span> = if line.contains("$(eval") && line.contains("$(shell") {
                         if (start_index + index) == command_row_index {
                             vec![Span::styled(
