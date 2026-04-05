@@ -3319,7 +3319,7 @@ SOFTWARE.
 
 ### MIT License
 #### Used by:
-- [fzf-make 0.67.0](https://github.com/kyu08/fzf-make)
+- [fzf-make 0.68.0](https://github.com/kyu08/fzf-make)
 
 ```
 MIT License
