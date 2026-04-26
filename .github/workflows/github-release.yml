@@ -1,0 +1,47 @@
+name: Github Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/create-gh-release-action@v1
+
+  upload-assets:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-unknown-linux-gnu
+            archive: fzf-make_$tag_linux_arm64
+            os: ubuntu-latest
+          - target: x86_64-unknown-linux-gnu
+            archive: fzf-make_$tag_linux_amd64
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: fzf-make
+          target: ${{ matrix.target }}
+          archive: ${{ matrix.archive }}
+          token: ${{ secrets.GITHUB_TOKEN }}
