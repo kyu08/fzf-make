@@ -1,9 +1,12 @@
 name: GitHub Release
 
 on:
-  push:
-    tags:
-      - "*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v0.69.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,17 +18,22 @@ jobs:
       matrix:
         include:
           - target: aarch64-unknown-linux-gnu
-            archive: fzf-make_$tag_linux_arm64
+            archive: fzf-make_${{ inputs.tag }}_linux_arm64
             os: ubuntu-latest
           - target: x86_64-unknown-linux-gnu
-            archive: fzf-make_$tag_linux_amd64
+            archive: fzf-make_${{ inputs.tag }}_linux_amd64
             os: ubuntu-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: main
+      - name: Create local tag for build context
+        run: git tag "${{ inputs.tag }}"
       - uses: taiki-e/upload-rust-binary-action@f0d45ae91ee7b8ee928de7a9d04d893a08bcbec6 # v1.30.2
         with:
           bin: fzf-make
           target: ${{ matrix.target }}
           archive: ${{ matrix.archive }}
+          ref: refs/tags/${{ inputs.tag }}
           token: ${{ secrets.GITHUB_TOKEN }}

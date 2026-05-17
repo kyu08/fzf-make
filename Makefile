@@ -73,11 +73,23 @@ bump-fzf-make-version: tool-bump-version
 		git pull; \
 		cargo set-version --bump minor; \
 		export CURRENT_VERSION=$$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version'); \
+		export RELEASE_BRANCH="release/v$${CURRENT_VERSION}"; \
 		make update-license-file; \
+		git checkout -b "$${RELEASE_BRANCH}"; \
 		git add .; \
 		git commit -m "chore(release): bump to v$${CURRENT_VERSION}"; \
-		git push origin HEAD; \
-		gh release create "v$${CURRENT_VERSION}" --generate-notes --draft | sed 's@releases/tag@releases/edit@' | xargs open; \
+		git push -u origin "$${RELEASE_BRANCH}"; \
+		gh pr create --base main --head "$${RELEASE_BRANCH}" \
+			--title "chore(release): bump to v$${CURRENT_VERSION}" \
+			--body "Automated bump for v$${CURRENT_VERSION}."; \
+		gh pr merge "$${RELEASE_BRANCH}" --squash --auto --delete-branch; \
+		echo "⏳ Waiting for PR to be merged..."; \
+		while [ "$$(gh pr view $${RELEASE_BRANCH} --json state -q .state 2>/dev/null)" != "MERGED" ]; do sleep 3; done; \
+		git checkout main; \
+		git pull; \
+		gh release create "v$${CURRENT_VERSION}" --generate-notes --draft --target main; \
+		gh workflow run github-release.yml -f tag="v$${CURRENT_VERSION}"; \
+		gh release view "v$${CURRENT_VERSION}" --json url -q .url | sed 's@releases/tag@releases/edit@' | xargs open; \
 	fi
 
 .PHONY: spell-check
