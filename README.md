@@ -69,12 +69,27 @@ nix run nixpkgs#fzf-make
 > You may need to enable experimental feature. In that case, execute the following command to enable them
 > `echo "experimental-features = nix-command flakes" | tee  ~/.config/nix/nix.conf`
 
-## OS-independent method
-### Cargo
+## Cargo
 ```sh
 cargo +1.90.0 install --locked fzf-make
 # Or build from the latest source
 cargo +1.90.0 install --git https://github.com/kyu08/fzf-make/
+```
+
+## Pre-built binaries for Linux
+Pre-built binaries are available for `linux_amd64` and `linux_arm64`.
+
+> [!NOTE]
+> Replace `/usr/local/bin` with any directory in your `$PATH` if you prefer another installation place.
+
+### linux_amd64
+```sh
+TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | grep -m1 tag_name | cut -d '"' -f 4) && curl -fsSL "https://github.com/kyu08/fzf-make/releases/download/${TAG}/fzf-make_${TAG}_linux_amd64.tar.gz" | tar -xz && sudo mv fzf-make /usr/local/bin/
+```
+
+### linux_arm64
+```sh
+TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | grep -m1 tag_name | cut -d '"' -f 4) && curl -fsSL "https://github.com/kyu08/fzf-make/releases/download/${TAG}/fzf-make_${TAG}_linux_arm64.tar.gz" | tar -xz && sudo mv fzf-make /usr/local/bin/
 ```
 
 # 💡 Usage
