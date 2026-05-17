@@ -1,8 +1,14 @@
 name: Brew Release
 on:
   push:
-    tags: 
+    tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '[⚠️ This is workaround when a release failed. Do not use casually.]The git tag to bump the formula to (e.g., v0.69.0)'
+        required: true
+        type: string
 jobs:
   bump-homebrew-formula:
     runs-on: ubuntu-latest
@@ -11,10 +17,11 @@ jobs:
       # (GitHub now returns HTTP 303 instead of 302 for tarball redirects, which upstream rejects).
       # Revert to mislav/bump-homebrew-formula-action once the upstream fix is released.
       - uses: AvesAlight/bump-homebrew-formula-action@efacc598ed9b4b1bc526125f82d2dfba17509842
-        if: ${{ !contains(github.ref, '-') }} # skip prereleases
+        if: ${{ !contains(inputs.tag || github.ref, '-') }} # skip prereleases
         with:
           formula-name: fzf-make
           base-branch: main
+          tag-name: ${{ inputs.tag || github.ref_name }}
           commit-message: |
             {{formulaName}} {{version}}
 
