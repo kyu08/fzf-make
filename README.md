@@ -155,10 +155,7 @@ nix develop
 ```
 
 # 👥 Contribution
-- Contributions are welcome!
-- If you have a Feature request, please create an issue first.
-- If you have added fzf-make to some package manager, please let me know. (or please send a PR to add how to install via the package manager in the `README.md`)
-- If you have any questions, feel free to create an issue and ask.
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 # 🗒 Related Article(s)
 - [fzf-make - A command runner with fuzzy finder and preview window for make, pnpm - reddit](https://www.reddit.com/r/commandline/comments/1h7btkl/fzfmake_a_command_runner_with_fuzzy_finder_and/)
