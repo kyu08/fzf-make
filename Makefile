@@ -79,16 +79,21 @@ bump-fzf-make-version: tool-bump-version
 		git add .; \
 		git commit -m "chore(release): bump to v$${CURRENT_VERSION}"; \
 		git push -u origin "$${RELEASE_BRANCH}"; \
-		gh pr create --base main --head "$${RELEASE_BRANCH}" \
+		PR_URL=$$(gh pr create --base main --head "$${RELEASE_BRANCH}" \
 			--title "chore(release): bump to v$${CURRENT_VERSION}" \
-			--body "Automated bump for v$${CURRENT_VERSION}."; \
-		gh pr merge "$${RELEASE_BRANCH}" --squash --auto --delete-branch; \
-		echo "⏳ Waiting for PR to be merged..."; \
-		while [ "$$(gh pr view $${RELEASE_BRANCH} --json state -q .state 2>/dev/null)" != "MERGED" ]; do sleep 3; done; \
+			--body "Automated bump for v$${CURRENT_VERSION}."); \
+		PR_NUMBER=$$(basename "$$PR_URL"); \
+		gh pr merge "$$PR_NUMBER" --squash --auto --delete-branch; \
+		echo "⏳ Waiting for PR #$$PR_NUMBER to be merged..."; \
+		while :; do STATE=$$(gh pr view "$$PR_NUMBER" --json state -q .state 2>/dev/null); case "$$STATE" in MERGED) break ;; CLOSED) echo "❌ PR #$$PR_NUMBER was closed without merging. Aborting."; exit 1 ;; esac; sleep 3; done; \
 		git checkout main; \
 		git pull; \
 		gh release create "v$${CURRENT_VERSION}" --generate-notes --draft --target main; \
 		gh workflow run github-release.yml -f tag="v$${CURRENT_VERSION}"; \
+		echo "⏳ Waiting for the release workflow to finish..."; \
+		sleep 5; \
+		RUN_ID=$$(gh run list --workflow=github-release.yml --event=workflow_dispatch --limit 1 --json databaseId -q '.[0].databaseId'); \
+		gh run watch "$$RUN_ID" --exit-status || echo "❌ Release workflow failed. Check: https://github.com/kyu08/fzf-make/actions/runs/$$RUN_ID"; \
 		gh release view "v$${CURRENT_VERSION}" --json url -q .url | sed 's@releases/tag@releases/edit@' | xargs open; \
 	fi
 

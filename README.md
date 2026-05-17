@@ -76,7 +76,7 @@ cargo +1.90.0 install --locked fzf-make
 cargo +1.90.0 install --git https://github.com/kyu08/fzf-make/
 ```
 
-## Pre-build binary for Linux
+## Pre-built binaries for Linux
 Pre-built binaries are available for `linux_amd64` and `linux_arm64`.
 
 > [!NOTE]
