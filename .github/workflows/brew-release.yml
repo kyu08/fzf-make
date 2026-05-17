@@ -7,7 +7,10 @@ jobs:
   bump-homebrew-formula:
     runs-on: ubuntu-latest
     steps:
-      - uses: mislav/bump-homebrew-formula-action@56a283fa15557e9abaa4bdb63b8212abc68e655c # v3.6
+      # Pinned to a fork that fixes https://github.com/mislav/bump-homebrew-formula-action/issues/340
+      # (GitHub now returns HTTP 303 instead of 302 for tarball redirects, which upstream rejects).
+      # Revert to mislav/bump-homebrew-formula-action once the upstream fix is released.
+      - uses: AvesAlight/bump-homebrew-formula-action@efacc598ed9b4b1bc526125f82d2dfba17509842
         if: ${{ !contains(github.ref, '-') }} # skip prereleases
         with:
           formula-name: fzf-make
