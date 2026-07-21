@@ -95,6 +95,7 @@ bump-fzf-make-version: tool-bump-version
 		RUN_ID=$$(gh run list --workflow=github-release.yml --event=workflow_dispatch --limit 1 --json databaseId -q '.[0].databaseId'); \
 		gh run watch "$$RUN_ID" --exit-status || echo "❌ Release workflow failed. Check: https://github.com/kyu08/fzf-make/actions/runs/$$RUN_ID"; \
 		gh release view "v$${CURRENT_VERSION}" --json url -q .url | sed 's@releases/tag@releases/edit@' | xargs open; \
+		printf '\n✅ Release prepare done.\n1. Finalize the release notes.\n2. Publish the release.\n'; \
 	fi
 
 .PHONY: spell-check
