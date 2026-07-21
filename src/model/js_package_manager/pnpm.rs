@@ -4,7 +4,7 @@ use crate::{
     model::{command, file_util, runner_type},
 };
 use anyhow::{Result, anyhow};
-use std::{path::PathBuf, process};
+use std::{path::PathBuf, process, process::Command, sync::OnceLock};
 
 const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
 
@@ -86,6 +86,9 @@ impl Pnpm {
                     if Self::use_filtering(value) {
                         continue;
                     }
+                    if Self::is_hidden_script(&key) {
+                        continue;
+                    }
                     result.push(command::CommandWithPreview::new(
                         runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
                         // pnpm executes workspace script following format: `pnpm --filter {package_name} {script_name}`
@@ -115,6 +118,7 @@ impl Pnpm {
             parsed_scripts_part_of_package_json
                 .iter()
                 .filter(|(_, value, _)| !Self::use_filtering(value.to_string()))
+                .filter(|(key, _, _)| !Self::is_hidden_script(key))
                 .map(|(key, _value, line_number)| {
                     command::CommandWithPreview::new(
                         runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
@@ -167,6 +171,29 @@ impl Pnpm {
 
         start_with_pnpm && has_filtering_or_dir_option && !has_run
     }
+
+    fn pnpm_version() -> &'static str {
+        static VERSION: OnceLock<String> = OnceLock::new();
+        VERSION.get_or_init(|| {
+            Command::new("pnpm")
+                .arg("--version")
+                .output()
+                .ok()
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+                .map(|s| s.trim().to_string())
+                .unwrap_or_else(|| "unknown".to_string())
+        })
+    }
+
+    // ref: https://pnpm.io/scripts#hidden-scripts
+    fn is_hidden_script(script_name: &str) -> bool {
+        script_name.starts_with(".") && Self::is_pnpm_version_11_or_higher(Self::pnpm_version())
+    }
+
+    fn is_pnpm_version_11_or_higher(version: &str) -> bool {
+        let major_version = version.split('.').next().unwrap_or("0");
+        major_version.parse::<u32>().unwrap_or(0) >= 11
+    }
 }
 
 #[cfg(test)]
@@ -190,5 +217,14 @@ mod test {
         assert_eq!(false, Pnpm::use_filtering("pnpm run".to_string()));
         assert_eq!(false, Pnpm::use_filtering("pnpm -r hoge".to_string()));
         assert_eq!(false, Pnpm::use_filtering("yarn -r --filter app3".to_string()));
+    }
+
+    #[test]
+    fn test_is_pnpm_version_11_or_higher() {
+        assert_eq!(false, Pnpm::is_pnpm_version_11_or_higher("7.0.0"));
+        assert_eq!(false, Pnpm::is_pnpm_version_11_or_higher("10.9.9"));
+        assert_eq!(true, Pnpm::is_pnpm_version_11_or_higher("11.0.0"));
+        assert_eq!(true, Pnpm::is_pnpm_version_11_or_higher("11.0.1"));
+        assert_eq!(true, Pnpm::is_pnpm_version_11_or_higher("12.0.0"));
     }
 }

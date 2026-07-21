@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    ".build": "echo this should be ignored if using pnpm higher than v11",
     "build": "echo build",
     "start": "echo start",
     "lint": "echo lint",
@@ -10,11 +11,5 @@
     "test-storybook": "echo test-storybook",
     "test-integration": "echo integration",
     "test-e2e": "echo test-e2e"
-  },
-  "devDependencies": {
-    "@babel/cli": "7.12.10"
-  },
-  "dependencies": {
-    "firebase": "^8.6.8"
   }
 }
