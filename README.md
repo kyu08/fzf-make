@@ -46,6 +46,11 @@ brew install fzf-make
 brew upgrade fzf-make
 ```
 
+### mise
+```sh
+mise use --global github:kyu08/fzf-make
+```
+
 ## Arch Linux
 
 `fzf-make` can be installed from the [AUR](https://aur.archlinux.org/packages/fzf-make) using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers). For example:
