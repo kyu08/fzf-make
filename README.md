@@ -34,6 +34,11 @@
 - **(Scheduled to be developed)** Support config file
 
 # 📦 Installation
+## mise
+```sh
+mise use --global github:kyu08/fzf-make
+```
+
 ## macOS
 ### Homebrew
 ```sh
@@ -90,6 +95,17 @@ TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | g
 ### linux_arm64
 ```sh
 TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | grep -m1 tag_name | cut -d '"' -f 4) && curl -fsSL "https://github.com/kyu08/fzf-make/releases/download/${TAG}/fzf-make_${TAG}_linux_arm64.tar.gz" | tar -xz && sudo mv fzf-make /usr/local/bin/
+```
+
+## Pre-built binaries for macOS
+Pre-built binaries are available for `macos_arm64`.
+
+> [!NOTE]
+> Replace `/usr/local/bin` with any directory in your `$PATH` if you prefer another installation place.
+
+### macos_arm64
+```sh
+TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | grep -m1 tag_name | cut -d '"' -f 4) && curl -fsSL "https://github.com/kyu08/fzf-make/releases/download/${TAG}/fzf-make_${TAG}_macos_arm64.tar.gz" | tar -xz && sudo mv fzf-make /usr/local/bin/
 ```
 
 # 💡 Usage

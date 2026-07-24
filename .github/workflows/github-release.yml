@@ -23,6 +23,9 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             archive: fzf-make_${{ inputs.tag }}_linux_amd64
             os: ubuntu-latest
+          - target: aarch64-apple-darwin
+            archive: fzf-make_${{ inputs.tag }}_macos_arm64
+            os: macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
