@@ -34,6 +34,11 @@
 - **(Scheduled to be developed)** Support config file
 
 # 📦 Installation
+## mise
+```sh
+mise use --global github:kyu08/fzf-make
+```
+
 ## macOS
 ### Homebrew
 ```sh
@@ -44,11 +49,6 @@ brew install fzf-make
 ```sh
 # update 
 brew upgrade fzf-make
-```
-
-### mise
-```sh
-mise use --global github:kyu08/fzf-make
 ```
 
 ## Arch Linux
