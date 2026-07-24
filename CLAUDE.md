@@ -1,2 +1,3 @@
 - Write comments in English.
 - Respond in the language used by the user.
+- Follow conventional commit when you git commit.
