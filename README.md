@@ -92,6 +92,22 @@ TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | g
 TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | grep -m1 tag_name | cut -d '"' -f 4) && curl -fsSL "https://github.com/kyu08/fzf-make/releases/download/${TAG}/fzf-make_${TAG}_linux_arm64.tar.gz" | tar -xz && sudo mv fzf-make /usr/local/bin/
 ```
 
+## Pre-built binaries for macOS
+Pre-built binaries are available for `macos_amd64` and `macos_arm64`.
+
+> [!NOTE]
+> Replace `/usr/local/bin` with any directory in your `$PATH` if you prefer another installation place.
+
+### macos_arm64
+```sh
+TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | grep -m1 tag_name | cut -d '"' -f 4) && curl -fsSL "https://github.com/kyu08/fzf-make/releases/download/${TAG}/fzf-make_${TAG}_macos_arm64.tar.gz" | tar -xz && sudo mv fzf-make /usr/local/bin/
+```
+
+### macos_amd64
+```sh
+TAG=$(curl -fsSL https://api.github.com/repos/kyu08/fzf-make/releases/latest | grep -m1 tag_name | cut -d '"' -f 4) && curl -fsSL "https://github.com/kyu08/fzf-make/releases/download/${TAG}/fzf-make_${TAG}_macos_amd64.tar.gz" | tar -xz && sudo mv fzf-make /usr/local/bin/
+```
+
 # 💡 Usage
 ## Run target using fuzzy finder
 1. Execute `fzf-make` in the directory you want to run make target, or (npm | pnpm | yarn) scripts or just recipe.
