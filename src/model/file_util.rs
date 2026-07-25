@@ -11,7 +11,7 @@ pub fn path_to_content(path: PathBuf) -> Result<String> {
 
 pub fn find_file_in_ancestors(current_dir: PathBuf, file_names: Vec<&str>) -> Option<PathBuf> {
     for path in current_dir.ancestors() {
-        let read_dir = match PathBuf::from(path).read_dir() {
+        let read_dir = match path.read_dir() {
             Ok(r) => r,
             Err(_) => continue,
         };
