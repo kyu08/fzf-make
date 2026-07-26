@@ -54,7 +54,7 @@ pub enum AppState<'a> {
     // See: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
     SelectCommand(Box<SelectCommandState<'a>>),
     ExecuteCommand(ExecuteCommandState),
-    // Result<()> holds Err is the error message to be displayed in the UI.
+    // Result<()> is used to carry an optional error that will be printed after the TUI is shut down.
     ShouldQuit(Result<()>),
 }
 
