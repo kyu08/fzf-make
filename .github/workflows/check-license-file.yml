@@ -58,4 +58,7 @@ jobs:
         if: steps.check-changes.outputs.changed == 'true'
         run: |
           git add .
-          git diff --cached --exit-code
+          if ! git diff --cached --exit-code; then
+            echo '::error::If you changed dependencies, please run `make update-license-file` to update the license file.'
+            exit 1
+          fi
