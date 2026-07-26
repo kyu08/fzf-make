@@ -162,8 +162,8 @@ impl Model<'_> {
         self.app_state = AppState::ExecuteCommand(ExecuteCommandState::new(runner, command));
     }
 
-    fn transition_to_should_quit_state(&mut self, error_message: Result<()>) {
-        self.app_state = AppState::ShouldQuit(error_message);
+    fn transition_to_should_quit_state(&mut self, quit_result: Result<()>) {
+        self.app_state = AppState::ShouldQuit(quit_result);
     }
 
     // Some(Ok()) => quit with no error message
