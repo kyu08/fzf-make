@@ -167,11 +167,11 @@ impl Model<'_> {
     }
 
     // Some(Ok()) => quit with no error message
-    // Some(Err(error_message)) => quit with error message
+    // Some(Err(quit_result)) => quit with error message
     // None => should not quit yet
     fn should_quit(&self) -> Option<&Result<()>> {
         match &self.app_state {
-            AppState::ShouldQuit(message) => Some(message),
+            AppState::ShouldQuit(quit_result) => Some(quit_result),
             _ => None,
         }
     }
