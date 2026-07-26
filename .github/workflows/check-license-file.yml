@@ -59,6 +59,6 @@ jobs:
         run: |
           git add .
           if ! git diff --cached --exit-code; then
-            echo '::error::If you changed dependencies, please run `make update-license-file` to update the license file.'
+            echo '::error::License file is out of date. Run `make update-license-file` and commit the resulting changes.'
             exit 1
           fi
