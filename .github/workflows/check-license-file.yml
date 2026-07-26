@@ -11,24 +11,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Currently, we specify this workflow as one of "Status checks that are required".
-      # So if we don't run this workflow using paths: Cargo.lock,
-      # PRs that don't change Cargo.lock will be blocked unnecessarily.
-      # So we check if Cargo.lock changed and skip the rest of the steps if not
-      # intentionally instead of using `paths`.
-      - name: Check if Cargo.lock changed
-        id: check-changes
-        run: |
-          if git diff --name-only origin/main...HEAD | grep -q "^Cargo.lock$"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
       # Install the prebuilt binary instead of compiling from source (`cargo install`)
       # because compiling cargo-about takes about 2.5 minutes in CI.
       - name: Install cargo-about
-        if: steps.check-changes.outputs.changed == 'true'
         uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
         with:
           tool: cargo-about@0.8.2
@@ -50,12 +35,15 @@ jobs:
       #  of this software and associated documentation files (the &quot;Software&quot;), to deal
       #  in the Software without restriction, including without limitation the rights
       - name: Check and update license file
-        if: steps.check-changes.outputs.changed == 'true'
         run: |
           make update-license-file
 
       - name: Check diff
-        if: steps.check-changes.outputs.changed == 'true'
         run: |
           git add .
-          git diff --cached --exit-code
+          if ! git diff --cached --exit-code; then
+            echo '::group::Error'
+            echo '::error::🚨🚨🚨 License file is out of date. Run `make update-license-file` and commit the resulting changes.'
+            echo '::endgroup::'
+            exit 1
+          fi
