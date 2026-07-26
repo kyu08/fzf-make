@@ -44,7 +44,7 @@ use update_informer::{Check, registry};
 // "Making impossible states impossible"
 // The type of `AppState` is defined according to the concept of 'Making Impossible States Impossible'.
 // See: https://www.youtube.com/watch?v=IcgmSRJHu_8
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub enum AppState<'a> {
     // Box the largest variant to reduce enum size (1176 bytes → ~8 bytes)
     // When there's a large size difference between variants, the entire enum
@@ -54,7 +54,25 @@ pub enum AppState<'a> {
     // See: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
     SelectCommand(Box<SelectCommandState<'a>>),
     ExecuteCommand(ExecuteCommandState),
-    ShouldQuit,
+    // Result<()> holds Err is the error message to be displayed in the UI.
+    ShouldQuit(Result<()>),
+}
+
+// PartialEq is implemented manually because anyhow::Error does not implement it.
+// Errors are compared by their string representation, which is sufficient for tests.
+impl PartialEq for AppState<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (AppState::SelectCommand(a), AppState::SelectCommand(b)) => a == b,
+            (AppState::ExecuteCommand(a), AppState::ExecuteCommand(b)) => a == b,
+            (AppState::ShouldQuit(a), AppState::ShouldQuit(b)) => match (a, b) {
+                (Ok(()), Ok(())) => true,
+                (Err(a), Err(b)) => a.to_string() == b.to_string(),
+                _ => false,
+            },
+            _ => false,
+        }
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -96,7 +114,10 @@ impl Model<'_> {
                         (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousCommand),
                         (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
                         (KeyCode::Char('y'), true) => Some(Message::CopyCommandToClipboard),
-                        (KeyCode::Enter, _) => Some(Message::ExecuteCommand(s.get_selected_command().unwrap())),
+                        (KeyCode::Enter, _) => match s.get_selected_command() {
+                            Some(c) => Some(Message::ExecuteCommand(c)),
+                            None => Some(Message::NoCommandSelected),
+                        },
                         _ => Some(Message::SearchTextAreaKeyInput(key)),
                     },
                     CurrentPane::History => match (key.code, is_ctrl_pressed) {
@@ -106,9 +127,10 @@ impl Model<'_> {
                         (KeyCode::Up, _) | (KeyCode::Char('p'), true) => Some(Message::PreviousHistory),
                         (KeyCode::Char('o'), true) => Some(Message::OpenAdditionalArgumentsWindow),
                         (KeyCode::Char('y'), true) => Some(Message::CopyCommandToClipboard),
-                        (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => {
-                            Some(Message::ExecuteCommand(s.get_selected_command().unwrap()))
-                        }
+                        (KeyCode::Enter, _) | (KeyCode::Char(' '), _) => match s.get_selected_command() {
+                            Some(c) => Some(Message::ExecuteCommand(c)),
+                            None => Some(Message::NoCommandSelected),
+                        },
                         _ => None,
                     },
                 }
@@ -140,12 +162,18 @@ impl Model<'_> {
         self.app_state = AppState::ExecuteCommand(ExecuteCommandState::new(runner, command));
     }
 
-    fn transition_to_should_quit_state(&mut self) {
-        self.app_state = AppState::ShouldQuit;
+    fn transition_to_should_quit_state(&mut self, error_message: Result<()>) {
+        self.app_state = AppState::ShouldQuit(error_message);
     }
 
-    fn should_quit(&self) -> bool {
-        self.app_state == AppState::ShouldQuit
+    // Some(Ok()) => quit with no error message
+    // Some(Err(error_message)) => quit with error message
+    // None => should not quit yet
+    fn should_quit(&self) -> Option<&Result<()>> {
+        match &self.app_state {
+            AppState::ShouldQuit(message) => Some(message),
+            _ => None,
+        }
     }
 
     fn is_command_selected(&self) -> bool {
@@ -243,7 +271,12 @@ async fn run<'a, B: Backend>(
         match handle_event(model) {
             Ok(message) => {
                 update(model, message);
-                if model.should_quit() || model.is_command_selected() {
+                match model.should_quit() {
+                    Some(Ok(())) => break,
+                    Some(Err(e)) => return Err(anyhow!("{e}")),
+                    None => {}
+                }
+                if model.is_command_selected() {
                     break;
                 }
             }
@@ -290,6 +323,7 @@ enum Message {
     MoveToNextPane,
     NextHistory,
     PreviousHistory,
+    NoCommandSelected,
     Quit,
     // Additional arguments
     OpenAdditionalArgumentsWindow,
@@ -328,7 +362,10 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::MoveToNextPane) => s.move_to_next_pane(),
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
-            Some(Message::Quit) => model.transition_to_should_quit_state(),
+            Some(Message::NoCommandSelected) => {
+                model.transition_to_should_quit_state(Err(anyhow!("No command selected")))
+            }
+            Some(Message::Quit) => model.transition_to_should_quit_state(Ok(())),
             Some(Message::OpenAdditionalArgumentsWindow) => s.open_additional_arguments_popup(),
             Some(Message::CloseAdditionalArgumentsWindow) => s.close_additional_arguments_popup(),
             Some(Message::AdditionalArgumentsKeyInput(key_event)) => s.handle_additional_arguments_key_input(key_event),
@@ -867,7 +904,7 @@ mod test {
                 },
                 message: Some(Message::Quit),
                 expect_model: Model {
-                    app_state: AppState::ShouldQuit,
+                    app_state: AppState::ShouldQuit(Ok(())),
                 },
             },
             Case {
