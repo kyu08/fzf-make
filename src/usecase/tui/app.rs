@@ -908,6 +908,18 @@ mod test {
                 },
             },
             Case {
+                title: "NoCommandSelected",
+                model: Model {
+                    app_state: AppState::SelectCommand(Box::new(SelectCommandState {
+                        ..SelectCommandState::new_for_test()
+                    })),
+                },
+                message: Some(Message::NoCommandSelected),
+                expect_model: Model {
+                    app_state: AppState::ShouldQuit(Err(anyhow!("No command selected"))),
+                },
+            },
+            Case {
                 title: "SearchTextAreaKeyInput(a)",
                 model: Model {
                     app_state: AppState::SelectCommand(Box::new(SelectCommandState {
@@ -1212,6 +1224,83 @@ mod test {
         for mut case in cases {
             update(&mut case.model, case.message);
             assert_eq!(case.expect_model, case.model, "\nFailed: 🚨{:?}🚨\n", case.title,);
+        }
+    }
+
+    // The manual PartialEq implementation compares errors by their string representation.
+    // If it were wrong (e.g. always true), assert_eq! in other tests could pass incorrectly,
+    // so its behavior is tested directly here.
+    #[test]
+    fn app_state_partial_eq_test() {
+        struct Case<'a> {
+            title: &'static str,
+            left: AppState<'a>,
+            right: AppState<'a>,
+            expect: bool,
+        }
+        let cases: Vec<Case> = vec![
+            Case {
+                title: "ShouldQuit(Ok) == ShouldQuit(Ok)",
+                left: AppState::ShouldQuit(Ok(())),
+                right: AppState::ShouldQuit(Ok(())),
+                expect: true,
+            },
+            Case {
+                title: "ShouldQuit(Err) with the same message should be equal",
+                left: AppState::ShouldQuit(Err(anyhow!("No command selected"))),
+                right: AppState::ShouldQuit(Err(anyhow!("No command selected"))),
+                expect: true,
+            },
+            Case {
+                title: "ShouldQuit(Err) with different messages should not be equal",
+                left: AppState::ShouldQuit(Err(anyhow!("No command selected"))),
+                right: AppState::ShouldQuit(Err(anyhow!("other error"))),
+                expect: false,
+            },
+            Case {
+                title: "ShouldQuit(Ok) != ShouldQuit(Err)",
+                left: AppState::ShouldQuit(Ok(())),
+                right: AppState::ShouldQuit(Err(anyhow!("No command selected"))),
+                expect: false,
+            },
+            Case {
+                title: "ShouldQuit != SelectCommand",
+                left: AppState::ShouldQuit(Ok(())),
+                right: AppState::SelectCommand(Box::new(SelectCommandState::new_for_test())),
+                expect: false,
+            },
+        ];
+
+        unsafe { env::set_var("FZF_MAKE_IS_TESTING", "true") };
+
+        for case in cases {
+            assert_eq!(case.expect, case.left == case.right, "\nFailed: 🚨{:?}🚨\n", case.title,);
+        }
+    }
+
+    #[test]
+    fn should_quit_test() {
+        unsafe { env::set_var("FZF_MAKE_IS_TESTING", "true") };
+
+        // None => should not quit yet
+        let model = Model {
+            app_state: AppState::SelectCommand(Box::new(SelectCommandState::new_for_test())),
+        };
+        assert!(model.should_quit().is_none());
+
+        // Some(Ok(())) => quit with no error message
+        let model = Model {
+            app_state: AppState::ShouldQuit(Ok(())),
+        };
+        assert!(matches!(model.should_quit(), Some(Ok(()))));
+
+        // Some(Err(error_message)) => quit with error message
+        let model = Model {
+            app_state: AppState::ShouldQuit(Err(anyhow!("No command selected"))),
+        };
+        match model.should_quit() {
+            Some(Err(e)) => assert_eq!("No command selected", e.to_string()),
+            other => panic!("expected Some(Err(_)), got {:?}", other),
         }
     }
 }
