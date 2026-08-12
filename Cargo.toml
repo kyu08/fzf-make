@@ -47,7 +47,7 @@ update-informer = { version = "1.2.0", default-features = true, features = [
 futures = "0.3"
 syntect-tui = "3.0.5"
 syntect = "5.2.0"
-tree-sitter = "=0.24.4"
+tree-sitter = "=0.26.11"
 tree-sitter-just = "=0.1.0"
 rust-embed = "8.5.0"
 time = { version = "=0.3.51", features = ["formatting"] }
