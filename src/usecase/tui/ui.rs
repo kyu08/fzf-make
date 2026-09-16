@@ -88,45 +88,8 @@ const BORDER_STYLE_NOT_SELECTED: ratatui::widgets::block::BorderType = ratatui::
 const TITLE_STYLE: ratatui::style::Style = Style::new().add_modifier(Modifier::BOLD);
 
 fn should_skip_makefile_syntax_highlighting(is_make_preview: bool, line: &str) -> bool {
+    let _ = line;
     is_make_preview
-        && ((line.contains("$(eval") && line.contains("$(shell"))
-            || contains_make_expansion_followed_by_path_separator(line))
-}
-
-fn contains_make_expansion_followed_by_path_separator(line: &str) -> bool {
-    let bytes = line.as_bytes();
-    let mut i = 0;
-
-    while i + 1 < bytes.len() {
-        if bytes[i] == b'$' && bytes[i + 1] == b'(' {
-            let mut depth = 1;
-            let mut j = i + 2;
-
-            while j < bytes.len() {
-                if j + 1 < bytes.len() && bytes[j] == b'$' && bytes[j + 1] == b'(' {
-                    depth += 1;
-                    j += 2;
-                    continue;
-                }
-
-                if bytes[j] == b')' {
-                    depth -= 1;
-                    if depth == 0 {
-                        if bytes.get(j + 1) == Some(&b'/') {
-                            return true;
-                        }
-                        break;
-                    }
-                }
-
-                j += 1;
-            }
-        }
-
-        i += 1;
-    }
-
-    false
 }
 
 fn color_and_border_style_for_selectable(
@@ -195,10 +158,9 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                             0
                         },
                     });
-                    // Skip syntax highlighting for Makefile lines that trigger
-                    // pathological backtracking in syntect's grammar, such as
-                    // nested $(eval ... $(shell ...)) constructs or path-like
-                    // expansions such as $(GOBIN)/foo.
+                    // Skip syntax highlighting for Makefile preview lines
+                    // because syntect's Makefile grammar can trigger
+                    // pathological backtracking on valid Make syntax.
                     // For more details, see https://github.com/kyu08/fzf-make/issues/595.
                     let mut spans: Vec<Span> = if should_skip_makefile_syntax_highlighting(is_make_preview, line) {
                         if (start_index + index) == command_row_index {
@@ -536,19 +498,27 @@ mod test {
     }
 
     #[test]
-    fn should_skip_makefile_syntax_highlighting_for_known_pathological_lines() {
-        assert!(should_skip_makefile_syntax_highlighting(true, PATHOLOGICAL_LINE));
-        for line in PATH_LIKE_EXPANSION_LINES {
+    fn should_skip_syntax_highlighting_for_all_makefile_preview_lines() {
+        for line in NORMAL_MAKEFILE_LINES
+            .iter()
+            .copied()
+            .chain(std::iter::once(PATHOLOGICAL_LINE))
+            .chain(PATH_LIKE_EXPANSION_LINES.iter().copied())
+        {
             assert!(should_skip_makefile_syntax_highlighting(true, line));
         }
     }
 
     #[test]
-    fn should_not_skip_normal_makefile_lines() {
-        for line in NORMAL_MAKEFILE_LINES {
-            assert!(!should_skip_makefile_syntax_highlighting(true, line));
+    fn should_not_skip_non_makefile_preview_lines() {
+        for line in NORMAL_MAKEFILE_LINES
+            .iter()
+            .copied()
+            .chain(std::iter::once(PATHOLOGICAL_LINE))
+            .chain(PATH_LIKE_EXPANSION_LINES.iter().copied())
+        {
+            assert!(!should_skip_makefile_syntax_highlighting(false, line));
         }
-        assert!(!should_skip_makefile_syntax_highlighting(false, PATHOLOGICAL_LINE));
     }
 
     #[test]
