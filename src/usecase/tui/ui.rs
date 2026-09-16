@@ -87,6 +87,48 @@ const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType = ratatui::widg
 const BORDER_STYLE_NOT_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Plain;
 const TITLE_STYLE: ratatui::style::Style = Style::new().add_modifier(Modifier::BOLD);
 
+fn should_skip_makefile_syntax_highlighting(command_file_extension: &str, line: &str) -> bool {
+    command_file_extension == "mk"
+        && ((line.contains("$(eval") && line.contains("$(shell"))
+            || contains_make_expansion_followed_by_path_separator(line))
+}
+
+fn contains_make_expansion_followed_by_path_separator(line: &str) -> bool {
+    let bytes = line.as_bytes();
+    let mut i = 0;
+
+    while i + 1 < bytes.len() {
+        if bytes[i] == b'$' && bytes[i + 1] == b'(' {
+            let mut depth = 1;
+            let mut j = i + 2;
+
+            while j < bytes.len() {
+                if j + 1 < bytes.len() && bytes[j] == b'$' && bytes[j + 1] == b'(' {
+                    depth += 1;
+                    j += 2;
+                    continue;
+                }
+
+                if bytes[j] == b')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        if bytes.get(j + 1) == Some(&b'/') {
+                            return true;
+                        }
+                        break;
+                    }
+                }
+
+                j += 1;
+            }
+        }
+
+        i += 1;
+    }
+
+    false
+}
+
 fn color_and_border_style_for_selectable(
     is_selected: bool,
     is_additional_arguments_popup_opened: bool,
@@ -152,11 +194,13 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                             0
                         },
                     });
-                    // Skip syntax highlighting for lines that cause catastrophic
-                    // backtracking in syntect's Makefile grammar (e.g. nested
-                    // $(eval ... $(shell ...)) constructs).
+                    // Skip syntax highlighting for Makefile lines that trigger
+                    // pathological backtracking in syntect's grammar, such as
+                    // nested $(eval ... $(shell ...)) constructs or path-like
+                    // expansions such as $(GOBIN)/foo.
                     // For more details, see https://github.com/kyu08/fzf-make/issues/595.
-                    let mut spans: Vec<Span> = if line.contains("$(eval") && line.contains("$(shell") {
+                    let mut spans: Vec<Span> = if should_skip_makefile_syntax_highlighting(command_file_extension, line)
+                    {
                         if (start_index + index) == command_row_index {
                             vec![Span::styled(
                                 line.to_string(),
@@ -463,6 +507,7 @@ mod test {
         "\tRUST_BACKTRACE=full cargo nextest run",
     ];
     const PATHOLOGICAL_LINE: &str = "\t$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
+    const PATH_LIKE_EXPANSION_LINES: &[&str] = &["foo: $(GOBIN)/foo", "\tgo vet -vettool=$(GOBIN)/foo ./..."];
     fn load_makefile_syntax() -> (SyntaxSet, syntect::highlighting::Theme) {
         let ss = SyntaxSet::load_defaults_newlines();
         let ts = ThemeSet::load_defaults();
@@ -491,15 +536,34 @@ mod test {
     }
 
     #[test]
-    fn highlight_pathological_line_with_skip_guard() {
+    fn should_skip_makefile_syntax_highlighting_for_known_pathological_lines() {
+        assert!(should_skip_makefile_syntax_highlighting("mk", PATHOLOGICAL_LINE));
+        for line in PATH_LIKE_EXPANSION_LINES {
+            assert!(should_skip_makefile_syntax_highlighting("mk", line));
+        }
+    }
+
+    #[test]
+    fn should_not_skip_normal_makefile_lines() {
+        for line in NORMAL_MAKEFILE_LINES {
+            assert!(!should_skip_makefile_syntax_highlighting("mk", line));
+        }
+        assert!(!should_skip_makefile_syntax_highlighting("yaml", PATHOLOGICAL_LINE));
+    }
+
+    #[test]
+    fn skipped_makefile_lines_stay_within_threshold() {
         let start = std::time::Instant::now();
-        // Reproduce the skip guard logic from render_preview_block.
-        let _spans: Vec<Span> = vec![Span::raw(PATHOLOGICAL_LINE.to_string())];
+        let _spans: Vec<Span> = std::iter::once(PATHOLOGICAL_LINE)
+            .chain(PATH_LIKE_EXPANSION_LINES.iter().copied())
+            .filter(|line| should_skip_makefile_syntax_highlighting("mk", line))
+            .map(|line| Span::raw(line.to_string()))
+            .collect();
         let elapsed = start.elapsed();
 
         assert!(
             elapsed < HIGHLIGHT_THRESHOLD,
-            "Highlighting pathological line with skip guard took {elapsed:?}, which exceeds the threshold of {HIGHLIGHT_THRESHOLD:?}",
+            "Rendering skipped Makefile lines took {elapsed:?}, which exceeds the threshold of {HIGHLIGHT_THRESHOLD:?}",
         );
     }
 }
