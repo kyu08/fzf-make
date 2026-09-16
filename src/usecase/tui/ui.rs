@@ -1,5 +1,5 @@
 use super::app::{AppState, CurrentPane, Model, SelectCommandState};
-use crate::model::command;
+use crate::model::{command, runner_type::RunnerType};
 use anyhow::{Context, Result};
 use ratatui::{
     Frame,
@@ -87,8 +87,8 @@ const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType = ratatui::widg
 const BORDER_STYLE_NOT_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Plain;
 const TITLE_STYLE: ratatui::style::Style = Style::new().add_modifier(Modifier::BOLD);
 
-fn should_skip_makefile_syntax_highlighting(command_file_extension: &str, line: &str) -> bool {
-    command_file_extension == "mk"
+fn should_skip_makefile_syntax_highlighting(is_make_preview: bool, line: &str) -> bool {
+    is_make_preview
         && ((line.contains("$(eval") && line.contains("$(shell"))
             || contains_make_expansion_followed_by_path_separator(line))
 }
@@ -175,9 +175,10 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                     let _ = ts.add_from_folder(path);
                 }
 
-                let command_file_extension = cmd.runner_type.get_extension_for_highlighting();
+                let syntax_highlighting_extension = cmd.runner_type.get_extension_for_highlighting();
+                let is_make_preview = matches!(&cmd.runner_type, RunnerType::Make);
                 let syntax = ss
-                    .find_syntax_by_extension(command_file_extension)
+                    .find_syntax_by_extension(syntax_highlighting_extension)
                     .unwrap_or_else(|| ss.find_syntax_plain_text());
 
                 let theme = &mut ts.themes["OneHalfDark"].clone();
@@ -199,8 +200,7 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
                     // nested $(eval ... $(shell ...)) constructs or path-like
                     // expansions such as $(GOBIN)/foo.
                     // For more details, see https://github.com/kyu08/fzf-make/issues/595.
-                    let mut spans: Vec<Span> = if should_skip_makefile_syntax_highlighting(command_file_extension, line)
-                    {
+                    let mut spans: Vec<Span> = if should_skip_makefile_syntax_highlighting(is_make_preview, line) {
                         if (start_index + index) == command_row_index {
                             vec![Span::styled(
                                 line.to_string(),
@@ -537,18 +537,18 @@ mod test {
 
     #[test]
     fn should_skip_makefile_syntax_highlighting_for_known_pathological_lines() {
-        assert!(should_skip_makefile_syntax_highlighting("mk", PATHOLOGICAL_LINE));
+        assert!(should_skip_makefile_syntax_highlighting(true, PATHOLOGICAL_LINE));
         for line in PATH_LIKE_EXPANSION_LINES {
-            assert!(should_skip_makefile_syntax_highlighting("mk", line));
+            assert!(should_skip_makefile_syntax_highlighting(true, line));
         }
     }
 
     #[test]
     fn should_not_skip_normal_makefile_lines() {
         for line in NORMAL_MAKEFILE_LINES {
-            assert!(!should_skip_makefile_syntax_highlighting("mk", line));
+            assert!(!should_skip_makefile_syntax_highlighting(true, line));
         }
-        assert!(!should_skip_makefile_syntax_highlighting("yaml", PATHOLOGICAL_LINE));
+        assert!(!should_skip_makefile_syntax_highlighting(false, PATHOLOGICAL_LINE));
     }
 
     #[test]
@@ -556,7 +556,7 @@ mod test {
         let start = std::time::Instant::now();
         let _spans: Vec<Span> = std::iter::once(PATHOLOGICAL_LINE)
             .chain(PATH_LIKE_EXPANSION_LINES.iter().copied())
-            .filter(|line| should_skip_makefile_syntax_highlighting("mk", line))
+            .filter(|line| should_skip_makefile_syntax_highlighting(true, line))
             .map(|line| Span::raw(line.to_string()))
             .collect();
         let elapsed = start.elapsed();
