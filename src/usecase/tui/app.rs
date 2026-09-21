@@ -1273,31 +1273,31 @@ mod test {
         }
         let cases: Vec<Case> = vec![
             Case {
-                title: "ShouldQuit(Ok) == ShouldQuit(Ok)",
+                title: "Quitting(Ok) == Quitting(Ok)",
                 left: AppState::Quitting(Ok(())),
                 right: AppState::Quitting(Ok(())),
                 expect: true,
             },
             Case {
-                title: "ShouldQuit(Err) with the same message should be equal",
+                title: "Quitting(Err) with the same message should be equal",
                 left: AppState::Quitting(Err(anyhow!("No command selected"))),
                 right: AppState::Quitting(Err(anyhow!("No command selected"))),
                 expect: true,
             },
             Case {
-                title: "ShouldQuit(Err) with different messages should not be equal",
+                title: "Quitting(Err) with different messages should not be equal",
                 left: AppState::Quitting(Err(anyhow!("No command selected"))),
                 right: AppState::Quitting(Err(anyhow!("other error"))),
                 expect: false,
             },
             Case {
-                title: "ShouldQuit(Ok) != ShouldQuit(Err)",
+                title: "Quitting(Ok) != Quitting(Err)",
                 left: AppState::Quitting(Ok(())),
                 right: AppState::Quitting(Err(anyhow!("No command selected"))),
                 expect: false,
             },
             Case {
-                title: "ShouldQuit != SelectCommand",
+                title: "Quitting != SelectingCommand",
                 left: AppState::Quitting(Ok(())),
                 right: AppState::SelectingCommand(Box::new(SelectCommandState::new_for_test())),
                 expect: false,
