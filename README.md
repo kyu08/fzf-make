@@ -173,8 +173,13 @@ nix develop
 # 👥 Contribution
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-# 🗒 Related Article(s)
+# 🗒 Related Articles
+## By me
 - [fzf-make - A command runner with fuzzy finder and preview window for make, pnpm - reddit](https://www.reddit.com/r/commandline/comments/1h7btkl/fzfmake_a_command_runner_with_fuzzy_finder_and/)
 - [Show HN: fzf-make – a command runner with a fuzzy finder for make, pnpm and yarn - Hacker News](https://news.ycombinator.com/item?id=42357587)
 - (Japanese)[[make,pnpm,yarnに対応]タスクランナーのコマンドをfuzzy finder形式で選択できるCLIツール fzf-makeの紹介](https://zenn.dev/kyu08/articles/974fd8bc25c303)
 - (Japanese)[Makefileに定義されたtargetをfzfで選択して実行するCLIツールをRustでつくった](https://blog.kyu08.com/posts/fzf-make)
+
+## By others
+- [fzf-make - Terminal Trove](https://terminaltrove.com/fzf-make/)
+- [fzf-make – fuzzy command runner for project tasks - LinuxLinks](https://www.linuxlinks.com/fzf-make-fuzzy-command-runner-project-tasks/)
