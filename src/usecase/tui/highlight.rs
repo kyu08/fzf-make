@@ -1,9 +1,9 @@
-use anyhow::{Context, Result};
 use ratatui::style::Style;
 use rust_embed::RustEmbed;
 use std::{
     collections::HashMap,
     fs,
+    io::Cursor,
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex, OnceLock,
@@ -212,16 +212,7 @@ fn syntax_set() -> &'static SyntaxSet {
 fn theme() -> &'static Theme {
     static THEME: OnceLock<Theme> = OnceLock::new();
     THEME.get_or_init(|| {
-        let mut theme_set = ThemeSet::load_defaults();
-        if let Ok(path) = load_syntax_highlighting_theme() {
-            let _ = theme_set.add_from_folder(path);
-        }
-
-        let mut theme = theme_set
-            .themes
-            .get("OneHalfDark")
-            .unwrap_or(&theme_set.themes["base16-ocean.dark"])
-            .clone();
+        let mut theme = embedded_theme().unwrap_or_else(fallback_theme);
         // Make the background transparent so the preview keeps ratatui's background.
         // The background of the row that defines the selected command is applied when rendering.
         theme.settings.background = Some(SColor {
@@ -234,41 +225,24 @@ fn theme() -> &'static Theme {
     })
 }
 
+/// Parses the theme that `rust-embed` compiled into the binary.
+fn embedded_theme() -> Option<Theme> {
+    let asset = Asset::get(THEME_FILE_NAME)?;
+    // `Cursor` gives the embedded bytes the `BufRead + Seek` that the parser wants, so the theme
+    // never has to exist as a file.
+    ThemeSet::load_from_reader(&mut Cursor::new(asset.data.as_ref())).ok()
+}
+
+/// Used only if the embedded theme cannot be parsed. `load_defaults` always provides this one.
+fn fallback_theme() -> Theme {
+    ThemeSet::load_defaults().themes["base16-ocean.dark"].clone()
+}
+
+const THEME_FILE_NAME: &str = "OneHalfDark.tmTheme";
+
 #[derive(RustEmbed)]
 #[folder = "assets"]
 struct Asset;
-
-fn load_syntax_highlighting_theme() -> Result<PathBuf> {
-    let temp_dir = std::env::temp_dir().join("fzf-make-syntax-highlighting-assets");
-    let version_file = temp_dir.join(".version");
-    let current_version = env!("CARGO_PKG_VERSION");
-
-    let should_extract = if temp_dir.exists() {
-        match fs::read_to_string(&version_file) {
-            // extract is done only once per version
-            Ok(v) => v.trim() != current_version,
-            Err(_) => true,
-        }
-    } else {
-        true
-    };
-
-    if should_extract {
-        if temp_dir.exists() {
-            fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
-        }
-        fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
-
-        let theme_file_name = "OneHalfDark.tmTheme";
-        let path = temp_dir.join(theme_file_name);
-        let content = Asset::get(theme_file_name).context("Failed to get embedded asset")?;
-
-        fs::write(path, content.data).context("Failed to write asset file")?;
-        fs::write(version_file, current_version).context("Failed to write version file")?;
-    }
-
-    Ok(temp_dir)
-}
 
 #[cfg(test)]
 mod test {
@@ -276,6 +250,15 @@ mod test {
     use pretty_assertions::assert_eq;
 
     const PATHOLOGICAL_LINE: &str = "    $(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
+
+    /// The preview silently falls back to another theme if this breaks, so catch it here instead.
+    #[test]
+    fn the_embedded_theme_is_parsable() {
+        assert!(
+            embedded_theme().is_some(),
+            "{THEME_FILE_NAME} is missing from the binary or is not a theme syntect can parse",
+        );
+    }
 
     /// Highlights without ever cancelling.
     fn highlight_all(lines: &[String], extension: &str) -> Vec<StyledLine> {
