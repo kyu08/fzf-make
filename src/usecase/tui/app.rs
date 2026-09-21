@@ -752,7 +752,9 @@ impl SelectingCommandState<'_> {
     pub fn get_runner(&self, runner_type: &runner_type::RunnerType) -> Option<runner::Runner> {
         for runner in &self.runners {
             match (runner_type, runner) {
-                (runner_type::RunnerType::Make, runner::Runner::MakeCommand(_)) => {
+                (runner_type::RunnerType::Make, runner::Runner::MakeCommand(_))
+                | (runner_type::RunnerType::Just, runner::Runner::Just(_))
+                | (runner_type::RunnerType::Task, runner::Runner::Task(_)) => {
                     return Some(runner.clone());
                 }
                 (
@@ -892,6 +894,53 @@ mod test {
     use crate::model::runner_type;
     use pretty_assertions::assert_eq;
     use std::env;
+
+    #[test]
+    fn get_runner_test() {
+        let mut state = SelectingCommandState::new_for_test();
+        state
+            .runners
+            .push(runner::Runner::Just(Just::new(PathBuf::from("test_data/just")).unwrap()));
+
+        struct Case {
+            title: &'static str,
+            runner_type: runner_type::RunnerType,
+            expect: Option<runner_type::RunnerType>,
+        }
+        let cases = vec![
+            Case {
+                title: "make is registered",
+                runner_type: runner_type::RunnerType::Make,
+                expect: Some(runner_type::RunnerType::Make),
+            },
+            Case {
+                title: "just is registered",
+                runner_type: runner_type::RunnerType::Just,
+                expect: Some(runner_type::RunnerType::Just),
+            },
+            Case {
+                title: "task is not registered",
+                runner_type: runner_type::RunnerType::Task,
+                expect: None,
+            },
+            Case {
+                title: "pnpm is not registered",
+                runner_type: runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm),
+                expect: None,
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                case.expect,
+                state
+                    .get_runner(&case.runner_type)
+                    .map(|r| runner_type::RunnerType::from(r.clone())),
+                "\nfailed: \u{1f6a8}{:?}\u{1f6a8}\n",
+                case.title,
+            );
+        }
+    }
 
     #[test]
     fn update_test() {
