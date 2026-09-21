@@ -1,0 +1,23 @@
+---
+source: src/usecase/tui/scenario_test.rs
+expression: screen
+---
+"┏ 📢 Commands ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓┌ 📚 History ──────────────────────────────────────────────┐" Hidden by multi-width symbols: [(3, " "), (63, " ")]
+"┃  > make run                                              ┃│                                                          │"
+"┃    make run-with-args                                    ┃│                                                          │"
+"┃    make run-with-arg                                     ┃│                                                          │"
+"┃    make cmd                                              ┃│                                                          │"
+"┃    make target-included                                  ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛└──────────────────────────────────────────────────────────┘"
+"┏ 🔍 Search ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓                                                            " Hidden by multi-width symbols: [(3, " ")]
+"┃   Type text to search command                            ┃                                                            "
+"┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ vX.Y.Z "
+"  Execute the selected command: <enter> | Select command: ↑(<c-p>)/↓(<c-n>) | Narrow down command: (type any            "
