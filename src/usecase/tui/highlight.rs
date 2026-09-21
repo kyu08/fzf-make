@@ -121,6 +121,17 @@ impl PreviewCache {
         }
     }
 
+    /// True while a file is still being highlighted in the background.
+    ///
+    /// The draw loop uses this to redraw at frame rate instead of waiting for its idle timeout,
+    /// so the preview gains colour as soon as the result is ready rather than at the next tick.
+    pub fn is_highlighting(&self) -> bool {
+        match self.files.lock() {
+            Ok(files) => files.values().any(|file| file.highlight == Highlight::InProgress),
+            Err(_) => false,
+        }
+    }
+
     /// Returns the styled fragments of lines `start_index..=end_index` of `path`.
     ///
     /// Lines whose highlighting has not finished yet are returned unstyled, so the preview shows

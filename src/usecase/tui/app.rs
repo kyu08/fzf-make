@@ -272,7 +272,15 @@ async fn run<'a, B: Backend>(
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
             return Err(anyhow!(e));
         }
-        match handle_event(model) {
+
+        // Redraw at frame rate while the preview is still gaining colour, so the result of the
+        // background highlighting shows up as soon as it is ready. Waiting for the idle timeout
+        // would leave the preview unstyled for up to half a second after it was already computed.
+        let timeout = match &model.app_state {
+            AppState::SelectCommand(s) if s.preview_cache.is_highlighting() => FRAME_POLL_TIMEOUT,
+            _ => IDLE_POLL_TIMEOUT,
+        };
+        match handle_event(model, timeout) {
             Ok(message) => {
                 update(model, message);
                 match model.should_quit() {
@@ -337,9 +345,18 @@ enum Message {
     CopyCommandToClipboard,
 }
 
+/// How long the draw loop waits for input when nothing else is going to change the screen.
+const IDLE_POLL_TIMEOUT: Duration = Duration::from_millis(500);
+/// How long it waits while background work is still changing the screen.
+///
+/// The loop only redraws once the wait returns, so this is the worst-case delay before the
+/// highlighted preview shows up. 16ms is one frame at 60Hz: a conventional default, not a measured
+/// one. A longer wait such as 33ms would probably look the same and halve the redraws.
+const FRAME_POLL_TIMEOUT: Duration = Duration::from_millis(16);
+
 // TODO: make this method Model's method
-fn handle_event(model: &Model) -> io::Result<Option<Message>> {
-    if crossterm::event::poll(std::time::Duration::from_millis(500))? {
+fn handle_event(model: &Model, timeout: Duration) -> io::Result<Option<Message>> {
+    if crossterm::event::poll(timeout)? {
         match crossterm::event::read()? {
             crossterm::event::Event::Key(key) if key.kind == KeyEventKind::Press => Ok(model.handle_key_input(key)),
             _ => Ok(None),
