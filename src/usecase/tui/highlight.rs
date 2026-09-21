@@ -9,6 +9,7 @@ use std::{
         Arc, Mutex, OnceLock,
         atomic::{AtomicBool, Ordering},
     },
+    thread,
     time::{Duration, Instant},
 };
 use syntect::{
@@ -62,9 +63,9 @@ pub struct PreviewCache {
 impl Drop for PreviewCache {
     /// Stops the background highlighting.
     ///
-    /// `#[tokio::main]` waits for every running blocking task before the process exits, so a
-    /// highlight that is still in flight delays the exit even though the TUI has already shut
-    /// down. Cancelling here bounds that wait to the line being highlighted right now.
+    /// The cache is dropped as soon as the user quits or picks a command, while the process
+    /// keeps running: it still has to restore the terminal and then run the chosen command.
+    /// Cancelling here stops the highlighting from competing with that for CPU.
     fn drop(&mut self) {
         self.cancelled.store(true, Ordering::Relaxed);
     }
@@ -111,14 +112,13 @@ impl PreviewCache {
             }
         };
 
-        // Highlighting a single line can take hundreds of milliseconds, so it must not run on
-        // the thread that draws the TUI. Outside a tokio runtime (tests) it runs inline.
-        match tokio::runtime::Handle::try_current() {
-            Ok(_) => {
-                tokio::task::spawn_blocking(highlight);
-            }
-            Err(_) => highlight(),
-        }
+        // Highlighting a single line can take seconds, so it must not run on the thread that
+        // draws the TUI. A plain thread is used rather than `tokio::task::spawn_blocking`
+        // because dropping the runtime joins every blocking task that is still running, and a
+        // single `highlight_line` call cannot be interrupted once it has started. That made
+        // quitting wait for the current line. Nothing joins this thread, so the process exits
+        // whenever it wants to and the thread goes with it.
+        thread::spawn(highlight);
     }
 
     /// True while a file is still being highlighted in the background.
