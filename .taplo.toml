@@ -1,0 +1,3 @@
+# taplo does not respect .gitignore, so generated and vendored files under
+# test_data must be excluded explicitly.
+exclude = ["test_data/**/*.toml"]

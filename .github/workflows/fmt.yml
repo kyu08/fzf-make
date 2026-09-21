@@ -22,4 +22,18 @@ jobs:
         rustup component add rustfmt
     - name: Check formatting
       run: |
-        make fmt-check
+        make fmt-rust-check
+
+  fmt-toml:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+    # Install the prebuilt binary instead of compiling from source (`cargo install`).
+    - name: Install taplo
+      uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
+      with:
+        tool: taplo@0.10.0
+    - name: Check formatting
+      run: |
+        make fmt-toml-check
