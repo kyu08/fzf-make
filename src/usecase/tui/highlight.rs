@@ -155,7 +155,7 @@ impl PreviewCache {
             Highlight::Done(highlighted) => highlighted[start_index..=end_index].to_vec(),
             Highlight::InProgress => file.lines[start_index..=end_index]
                 .iter()
-                .map(|line| vec![(Style::default(), line.clone())])
+                .map(|line| plain(line))
                 .collect(),
         }
     }
