@@ -83,7 +83,7 @@ impl Pnpm {
             }
 
             if let Ok(c) = path_to_content::path_to_content(&path)
-                && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c)
+                && let Some((name, parsing_result)) = js::parse_package_json(&c)
             {
                 for (key, value, line_number) in parsing_result {
                     if Self::use_filtering(value) {
@@ -110,7 +110,7 @@ impl Pnpm {
     fn collect_scripts_in_package_json(current_dir: PathBuf) -> Option<Vec<command::CommandWithPreview>> {
         let parsed_scripts_part_of_package_json =
             match path_to_content::path_to_content(&current_dir.join(js::METADATA_FILE_NAME)) {
-                Ok(c) => match js::JsPackageManager::parse_package_json(&c) {
+                Ok(c) => match js::parse_package_json(&c) {
                     Some(result) => result.1,
                     None => return None,
                 },

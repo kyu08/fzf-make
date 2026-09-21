@@ -462,7 +462,7 @@ impl SelectingCommandState<'_> {
                 runners.push(Box::new(f));
             };
             if let Some(js_package_manager) = js::get_js_package_manager_runner(current_dir.clone()) {
-                runners.push(Box::new(js_package_manager));
+                runners.push(js_package_manager);
             };
             if let Ok(just) = Just::new(current_dir.clone()) {
                 runners.push(Box::new(just));
