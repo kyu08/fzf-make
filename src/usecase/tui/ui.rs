@@ -1,6 +1,5 @@
 use super::app::{AppState, CurrentPane, Model, SelectCommandState};
 use crate::model::command;
-use anyhow::{Context, Result};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Flex, Layout, Rect},
@@ -8,19 +7,6 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
-use rust_embed::RustEmbed;
-use std::{
-    fs,
-    fs::File,
-    io::{BufRead, BufReader},
-    path::PathBuf,
-};
-use syntect::{
-    easy::HighlightLines,
-    highlighting::{Color as SColor, ThemeSet},
-    parsing::SyntaxSet,
-};
-use syntect_tui::into_span;
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
     if let AppState::SelectCommand(model) = &mut model.app_state {
@@ -86,6 +72,8 @@ const FG_COLOR_NOT_SELECTED: ratatui::style::Color = Color::DarkGray;
 const BORDER_STYLE_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Thick;
 const BORDER_STYLE_NOT_SELECTED: ratatui::widgets::block::BorderType = ratatui::widgets::BorderType::Plain;
 const TITLE_STYLE: ratatui::style::Style = Style::new().add_modifier(Modifier::BOLD);
+/// Background of the preview row that defines the selected command.
+const COMMAND_ROW_BG_COLOR: ratatui::style::Color = Color::Rgb(94, 120, 200);
 
 fn color_and_border_style_for_selectable(
     is_selected: bool,
@@ -102,87 +90,37 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
     let narrow_down_commands = model.narrow_down_commands();
     let selecting_command = narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
-    let reader = match selecting_command.map(|c| File::open(c.file_path.clone())) {
-        Some(Ok(file)) => Some(BufReader::new(file)),
-        _ => None,
-    };
-    let command_row_index = selecting_command.map(|c| c.line_number as usize - 1);
-    let row_count = chunk.rows().count() - 2; // NOTE: chunk.rows().count() includes border lines
-    let start_index_and_end_index = command_row_index.map(|c| determine_rendering_position(row_count, c));
-    // NOTE: due to lifetime, source_lines need to be declared outside of `let lines = {/* ... */}`
-    let source_lines: Vec<_> = match (selecting_command, start_index_and_end_index, reader) {
-        (Some(_), Some((start_index, end_index)), Some(reader)) => {
-            reader
-                .lines()
-                .skip(start_index)
-                .take(end_index - start_index + 1)
-                // HACK: workaround for https://github.com/ratatui/ratatui/issues/876
-                .map(|line| line.unwrap().replace('\t', "    "))
+    let lines = match selecting_command {
+        Some(command) => {
+            let command_row_index = command.line_number as usize - 1;
+            let row_count = chunk.rows().count() - 2; // NOTE: chunk.rows().count() includes border lines
+            let (start_index, end_index) = determine_rendering_position(row_count, command_row_index);
+
+            model
+                .preview_cache
+                .styled_lines(&command.file_path, start_index, end_index)
+                .into_iter()
+                .enumerate()
+                .map(|(index, styled_line)| {
+                    let row_index = start_index + index;
+                    // add row number
+                    let mut spans = vec![Span::styled(format!("{:5} ", row_index + 1), Style::default())];
+                    spans.extend(styled_line.into_iter().map(|(style, content)| {
+                        // Every line is highlighted with a transparent background so that it keeps
+                        // ratatui's background. Only the row that defines the command is filled.
+                        let style = if row_index == command_row_index {
+                            style.bg(COMMAND_ROW_BG_COLOR)
+                        } else {
+                            style
+                        };
+                        Span::styled(content, style)
+                    }));
+
+                    Line::from(spans)
+                })
                 .collect()
         }
-        _ => vec![],
-    };
-
-    let lines = {
-        match (selecting_command, start_index_and_end_index, command_row_index) {
-            (Some(cmd), Some((start_index, _)), Some(command_row_index)) => {
-                let ss = SyntaxSet::load_defaults_newlines();
-
-                let mut ts = ThemeSet::load_defaults();
-                if let Ok(path) = load_syntax_highlighting_theme() {
-                    let _ = ts.add_from_folder(path);
-                }
-
-                let command_file_extension = cmd.runner_type.get_extension_for_highlighting();
-                let syntax = ss
-                    .find_syntax_by_extension(command_file_extension)
-                    .unwrap_or_else(|| ss.find_syntax_plain_text());
-
-                let theme = &mut ts.themes["OneHalfDark"].clone();
-                let mut lines = vec![];
-                for (index, line) in source_lines.iter().enumerate() {
-                    theme.settings.background = Some(SColor {
-                        r: 94,
-                        g: 120,
-                        b: 200,
-                        // To get bg same as ratatui's background, make the line other than includes command transparent.
-                        a: if (start_index + index) == command_row_index {
-                            50
-                        } else {
-                            0
-                        },
-                    });
-                    // Skip syntax highlighting for lines that cause catastrophic
-                    // backtracking in syntect's Makefile grammar (e.g. nested
-                    // $(eval ... $(shell ...)) constructs).
-                    // For more details, see https://github.com/kyu08/fzf-make/issues/595.
-                    let mut spans: Vec<Span> = if line.contains("$(eval") && line.contains("$(shell") {
-                        if (start_index + index) == command_row_index {
-                            vec![Span::styled(
-                                line.to_string(),
-                                Style::default().bg(Color::Rgb(94, 120, 200)),
-                            )]
-                        } else {
-                            vec![Span::raw(line.to_string())]
-                        }
-                    } else {
-                        let mut h = HighlightLines::new(syntax, theme);
-                        h.highlight_line(line, &ss)
-                            .unwrap()
-                            .into_iter()
-                            .filter_map(|segment| into_span(segment).ok())
-                            .collect()
-                    };
-
-                    // add row number
-                    spans.insert(0, Span::styled(format!("{:5} ", start_index + index + 1), Style::default()));
-
-                    lines.push(Line::from(spans));
-                }
-                lines
-            }
-            _ => vec![],
-        }
+        None => vec![],
     };
 
     let (fg_color_, border_style) = color_and_border_style_for_selectable(
@@ -197,41 +135,6 @@ fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatu
         .title_style(TITLE_STYLE);
     let preview_widget = Paragraph::new(lines).wrap(Wrap { trim: false }).block(block);
     f.render_widget(preview_widget, chunk);
-}
-
-#[derive(RustEmbed)]
-#[folder = "assets"]
-struct Asset;
-fn load_syntax_highlighting_theme() -> Result<PathBuf> {
-    let temp_dir = std::env::temp_dir().join("fzf-make-syntax-highlighting-assets");
-    let version_file = temp_dir.join(".version");
-    let current_version = env!("CARGO_PKG_VERSION");
-
-    let should_extract = if temp_dir.exists() {
-        match fs::read_to_string(&version_file) {
-            // extract is done only once per version
-            Ok(v) => v.trim() != current_version,
-            Err(_) => true,
-        }
-    } else {
-        true
-    };
-
-    if should_extract {
-        if temp_dir.exists() {
-            fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
-        }
-        fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
-
-        let theme_file_name = "OneHalfDark.tmTheme";
-        let path = temp_dir.join(theme_file_name);
-        let content = Asset::get(theme_file_name).context("Failed to get embedded asset")?;
-
-        fs::write(path, content.data).context("Failed to write asset file")?;
-        fs::write(version_file, current_version).context("Failed to write version file")?;
-    }
-
-    Ok(temp_dir)
 }
 
 fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (usize, usize) {
@@ -433,7 +336,6 @@ fn commands_block(
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::time::Duration;
 
     #[test]
     fn test_determine_rendering_position() {
@@ -451,55 +353,5 @@ mod test {
         let (start, end) = determine_rendering_position(10, 1);
         assert_eq!(start, 0);
         assert_eq!(end, 9);
-    }
-
-    const HIGHLIGHT_THRESHOLD: Duration = Duration::from_millis(500);
-    const NORMAL_MAKEFILE_LINES: &[&str] = &[
-        ".PHONY: build",
-        "build:",
-        "\t@cargo build --verbose --release",
-        "test: tool-test",
-        "\trm -rf $(TEST_HISTORY_DIR)",
-        "\tRUST_BACKTRACE=full cargo nextest run",
-    ];
-    const PATHOLOGICAL_LINE: &str = "\t$(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
-    fn load_makefile_syntax() -> (SyntaxSet, syntect::highlighting::Theme) {
-        let ss = SyntaxSet::load_defaults_newlines();
-        let ts = ThemeSet::load_defaults();
-        let theme = ts.themes["base16-ocean.dark"].clone();
-        (ss, theme)
-    }
-
-    #[test]
-    fn highlight_normal_lines_within_threshold() {
-        let (ss, theme) = load_makefile_syntax();
-        let syntax = ss
-            .find_syntax_by_extension("mk")
-            .unwrap_or_else(|| ss.find_syntax_plain_text());
-
-        let start = std::time::Instant::now();
-        for line in NORMAL_MAKEFILE_LINES {
-            let mut h = HighlightLines::new(syntax, &theme);
-            let _ = h.highlight_line(line, &ss);
-        }
-        let elapsed = start.elapsed();
-
-        assert!(
-            elapsed < HIGHLIGHT_THRESHOLD,
-            "Highlighting normal Makefile lines took {elapsed:?}, which exceeds the threshold of {HIGHLIGHT_THRESHOLD:?}",
-        );
-    }
-
-    #[test]
-    fn highlight_pathological_line_with_skip_guard() {
-        let start = std::time::Instant::now();
-        // Reproduce the skip guard logic from render_preview_block.
-        let _spans: Vec<Span> = vec![Span::raw(PATHOLOGICAL_LINE.to_string())];
-        let elapsed = start.elapsed();
-
-        assert!(
-            elapsed < HIGHLIGHT_THRESHOLD,
-            "Highlighting pathological line with skip guard took {elapsed:?}, which exceeds the threshold of {HIGHLIGHT_THRESHOLD:?}",
-        );
     }
 }

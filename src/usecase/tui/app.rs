@@ -1,4 +1,4 @@
-use super::{config, ui::ui};
+use super::{config, highlight::PreviewCache, ui::ui};
 use crate::{
     error::any_to_string,
     file::toml,
@@ -265,6 +265,10 @@ async fn run<'a, B: Backend>(
             s.latest_version = Some(new_version.to_string());
         }
 
+        if let AppState::SelectCommand(s) = &model.app_state {
+            s.load_preview();
+        }
+
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
             return Err(anyhow!(e));
         }
@@ -390,6 +394,7 @@ pub struct SelectCommandState<'a> {
     // the preview pane or the history pane.
     // In the history pane, we don't have file_path and line_number info.
     pub copy_command_state: Option<Result<String, String>>,
+    pub(super) preview_cache: PreviewCache,
 }
 
 impl PartialEq for SelectCommandState<'_> {
@@ -464,7 +469,19 @@ impl SelectCommandState<'_> {
                 additional_arguments_popup_state: None,
                 latest_version: None,
                 copy_command_state: None,
+                preview_cache: PreviewCache::default(),
             })
+        }
+    }
+
+    /// Makes sure the file of the currently selected command is cached for the preview pane.
+    ///
+    /// Reading the file is cheap, but highlighting it is not, so highlighting continues in the
+    /// background and the preview shows unstyled text until it finishes.
+    pub(super) fn load_preview(&self) {
+        if let Some(command) = self.selected_command() {
+            self.preview_cache
+                .load(&command.file_path, command.runner_type.get_extension_for_highlighting());
         }
     }
 
@@ -779,6 +796,7 @@ impl SelectCommandState<'_> {
             additional_arguments_popup_state: None,
             latest_version: None,
             copy_command_state: None,
+            preview_cache: PreviewCache::default(),
         }
     }
 }
