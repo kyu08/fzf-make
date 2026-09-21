@@ -31,7 +31,7 @@ impl RunnerType {
         None
     }
 
-    pub fn get_extension_for_highlighting(&self) -> &str {
+    pub fn get_extension_for_highlighting(&self) -> &'static str {
         match self {
             RunnerType::Make => "mk",
             // HACK: If `just` is passed to syntect, it will be highlighted as just a plain text.

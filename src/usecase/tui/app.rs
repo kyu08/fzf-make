@@ -1,4 +1,4 @@
-use super::{config, ui::ui};
+use super::{config, highlight::PreviewCache, ui::ui};
 use crate::{
     error::any_to_string,
     file::toml,
@@ -265,10 +265,22 @@ async fn run<'a, B: Backend>(
             s.latest_version = Some(new_version.to_string());
         }
 
+        if let AppState::SelectCommand(s) = &model.app_state {
+            s.load_preview();
+        }
+
         if let Err(e) = terminal.draw(|f| ui(f, model)) {
             return Err(anyhow!(e));
         }
-        match handle_event(model) {
+
+        // Redraw at frame rate while the preview is still gaining color, so the result of the
+        // background highlighting shows up as soon as it is ready. Waiting for the idle timeout
+        // would leave the preview unstyled for up to half a second after it was already computed.
+        let timeout = match &model.app_state {
+            AppState::SelectCommand(s) if s.preview_cache.is_highlighting() => FRAME_POLL_TIMEOUT,
+            _ => IDLE_POLL_TIMEOUT,
+        };
+        match handle_event(model, timeout) {
             Ok(message) => {
                 update(model, message);
                 match model.should_quit() {
@@ -333,9 +345,18 @@ enum Message {
     CopyCommandToClipboard,
 }
 
+/// How long the draw loop waits for input when nothing else is going to change the screen.
+const IDLE_POLL_TIMEOUT: Duration = Duration::from_millis(500);
+/// How long it waits while background work is still changing the screen.
+///
+/// The loop only redraws once the wait returns, so this is the worst-case delay before the
+/// highlighted preview shows up. 16ms is one frame at 60Hz: a conventional default, not a measured
+/// one. A longer wait such as 33ms would probably look the same and halve the redraws.
+const FRAME_POLL_TIMEOUT: Duration = Duration::from_millis(16);
+
 // TODO: make this method Model's method
-fn handle_event(model: &Model) -> io::Result<Option<Message>> {
-    if crossterm::event::poll(std::time::Duration::from_millis(500))? {
+fn handle_event(model: &Model, timeout: Duration) -> io::Result<Option<Message>> {
+    if crossterm::event::poll(timeout)? {
         match crossterm::event::read()? {
             crossterm::event::Event::Key(key) if key.kind == KeyEventKind::Press => Ok(model.handle_key_input(key)),
             _ => Ok(None),
@@ -390,6 +411,7 @@ pub struct SelectCommandState<'a> {
     // the preview pane or the history pane.
     // In the history pane, we don't have file_path and line_number info.
     pub copy_command_state: Option<Result<String, String>>,
+    pub(super) preview_cache: PreviewCache,
 }
 
 impl PartialEq for SelectCommandState<'_> {
@@ -464,7 +486,19 @@ impl SelectCommandState<'_> {
                 additional_arguments_popup_state: None,
                 latest_version: None,
                 copy_command_state: None,
+                preview_cache: PreviewCache::default(),
             })
+        }
+    }
+
+    /// Makes sure the file of the currently selected command is cached for the preview pane.
+    ///
+    /// Reading the file is cheap, but highlighting it is not, so highlighting continues in the
+    /// background and the preview shows unstyled text until it finishes.
+    pub(super) fn load_preview(&self) {
+        if let Some(command) = self.selected_command() {
+            self.preview_cache
+                .load(&command.file_path, command.runner_type.get_extension_for_highlighting());
         }
     }
 
@@ -779,6 +813,7 @@ impl SelectCommandState<'_> {
             additional_arguments_popup_state: None,
             latest_version: None,
             copy_command_state: None,
+            preview_cache: PreviewCache::default(),
         }
     }
 }
