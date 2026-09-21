@@ -5,7 +5,10 @@ use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, OnceLock},
+    sync::{
+        Arc, Mutex, OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
 };
 use syntect::{
@@ -47,9 +50,24 @@ struct PreviewFile {
 ///
 /// The in-memory cache is never purged till quitting fzf-make, so edits made to a file while fzf-make is running are not
 /// reflected in the preview.
-#[derive(Debug, Clone, Default)]
+///
+/// Deliberately not `Clone`: dropping the cache cancels the background work, so a second owner
+/// would make the cancellation fire while a task is still running.
+#[derive(Debug, Default)]
 pub struct PreviewCache {
     files: Arc<Mutex<HashMap<PathBuf, PreviewFile>>>,
+    cancelled: Arc<AtomicBool>,
+}
+
+impl Drop for PreviewCache {
+    /// Stops the background highlighting.
+    ///
+    /// `#[tokio::main]` waits for every running blocking task before the process exits, so a
+    /// highlight that is still in flight delays the exit even though the TUI has already shut
+    /// down. Cancelling here bounds that wait to the line being highlighted right now.
+    fn drop(&mut self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+    }
 }
 
 impl PreviewCache {
@@ -82,9 +100,10 @@ impl PreviewCache {
         };
 
         let files = self.files.clone();
+        let cancelled = self.cancelled.clone();
         let path = path.to_path_buf();
         let highlight = move || {
-            let highlighted = highlight_lines(&lines, extension);
+            let highlighted = highlight_lines(&lines, extension, &cancelled);
             if let Ok(mut files) = files.lock()
                 && let Some(file) = files.get_mut(&path)
             {
@@ -140,7 +159,7 @@ impl PreviewCache {
 /// previous lines skips it for every recipe line. Highlighting such a file line by line, with a
 /// fresh highlighter per line, took ~680ms; carrying the state takes ~3ms.
 /// See https://github.com/kyu08/fzf-make/issues/595.
-fn highlight_lines(lines: &[String], extension: &str) -> Vec<StyledLine> {
+fn highlight_lines(lines: &[String], extension: &str, cancelled: &AtomicBool) -> Vec<StyledLine> {
     let syntax_set = syntax_set();
     let syntax = syntax_set
         .find_syntax_by_extension(extension)
@@ -151,8 +170,9 @@ fn highlight_lines(lines: &[String], extension: &str) -> Vec<StyledLine> {
     let mut result: Vec<StyledLine> = Vec::with_capacity(lines.len());
     for line in lines {
         // A pathological line placed before any context is established still costs hundreds of
-        // milliseconds, so give up on the rest of the file once the budget is spent.
-        if HIGHLIGHT_TIME_BUDGET < started.elapsed() {
+        // milliseconds, so give up on the rest of the file once the budget is spent, or as soon
+        // as the cache is dropped because fzf-make is exiting.
+        if HIGHLIGHT_TIME_BUDGET < started.elapsed() || cancelled.load(Ordering::Relaxed) {
             result.extend(lines[result.len()..].iter().map(|line| plain(line)));
             break;
         }
@@ -246,6 +266,11 @@ mod test {
 
     const PATHOLOGICAL_LINE: &str = "    $(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
 
+    /// Highlights without ever cancelling.
+    fn highlight_all(lines: &[String], extension: &str) -> Vec<StyledLine> {
+        highlight_lines(lines, extension, &AtomicBool::new(false))
+    }
+
     /// Guards against a regression where the preview lost all of its colour, which is what
     /// happened while the pathological lines were worked around by skipping the highlighter.
     #[test]
@@ -260,7 +285,7 @@ mod test {
         .map(|l| l.to_string())
         .collect::<Vec<_>>();
 
-        let styles: Vec<Style> = highlight_lines(&lines, "mk")
+        let styles: Vec<Style> = highlight_all(&lines, "mk")
             .into_iter()
             .flatten()
             .map(|(style, _)| style)
@@ -304,7 +329,7 @@ mod test {
         ];
 
         for case in cases {
-            assert_eq!(case.lines.len(), highlight_lines(&case.lines, "mk").len(), "\nFailed: 🚨{:?}🚨\n", case.title,);
+            assert_eq!(case.lines.len(), highlight_all(&case.lines, "mk").len(), "\nFailed: 🚨{:?}🚨\n", case.title,);
         }
     }
 
@@ -312,7 +337,7 @@ mod test {
     fn highlight_lines_concatenates_back_to_the_source_line() {
         let lines = vec!["deploy:".to_string(), PATHOLOGICAL_LINE.to_string()];
 
-        for (styled, source) in highlight_lines(&lines, "mk").iter().zip(lines.iter()) {
+        for (styled, source) in highlight_all(&lines, "mk").iter().zip(lines.iter()) {
             let concatenated: String = styled.iter().map(|(_, content)| content.as_str()).collect();
             assert_eq!(source.trim_end(), concatenated.trim_end());
         }
@@ -324,7 +349,7 @@ mod test {
         let lines = vec![PATHOLOGICAL_LINE.to_string(); 30];
 
         let started = Instant::now();
-        let highlighted = highlight_lines(&lines, "mk");
+        let highlighted = highlight_all(&lines, "mk");
         let elapsed = started.elapsed();
 
         assert_eq!(lines.len(), highlighted.len());
@@ -332,6 +357,32 @@ mod test {
             elapsed < HIGHLIGHT_TIME_BUDGET * 3,
             "Highlighting took {elapsed:?}, which is far beyond the budget of {HIGHLIGHT_TIME_BUDGET:?}",
         );
+    }
+
+    #[test]
+    fn highlight_lines_stops_as_soon_as_it_is_cancelled() {
+        // Every line is pathological, so without cancellation this takes seconds.
+        let lines = vec![PATHOLOGICAL_LINE.to_string(); 30];
+
+        let started = Instant::now();
+        let highlighted = highlight_lines(&lines, "mk", &AtomicBool::new(true));
+        let elapsed = started.elapsed();
+
+        assert_eq!(lines.len(), highlighted.len());
+        assert!(
+            elapsed < Duration::from_millis(100),
+            "Cancelled highlighting took {elapsed:?}, so it did not stop at the first line",
+        );
+    }
+
+    #[test]
+    fn dropping_the_cache_cancels_the_background_work() {
+        let cache = PreviewCache::default();
+        let cancelled = cache.cancelled.clone();
+
+        assert!(!cancelled.load(Ordering::Relaxed));
+        drop(cache);
+        assert!(cancelled.load(Ordering::Relaxed));
     }
 
     #[test]
