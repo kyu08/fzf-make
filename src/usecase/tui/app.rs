@@ -8,7 +8,7 @@ use crate::{
         js_package_manager::js_package_manager_main as js,
         just::just_main::Just,
         make::make_main::Make,
-        runner::{self, Runner},
+        runner::Runner,
         runner_type,
         task::task_main::Task,
     },
@@ -168,7 +168,7 @@ impl Model<'_> {
         vec![]
     }
 
-    fn transition_to_selected_command_state(&mut self, runner: runner::Runner, command: command::CommandForExec) {
+    fn transition_to_selected_command_state(&mut self, runner: Box<dyn Runner>, command: command::CommandForExec) {
         self.app_state = AppState::SelectedCommand(SelectedCommandState::new(runner, command));
     }
 
@@ -190,7 +190,7 @@ impl Model<'_> {
         matches!(self.app_state, AppState::SelectedCommand(_))
     }
 
-    pub(super) fn command_to_execute(&self) -> Option<(runner::Runner, command::CommandForExec)> {
+    pub(super) fn command_to_execute(&self) -> Option<(Box<dyn Runner>, command::CommandForExec)> {
         match &self.app_state {
             AppState::SelectedCommand(command) => {
                 let command = command.clone();
@@ -261,7 +261,7 @@ const VERSION_KEY: &str = "version";
 async fn run<'a, B: Backend>(
     terminal: &mut Terminal<B>,
     model: &'a mut Model<'a>,
-) -> Result<Option<(runner::Runner, command::CommandForExec)>> {
+) -> Result<Option<(Box<dyn Runner>, command::CommandForExec)>> {
     let shared_version_hash_map = Arc::new(Mutex::new(HashMap::new()));
 
     let cloned_hash_map = shared_version_hash_map.clone();
@@ -384,7 +384,7 @@ pub(super) fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
             Some(Message::ExecuteCommand(command)) => {
                 s.store_history(command.clone());
-                if let Some(r) = command.runner_type.to_runner(&s.runners) {
+                if let Some(r) = s.get_runner(&command.runner_type) {
                     model.transition_to_selected_command_state(r, command);
                 }
             }
@@ -408,7 +408,7 @@ pub(super) fn update(model: &mut Model, message: Option<Message>) {
 pub struct SelectingCommandState<'a> {
     pub current_dir: PathBuf,
     pub current_pane: CurrentPane,
-    pub runners: Vec<runner::Runner>,
+    pub runners: Vec<Box<dyn Runner>>,
     pub search_text_area: TextArea_<'a>,
     pub commands_list_state: ListState,
     pub history: Vec<histories::HistoryCommand>,
@@ -436,7 +436,7 @@ impl PartialEq for SelectingCommandState<'_> {
         let mut runner = false;
         for (i, r) in self.runners.iter().enumerate() {
             let other = other.runners.get(i).unwrap();
-            if r.path() == other.path() && r.list_commands() == other.list_commands() {
+            if r.path() == other.path() && r.to_commands() == other.to_commands() {
                 runner = true;
             } else {
                 runner = false;
@@ -456,19 +456,19 @@ impl SelectingCommandState<'_> {
         };
 
         let runners = {
-            let mut runners = vec![];
+            let mut runners: Vec<Box<dyn Runner>> = vec![];
 
             if let Ok(f) = Make::new(current_dir.clone()) {
-                runners.push(Runner::MakeCommand(f));
+                runners.push(Box::new(f));
             };
             if let Some(js_package_manager) = js::get_js_package_manager_runner(current_dir.clone()) {
-                runners.push(Runner::JsPackageManager(js_package_manager));
+                runners.push(Box::new(js_package_manager));
             };
             if let Ok(just) = Just::new(current_dir.clone()) {
-                runners.push(Runner::Just(just));
+                runners.push(Box::new(just));
             };
             if let Ok(task) = Task::new(current_dir.clone()) {
-                runners.push(Runner::Task(task));
+                runners.push(Box::new(task));
             };
             runners
         };
@@ -542,7 +542,7 @@ impl SelectingCommandState<'_> {
         let commands = {
             let mut commands: Vec<command::CommandWithPreview> = Vec::new();
             for runner in &self.runners {
-                commands = [commands, runner.list_commands()].concat();
+                commands = [commands, runner.to_commands()].concat();
             }
             commands
         };
@@ -749,42 +749,8 @@ impl SelectingCommandState<'_> {
         self.history.first()
     }
 
-    pub fn get_runner(&self, runner_type: &runner_type::RunnerType) -> Option<runner::Runner> {
-        for runner in &self.runners {
-            match (runner_type, runner) {
-                (runner_type::RunnerType::Make, runner::Runner::MakeCommand(_))
-                | (runner_type::RunnerType::Just, runner::Runner::Just(_))
-                | (runner_type::RunnerType::Task, runner::Runner::Task(_)) => {
-                    return Some(runner.clone());
-                }
-                (
-                    runner_type::RunnerType::JsPackageManager(runner_type_js),
-                    runner::Runner::JsPackageManager(runner_js),
-                ) => match (runner_type_js, runner_js) {
-                    (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsNpm(_)) => {
-                        return Some(runner.clone());
-                    }
-
-                    (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsPnpm(_)) => {
-                        return Some(runner.clone());
-                    }
-
-                    (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsYarn(_)) => {
-                        return Some(runner.clone());
-                    }
-
-                    // _ patterns. To prevent omission of corrections, _ is not used.
-                    (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsPnpm(_))
-                    | (runner_type::JsPackageManager::Npm, js::JsPackageManager::JsYarn(_))
-                    | (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsNpm(_))
-                    | (runner_type::JsPackageManager::Pnpm, js::JsPackageManager::JsYarn(_))
-                    | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsNpm(_))
-                    | (runner_type::JsPackageManager::Yarn, js::JsPackageManager::JsPnpm(_)) => return None,
-                },
-                _ => continue,
-            }
-        }
-        None
+    pub fn get_runner(&self, runner_type: &runner_type::RunnerType) -> Option<Box<dyn Runner>> {
+        self.runners.iter().find(|r| r.runner_type() == *runner_type).cloned()
     }
 
     pub fn is_additional_arguments_popup_opened(&self) -> bool {
@@ -798,7 +764,7 @@ impl SelectingCommandState<'_> {
         SelectingCommandState {
             current_dir: env::current_dir().unwrap(),
             current_pane: CurrentPane::Main,
-            runners: vec![runner::Runner::MakeCommand(Make::new_for_test())],
+            runners: vec![Box::new(Make::new_for_test())],
             search_text_area: TextArea_(TextArea::default()),
             commands_list_state: ListState::with_selected(ListState::default(), Some(0)),
             history: vec![
@@ -848,16 +814,22 @@ impl AdditionalWindowState<'_> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct SelectedCommandState {
     /// It is possible to have one concrete type like Command struct here.
     /// But from the perspective of simpleness of code base, this field has trait object.
-    executor: runner::Runner,
+    executor: Box<dyn Runner>,
     command: command::CommandForExec,
 }
 
+impl PartialEq for SelectedCommandState {
+    fn eq(&self, other: &Self) -> bool {
+        *self.executor == *other.executor && self.command == other.command
+    }
+}
+
 impl SelectedCommandState {
-    fn new(executor: runner::Runner, command: command::CommandForExec) -> Self {
+    fn new(executor: Box<dyn Runner>, command: command::CommandForExec) -> Self {
         SelectedCommandState { executor, command }
     }
 }
@@ -900,7 +872,7 @@ mod test {
         let mut state = SelectingCommandState::new_for_test();
         state
             .runners
-            .push(runner::Runner::Just(Just::new(PathBuf::from("test_data/just")).unwrap()));
+            .push(Box::new(Just::new(PathBuf::from("test_data/just")).unwrap()));
 
         struct Case {
             title: &'static str,
@@ -933,9 +905,7 @@ mod test {
         for case in cases {
             assert_eq!(
                 case.expect,
-                state
-                    .get_runner(&case.runner_type)
-                    .map(|r| runner_type::RunnerType::from(r.clone())),
+                state.get_runner(&case.runner_type).map(|r| r.runner_type()),
                 "\nfailed: \u{1f6a8}{:?}\u{1f6a8}\n",
                 case.title,
             );
@@ -1118,7 +1088,7 @@ mod test {
                 })),
                 expect_model: Model {
                     app_state: AppState::SelectedCommand(SelectedCommandState::new(
-                        runner::Runner::MakeCommand(Make::new_for_test()),
+                        Box::new(Make::new_for_test()),
                         command::CommandForExec {
                             runner_type: runner_type::RunnerType::Make,
                             args: "target0".to_string(),
@@ -1141,7 +1111,7 @@ mod test {
                 })),
                 expect_model: Model {
                     app_state: AppState::SelectedCommand(SelectedCommandState::new(
-                        runner::Runner::MakeCommand(Make::new_for_test()),
+                        Box::new(Make::new_for_test()),
                         command::CommandForExec {
                             runner_type: runner_type::RunnerType::Make,
                             args: "history1".to_string(),

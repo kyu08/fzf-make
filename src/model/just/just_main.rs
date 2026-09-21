@@ -1,13 +1,13 @@
 use crate::model::{
     command::{self, CommandWithPreview},
     file_util,
+    runner::Runner,
     runner_type::RunnerType,
 };
 use anyhow::{Result, anyhow, bail};
 use std::{
     fs::{self},
     path::PathBuf,
-    process,
 };
 use tree_sitter::Parser;
 
@@ -38,21 +38,20 @@ struct PossiblePaths {
     child: Vec<PathBuf>,
 }
 
-impl Just {
-    pub fn new(current_dir: PathBuf) -> Result<Just> {
-        let justfile_path = match Just::find_justfile(current_dir.clone()) {
-            Some(path) => path,
-            None => bail!("justfile not found"),
-        };
-        let source_code = fs::read_to_string(&justfile_path)?;
-
-        match Just::parse_justfile(current_dir, justfile_path.clone(), source_code) {
-            Some(c) => Ok(c),
-            None => Err(anyhow!("failed to parse justfile")),
-        }
+impl Runner for Just {
+    fn runner_type(&self) -> RunnerType {
+        RunnerType::Just
     }
 
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
+    fn program(&self) -> &'static str {
+        "just"
+    }
+
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         let mut result = self.commands.clone();
 
         // Add commands from modules with module name prefix (recursively)
@@ -72,26 +71,22 @@ impl Just {
         result
     }
 
-    pub fn path(&self) -> PathBuf {
-        self.path.clone()
+    fn clone_box(&self) -> Box<dyn Runner> {
+        Box::new(self.clone())
     }
+}
 
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String, anyhow::Error> {
-        Ok(format!("just {}", command.args))
-    }
+impl Just {
+    pub fn new(current_dir: PathBuf) -> Result<Just> {
+        let justfile_path = match Just::find_justfile(current_dir.clone()) {
+            Some(path) => path,
+            None => bail!("justfile not found"),
+        };
+        let source_code = fs::read_to_string(&justfile_path)?;
 
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<(), anyhow::Error> {
-        let child = process::Command::new("just")
-            .stdin(process::Stdio::inherit())
-            .args(command.args.split_whitespace())
-            .spawn();
-
-        match child {
-            Ok(mut child) => match child.wait() {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow!("failed to run: {}", e)),
-            },
-            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
+        match Just::parse_justfile(current_dir, justfile_path.clone(), source_code) {
+            Some(c) => Ok(c),
+            None => Err(anyhow!("failed to parse justfile")),
         }
     }
 
