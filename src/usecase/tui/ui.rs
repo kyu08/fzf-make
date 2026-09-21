@@ -1,4 +1,4 @@
-use super::app::{AppState, CurrentPane, Model, SelectCommandState};
+use super::app::{AppState, CurrentPane, Model, SelectingCommandState};
 use crate::model::command;
 use ratatui::{
     Frame,
@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
-    if let AppState::SelectCommand(model) = &mut model.app_state {
+    if let AppState::SelectingCommand(model) = &mut model.app_state {
         let main_and_key_bindings = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(3), Constraint::Length(1)])
@@ -86,7 +86,7 @@ fn color_and_border_style_for_selectable(
     }
 }
 
-fn render_preview_block(model: &SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_preview_block(model: &SelectingCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let narrow_down_commands = model.narrow_down_commands();
     let selecting_command = narrow_down_commands.get(model.commands_list_state.selected().unwrap_or(0));
 
@@ -153,7 +153,7 @@ fn determine_rendering_position(row_count: usize, command_row_index: usize) -> (
     }
 }
 
-fn render_commands_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_commands_block(model: &mut SelectingCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
         commands_block(
             " 📢 Commands ",
@@ -167,7 +167,7 @@ fn render_commands_block(model: &mut SelectCommandState, f: &mut Frame, chunk: r
     );
 }
 
-fn render_input_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_input_block(model: &mut SelectingCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let (fg_color, border_style) = color_and_border_style_for_selectable(
         model.current_pane.is_main(),
         model.is_additional_arguments_popup_opened(),
@@ -191,7 +191,7 @@ fn render_input_block(model: &mut SelectCommandState, f: &mut Frame, chunk: rata
     f.render_widget(&model.search_text_area.0, chunk);
 }
 
-fn render_notification_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_notification_block(model: &mut SelectingCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let text = {
         if let Some(s) = &model.copy_command_state {
             match s {
@@ -237,7 +237,7 @@ fn render_current_version_block(f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_widget(key_notes_footer, chunk);
 }
 
-fn render_history_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_history_block(model: &mut SelectingCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     f.render_stateful_widget(
         commands_block(
             " 📚 History ",
@@ -260,7 +260,7 @@ fn popup_area(area: Rect, x: u16, y: u16) -> Rect {
     area
 }
 
-fn render_additional_arguments_popup(model: &mut SelectCommandState, f: &mut Frame) {
+fn render_additional_arguments_popup(model: &mut SelectingCommandState, f: &mut Frame) {
     if model.additional_arguments_popup_state.is_none() {
         return;
     }
@@ -282,7 +282,7 @@ fn render_additional_arguments_popup(model: &mut SelectCommandState, f: &mut Fra
     f.render_widget(&additional_arguments_popup_state.arguments_text_area.0, area);
 }
 
-fn render_hint_block(model: &mut SelectCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
+fn render_hint_block(model: &mut SelectingCommandState, f: &mut Frame, chunk: ratatui::layout::Rect) {
     let hint_text = if model.is_additional_arguments_popup_opened() {
         "Execute the selected command: <enter> | Passing additional arguments: (type any character) | Close the popup window: <esc>"
     } else {
