@@ -7,9 +7,6 @@
   "schedule": [
     "before 4am on the first day of the month"
   ],
-  "reviewers": [
-    "kyu08"
-  ],
   "ignorePaths": [
     "./test_data/**"
   ]
