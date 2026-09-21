@@ -7,12 +7,18 @@ run:
 	@RUST_BACKTRACE=full cargo run
 
 .PHONY: tools
-tools: tool-test tool-bump-version tool-spell-check tool-fmt-toml
+tools: tool-test tool-bump-version tool-spell-check tool-fmt-toml tool-review-snapshots
 
 .PHONY: tool-test
 tool-test:
 	@if ! which cargo-nextest > /dev/null; then \
 		cargo install --locked cargo-nextest --version 0.9.72; \
+	fi
+
+.PHONY: tool-review-snapshots
+tool-review-snapshots:
+	@if ! which cargo-insta > /dev/null; then \
+		cargo install --locked cargo-insta --version 1.48.0; \
 	fi
 
 .PHONY: tool-bump-version
@@ -107,6 +113,11 @@ bump-fzf-make-version: tool-bump-version
 .PHONY: spell-check
 spell-check: tool-spell-check
 	typos
+
+# Accept or reject the screens the scenario tests rendered after an intentional UI change.
+.PHONY: review-snapshots
+review-snapshots: tool-review-snapshots
+	cargo insta review
 
 .PHONY: detect-unused-dependencies
 detect-unused-dependencies: tool-detect-unused-dependencies
