@@ -6,6 +6,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     sync::{Arc, Mutex, OnceLock},
+    time::{Duration, Instant},
 };
 use syntect::{
     easy::HighlightLines,
@@ -14,75 +15,131 @@ use syntect::{
 };
 use syntect_tui::into_span;
 
+/// Upper bound of the time spent highlighting a single file.
+///
+/// Highlighting runs in a background thread, so exceeding this budget never blocks the TUI.
+/// The budget only exists to stop burning CPU on a file whose every line is pathological.
+const HIGHLIGHT_TIME_BUDGET: Duration = Duration::from_millis(1000);
+
 /// A source line split into styled fragments.
 pub type StyledLine = Vec<(Style, String)>;
 
+#[derive(Debug, Clone, PartialEq)]
+enum Highlight {
+    /// Highlighting is still running in the background.
+    InProgress,
+    /// `lines[i]` holds the styled fragments of source line `i`.
+    Done(Vec<StyledLine>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct PreviewFile {
+    /// Source lines with tabs expanded.
+    lines: Vec<String>,
+    highlight: Highlight,
+}
+
 /// Holds the syntax highlighting result of every file shown in the preview pane.
 ///
-/// A file is read and highlighted once, on the first draw that needs it, and the result is reused
-/// for every later draw. Before this cache existed, the preview re-read the file, reloaded
-/// syntect's syntax and theme definitions, and re-highlighted every visible line on every draw,
-/// which meant on every key press.
+/// A file is read and highlighted once, on the first draw that needs it, and the result is
+/// reused for every later draw. Without this, the preview was re-read and re-highlighted on
+/// every key press and it makes whole performance worse.
 ///
-/// The cache is never invalidated, so edits made to a file while fzf-make is running are not
+/// The in-memory cache is never purged till quitting fzf-make, so edits made to a file while fzf-make is running are not
 /// reflected in the preview.
 #[derive(Debug, Clone, Default)]
 pub struct PreviewCache {
-    files: Arc<Mutex<HashMap<PathBuf, Vec<StyledLine>>>>,
+    files: Arc<Mutex<HashMap<PathBuf, PreviewFile>>>,
 }
 
 impl PreviewCache {
-    /// Reads `path` and highlights it. Does nothing if `path` is already cached, so this is safe
-    /// to call on every draw.
+    /// Reads `path` and starts highlighting it in the background. Returns immediately.
+    ///
+    /// Does nothing if `path` is already cached, so this is safe to call on every draw.
     pub fn load(&self, path: &Path, extension: &'static str) {
-        let mut files = match self.files.lock() {
-            Ok(files) => files,
-            Err(_) => return,
+        let lines = {
+            let mut files = match self.files.lock() {
+                Ok(files) => files,
+                Err(_) => return,
+            };
+            if files.contains_key(path) {
+                return;
+            }
+            // HACK: tabs are expanded here as a workaround for
+            // https://github.com/ratatui/ratatui/issues/876
+            let lines: Vec<String> = match fs::read_to_string(path) {
+                Ok(content) => content.lines().map(|line| line.replace('\t', "    ")).collect(),
+                Err(_) => return,
+            };
+            files.insert(
+                path.to_path_buf(),
+                PreviewFile {
+                    lines: lines.clone(),
+                    highlight: Highlight::InProgress,
+                },
+            );
+            lines
         };
-        if files.contains_key(path) {
-            return;
-        }
 
-        // HACK: tabs are expanded here as a workaround for
-        // https://github.com/ratatui/ratatui/issues/876
-        let lines: Vec<String> = match fs::read_to_string(path) {
-            Ok(content) => content.lines().map(|line| line.replace('\t', "    ")).collect(),
-            Err(_) => return,
+        let files = self.files.clone();
+        let path = path.to_path_buf();
+        let highlight = move || {
+            let highlighted = highlight_lines(&lines, extension);
+            if let Ok(mut files) = files.lock()
+                && let Some(file) = files.get_mut(&path)
+            {
+                file.highlight = Highlight::Done(highlighted);
+            }
         };
-        files.insert(path.to_path_buf(), highlight_lines(&lines, extension));
+
+        // Highlighting a single line can take hundreds of milliseconds, so it must not run on
+        // the thread that draws the TUI. Outside a tokio runtime (tests) it runs inline.
+        match tokio::runtime::Handle::try_current() {
+            Ok(_) => {
+                tokio::task::spawn_blocking(highlight);
+            }
+            Err(_) => highlight(),
+        }
     }
 
     /// Returns the styled fragments of lines `start_index..=end_index` of `path`.
+    ///
+    /// Lines whose highlighting has not finished yet are returned unstyled, so the preview shows
+    /// the file content immediately and gains colour once the background work completes.
     pub fn styled_lines(&self, path: &Path, start_index: usize, end_index: usize) -> Vec<StyledLine> {
         let files = match self.files.lock() {
             Ok(files) => files,
             Err(_) => return vec![],
         };
-        let lines = match files.get(path) {
-            Some(lines) => lines,
+        let file = match files.get(path) {
+            Some(file) => file,
             None => return vec![],
         };
 
-        if lines.len() <= start_index {
+        let end_index = end_index.min(file.lines.len().saturating_sub(1));
+        if file.lines.is_empty() || file.lines.len() <= start_index {
             return vec![];
         }
-        lines[start_index..=end_index.min(lines.len() - 1)].to_vec()
+
+        match &file.highlight {
+            Highlight::Done(highlighted) => highlighted[start_index..=end_index].to_vec(),
+            Highlight::InProgress => file.lines[start_index..=end_index]
+                .iter()
+                .map(|line| vec![(Style::default(), line.clone())])
+                .collect(),
+        }
     }
 }
 
 /// Highlights every line of a file with a single stateful highlighter.
 ///
-/// Reusing one `HighlightLines` across the whole file is what keeps this fast, and it is the fix
-/// for https://github.com/kyu08/fzf-make/issues/595. syntect's Makefile grammar recognises a
-/// target definition with a deeply nested regex, and a line such as `$(eval X := $(shell ...))`
-/// makes that regex backtrack catastrophically. The grammar only attempts it while the parser sits
-/// in the root context, so carrying the parse state over from the preceding lines skips it
-/// entirely for every line inside a recipe. Highlighting this repository's own Makefile with a
-/// fresh highlighter per line took ~680ms; carrying the state takes ~3ms.
-///
-/// Carrying the state is also what syntect expects: a fresh highlighter cannot see that a line
-/// belongs to a recipe, a `define` block or a continued line, so it used to colour those lines as
-/// if each of them started a new file.
+/// Reusing one `HighlightLines` across the whole file is what keeps this fast. syntect's Makefile
+/// grammar matches a target definition with a deeply nested regex, and a line such as
+/// `$(eval X := $(shell ...))` makes that regex backtrack catastrophically. The grammar only
+/// attempts it while the parser sits in the root context, so carrying the parse state from the
+/// previous lines skips it for every recipe line. Highlighting such a file line by line, with a
+/// fresh highlighter per line, took ~680ms; carrying the state takes ~3ms.
+/// See https://github.com/kyu08/fzf-make/issues/595.
 fn highlight_lines(lines: &[String], extension: &str) -> Vec<StyledLine> {
     let syntax_set = syntax_set();
     let syntax = syntax_set
@@ -90,17 +147,26 @@ fn highlight_lines(lines: &[String], extension: &str) -> Vec<StyledLine> {
         .unwrap_or_else(|| syntax_set.find_syntax_plain_text());
     let mut highlighter = HighlightLines::new(syntax, theme());
 
-    lines
-        .iter()
-        .map(|line| match highlighter.highlight_line(line, syntax_set) {
+    let started = Instant::now();
+    let mut result: Vec<StyledLine> = Vec::with_capacity(lines.len());
+    for line in lines {
+        // A pathological line placed before any context is established still costs hundreds of
+        // milliseconds, so give up on the rest of the file once the budget is spent.
+        if HIGHLIGHT_TIME_BUDGET < started.elapsed() {
+            result.extend(lines[result.len()..].iter().map(|line| plain(line)));
+            break;
+        }
+
+        result.push(match highlighter.highlight_line(line, syntax_set) {
             Ok(segments) => segments
                 .into_iter()
                 .filter_map(|segment| into_span(segment).ok())
                 .map(|span| (span.style, span.content.into_owned()))
                 .collect(),
             Err(_) => plain(line),
-        })
-        .collect()
+        });
+    }
+    result
 }
 
 fn plain(line: &str) -> StyledLine {
@@ -125,7 +191,7 @@ fn theme() -> &'static Theme {
             .get("OneHalfDark")
             .unwrap_or(&theme_set.themes["base16-ocean.dark"])
             .clone();
-        // Make the background transparent so that the preview keeps ratatui's background.
+        // Make the background transparent so the preview keeps ratatui's background.
         // The background of the row that defines the selected command is applied when rendering.
         theme.settings.background = Some(SColor {
             r: 94,
@@ -180,8 +246,8 @@ mod test {
 
     const PATHOLOGICAL_LINE: &str = "    $(eval RESOLVED_TARGETS := $(shell bash resolve.sh $(DEPENDENCY_SERVICES)))";
 
-    /// Guards against a regression where the preview lost all of its colour, which is what the
-    /// preview looked like while these lines were worked around by skipping the highlighter.
+    /// Guards against a regression where the preview lost all of its colour, which is what
+    /// happened while the pathological lines were worked around by skipping the highlighter.
     #[test]
     fn highlight_lines_actually_applies_more_than_one_style() {
         let lines = [
@@ -250,6 +316,22 @@ mod test {
             let concatenated: String = styled.iter().map(|(_, content)| content.as_str()).collect();
             assert_eq!(source.trim_end(), concatenated.trim_end());
         }
+    }
+
+    #[test]
+    fn highlight_lines_stays_within_the_time_budget() {
+        // Every line is pathological, so the budget is what stops the loop.
+        let lines = vec![PATHOLOGICAL_LINE.to_string(); 30];
+
+        let started = Instant::now();
+        let highlighted = highlight_lines(&lines, "mk");
+        let elapsed = started.elapsed();
+
+        assert_eq!(lines.len(), highlighted.len());
+        assert!(
+            elapsed < HIGHLIGHT_TIME_BUDGET * 3,
+            "Highlighting took {elapsed:?}, which is far beyond the budget of {HIGHLIGHT_TIME_BUDGET:?}",
+        );
     }
 
     #[test]
