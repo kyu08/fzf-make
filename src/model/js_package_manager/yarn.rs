@@ -1,7 +1,7 @@
 use super::js_package_manager_main as js;
 use crate::{
     file::path_to_content,
-    model::{command, runner_type},
+    model::{command, runner::Runner, runner_type},
 };
 use anyhow::{Result, anyhow};
 use std::{path::PathBuf, process};
@@ -10,7 +10,7 @@ const YARN_LOCKFILE_NAME: &str = "yarn.lock";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Yarn {
-    pub path: PathBuf,
+    path: PathBuf,
     commands: Vec<command::CommandWithPreview>,
 }
 
@@ -19,26 +19,29 @@ enum YarnVersion {
     V2OrLater,
 }
 
+impl Runner for Yarn {
+    fn runner_type(&self) -> runner_type::RunnerType {
+        runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn)
+    }
+
+    fn program(&self) -> &'static str {
+        "yarn"
+    }
+
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview> {
+        self.commands.clone()
+    }
+
+    fn clone_box(&self) -> Box<dyn Runner> {
+        Box::new(self.clone())
+    }
+}
+
 impl Yarn {
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
-        Ok(format!("yarn {}", command.args))
-    }
-
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
-        let child = process::Command::new("yarn")
-            .stdin(process::Stdio::inherit())
-            .args(command.args.split_whitespace().collect::<Vec<&str>>())
-            .spawn();
-
-        match child {
-            Ok(mut child) => match child.wait() {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow!("failed to run: {}", e)),
-            },
-            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
-        }
-    }
-
     pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Yarn> {
         Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME)?;
         if Iterator::find(&mut cwd_file_names.iter(), |&f| f == YARN_LOCKFILE_NAME).is_some() {
@@ -88,10 +91,6 @@ impl Yarn {
             }
             None => None, // yarn is not installed
         }
-    }
-
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
-        self.commands.clone()
     }
 
     // scripts_to_commands collects all scripts by following steps:

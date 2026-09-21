@@ -1,6 +1,5 @@
 use super::{npm, pnpm, yarn};
-use crate::model::command;
-use anyhow::Result;
+use crate::model::{command, runner::Runner, runner_type::RunnerType};
 use codespan::Files;
 use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
@@ -17,16 +16,32 @@ pub enum JsPackageManager {
     JsYarn(yarn::Yarn),
 }
 
-impl JsPackageManager {
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
+impl Runner for JsPackageManager {
+    fn runner_type(&self) -> RunnerType {
         match self {
-            JsPackageManager::JsNpm(npm) => npm.command_to_run(command),
-            JsPackageManager::JsPnpm(pnpm) => pnpm.command_to_run(command),
-            JsPackageManager::JsYarn(yarn) => yarn.command_to_run(command),
+            JsPackageManager::JsNpm(npm) => npm.runner_type(),
+            JsPackageManager::JsPnpm(pnpm) => pnpm.runner_type(),
+            JsPackageManager::JsYarn(yarn) => yarn.runner_type(),
         }
     }
 
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
+    fn program(&self) -> &'static str {
+        match self {
+            JsPackageManager::JsNpm(npm) => npm.program(),
+            JsPackageManager::JsPnpm(pnpm) => pnpm.program(),
+            JsPackageManager::JsYarn(yarn) => yarn.program(),
+        }
+    }
+
+    fn path(&self) -> PathBuf {
+        match self {
+            JsPackageManager::JsNpm(npm) => npm.path(),
+            JsPackageManager::JsPnpm(pnpm) => pnpm.path(),
+            JsPackageManager::JsYarn(yarn) => yarn.path(),
+        }
+    }
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         match self {
             JsPackageManager::JsNpm(npm) => npm.to_commands(),
             JsPackageManager::JsPnpm(pnpm) => pnpm.to_commands(),
@@ -34,22 +49,12 @@ impl JsPackageManager {
         }
     }
 
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
-        match self {
-            JsPackageManager::JsNpm(npm) => npm.execute(command),
-            JsPackageManager::JsPnpm(pnpm) => pnpm.execute(command),
-            JsPackageManager::JsYarn(yarn) => yarn.execute(command),
-        }
+    fn clone_box(&self) -> Box<dyn Runner> {
+        Box::new(self.clone())
     }
+}
 
-    pub fn path(&self) -> PathBuf {
-        match self {
-            JsPackageManager::JsNpm(npm) => npm.path.clone(),
-            JsPackageManager::JsPnpm(pnpm) => pnpm.path.clone(),
-            JsPackageManager::JsYarn(yarn) => yarn.path.clone(),
-        }
-    }
-
+impl JsPackageManager {
     fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
         if let Some(r) = pnpm::Pnpm::new(current_dir.clone(), file_names.clone()) {
             return Some(JsPackageManager::JsPnpm(r));
