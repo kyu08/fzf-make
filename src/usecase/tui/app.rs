@@ -273,7 +273,7 @@ async fn run<'a, B: Backend>(
             return Err(anyhow!(e));
         }
 
-        // Redraw at frame rate while the preview is still gaining colour, so the result of the
+        // Redraw at frame rate while the preview is still gaining color, so the result of the
         // background highlighting shows up as soon as it is ready. Waiting for the idle timeout
         // would leave the preview unstyled for up to half a second after it was already computed.
         let timeout = match &model.app_state {

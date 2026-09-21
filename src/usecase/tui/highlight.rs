@@ -124,7 +124,7 @@ impl PreviewCache {
     /// True while a file is still being highlighted in the background.
     ///
     /// The draw loop uses this to redraw at frame rate instead of waiting for its idle timeout,
-    /// so the preview gains colour as soon as the result is ready rather than at the next tick.
+    /// so the preview gains color as soon as the result is ready rather than at the next tick.
     pub fn is_highlighting(&self) -> bool {
         match self.files.lock() {
             Ok(files) => files.values().any(|file| file.highlight == Highlight::InProgress),
@@ -135,7 +135,7 @@ impl PreviewCache {
     /// Returns the styled fragments of lines `start_index..=end_index` of `path`.
     ///
     /// Lines whose highlighting has not finished yet are returned unstyled, so the preview shows
-    /// the file content immediately and gains colour once the background work completes.
+    /// the file content immediately and gains color once the background work completes.
     pub fn styled_lines(&self, path: &Path, start_index: usize, end_index: usize) -> Vec<StyledLine> {
         let files = match self.files.lock() {
             Ok(files) => files,
@@ -282,7 +282,7 @@ mod test {
         highlight_lines(lines, extension, &AtomicBool::new(false))
     }
 
-    /// Guards against a regression where the preview lost all of its colour, which is what
+    /// Guards against a regression where the preview lost all of its color, which is what
     /// happened while the pathological lines were worked around by skipping the highlighter.
     #[test]
     fn highlight_lines_actually_applies_more_than_one_style() {
