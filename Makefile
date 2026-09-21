@@ -7,7 +7,7 @@ run:
 	@RUST_BACKTRACE=full cargo run
 
 .PHONY: tools
-tools: tool-test tool-bump-version tool-spell-check
+tools: tool-test tool-bump-version tool-spell-check tool-fmt-toml
 
 .PHONY: tool-test
 tool-test:
@@ -43,6 +43,12 @@ tool-check-licenses:
 tool-update-license-file:
 	@if ! which cargo-about > /dev/null; then \
 		cargo install --locked cargo-about --version 0.8.2; \
+	fi
+
+.PHONY: tool-fmt-toml
+tool-fmt-toml:
+	@if ! which taplo > /dev/null; then \
+		cargo install --locked taplo-cli --version 0.10.0; \
 	fi
 
 .PHONY: test-ci # for CI
@@ -132,12 +138,26 @@ build:
 	@cargo build
 
 .PHONY: fmt
- fmt:
-	@cargo +nightly fmt
+fmt: fmt-rust fmt-toml
 
 .PHONY: fmt-check
- fmt-check:
+fmt-check: fmt-rust-check fmt-toml-check
+
+.PHONY: fmt-rust
+fmt-rust:
+	@cargo +nightly fmt
+
+.PHONY: fmt-rust-check
+fmt-rust-check:
 	@cargo +nightly fmt -- --check
+
+.PHONY: fmt-toml
+fmt-toml: tool-fmt-toml
+	@taplo fmt
+
+.PHONY: fmt-toml-check
+fmt-toml-check: tool-fmt-toml
+	@taplo fmt --check --diff
 
 .PHONY: check
  check:
