@@ -53,7 +53,7 @@ pub enum AppState<'a> {
     // - Increased risk of stack overflow
     // See: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
     SelectingCommand(Box<SelectCommandState<'a>>),
-    SelectedCommand(ExecuteCommandState),
+    SelectedCommand(SelectedCommandState),
     // Result<()> is used to carry an optional error that will be printed after the TUI is shut down.
     Quitting(Result<()>),
 }
@@ -158,11 +158,11 @@ impl Model<'_> {
         vec![]
     }
 
-    fn transition_to_execute_command_state(&mut self, runner: runner::Runner, command: command::CommandForExec) {
-        self.app_state = AppState::SelectedCommand(ExecuteCommandState::new(runner, command));
+    fn transition_to_selected_command_state(&mut self, runner: runner::Runner, command: command::CommandForExec) {
+        self.app_state = AppState::SelectedCommand(SelectedCommandState::new(runner, command));
     }
 
-    fn transition_to_should_quit_state(&mut self, quit_result: Result<()>) {
+    fn transition_to_quitting_state(&mut self, quit_result: Result<()>) {
         self.app_state = AppState::Quitting(quit_result);
     }
 
@@ -375,7 +375,7 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::ExecuteCommand(command)) => {
                 s.store_history(command.clone());
                 if let Some(r) = command.runner_type.to_runner(&s.runners) {
-                    model.transition_to_execute_command_state(r, command);
+                    model.transition_to_selected_command_state(r, command);
                 }
             }
             Some(Message::NextCommand) => s.next_command(),
@@ -383,10 +383,8 @@ fn update(model: &mut Model, message: Option<Message>) {
             Some(Message::MoveToNextPane) => s.move_to_next_pane(),
             Some(Message::NextHistory) => s.next_history(),
             Some(Message::PreviousHistory) => s.previous_history(),
-            Some(Message::NoCommandSelected) => {
-                model.transition_to_should_quit_state(Err(anyhow!("No command selected")))
-            }
-            Some(Message::Quit) => model.transition_to_should_quit_state(Ok(())),
+            Some(Message::NoCommandSelected) => model.transition_to_quitting_state(Err(anyhow!("No command selected"))),
+            Some(Message::Quit) => model.transition_to_quitting_state(Ok(())),
             Some(Message::OpenAdditionalArgumentsWindow) => s.open_additional_arguments_popup(),
             Some(Message::CloseAdditionalArgumentsWindow) => s.close_additional_arguments_popup(),
             Some(Message::AdditionalArgumentsKeyInput(key_event)) => s.handle_additional_arguments_key_input(key_event),
@@ -843,16 +841,16 @@ impl AdditionalWindowState<'_> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExecuteCommandState {
+pub struct SelectedCommandState {
     /// It is possible to have one concrete type like Command struct here.
     /// But from the perspective of simpleness of code base, this field has trait object.
     executor: runner::Runner,
     command: command::CommandForExec,
 }
 
-impl ExecuteCommandState {
+impl SelectedCommandState {
     fn new(executor: runner::Runner, command: command::CommandForExec) -> Self {
-        ExecuteCommandState { executor, command }
+        SelectedCommandState { executor, command }
     }
 }
 
@@ -1064,7 +1062,7 @@ mod test {
                     args: "target0".to_string(),
                 })),
                 expect_model: Model {
-                    app_state: AppState::SelectedCommand(ExecuteCommandState::new(
+                    app_state: AppState::SelectedCommand(SelectedCommandState::new(
                         runner::Runner::MakeCommand(Make::new_for_test()),
                         command::CommandForExec {
                             runner_type: runner_type::RunnerType::Make,
@@ -1087,7 +1085,7 @@ mod test {
                     args: "history1".to_string(),
                 })),
                 expect_model: Model {
-                    app_state: AppState::SelectedCommand(ExecuteCommandState::new(
+                    app_state: AppState::SelectedCommand(SelectedCommandState::new(
                         runner::Runner::MakeCommand(Make::new_for_test()),
                         command::CommandForExec {
                             runner_type: runner_type::RunnerType::Make,
