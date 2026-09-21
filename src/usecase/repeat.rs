@@ -24,7 +24,7 @@ impl Usecase for Repeat {
             match Model::new(config::Config::default()) {
                 Err(e) => Err(e),
                 Ok(model) => match model.app_state {
-                    AppState::SelectCommand(state) => match state.get_latest_command() {
+                    AppState::SelectingCommand(state) => match state.get_latest_command() {
                         Some(c) => match state.get_runner(&c.runner_type) {
                             Some(runner) => {
                                 runner.show_command(&command::CommandForExec::from(c.clone()));

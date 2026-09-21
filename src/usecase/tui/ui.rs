@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 pub fn ui(f: &mut Frame, model: &mut Model) {
-    if let AppState::SelectCommand(model) = &mut model.app_state {
+    if let AppState::SelectingCommand(model) = &mut model.app_state {
         let main_and_key_bindings = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(3), Constraint::Length(1)])
