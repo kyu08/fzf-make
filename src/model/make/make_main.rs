@@ -1,37 +1,34 @@
 use super::target::*;
-use crate::model::{command, file_util};
+use crate::model::{command, file_util, runner::Runner, runner_type::RunnerType};
 use anyhow::{Result, anyhow};
 use regex::Regex;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process,
 };
 
 /// Make represents a Makefile.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Make {
-    pub path: PathBuf,
+    path: PathBuf,
     include_files: Vec<Make>,
     targets: Targets,
 }
 
-impl Make {
-    /// It is possible to implement this method as an associated function because it takes a
-    /// command as an argument. However, if it is an associated function, it can be called
-    /// from anywhere, so it is better to make it a method to limit the context.
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
-        Ok(format!("make {}", command.args))
+impl Runner for Make {
+    fn runner_type(&self) -> RunnerType {
+        RunnerType::Make
     }
 
-    pub fn new(current_dir: PathBuf) -> Result<Make> {
-        let Some(makefile_name) = Make::specify_makefile_name(current_dir, ".".to_string()) else {
-            return Err(anyhow!("makefile not found.\n"));
-        };
-        Make::new_internal(Path::new(&makefile_name).to_path_buf())
+    fn program(&self) -> &'static str {
+        "make"
     }
 
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         let mut result: Vec<command::CommandWithPreview> = vec![];
         result.append(&mut self.targets.0.to_vec());
         for include_file in &self.include_files {
@@ -41,30 +38,31 @@ impl Make {
         result
     }
 
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
-        let child = process::Command::new("make")
-            .stdin(process::Stdio::inherit())
-            .args(command.args.split_whitespace())
-            .spawn();
+    fn clone_box(&self) -> Box<dyn Runner> {
+        Box::new(self.clone())
+    }
+}
 
-        match child {
-            Ok(mut child) => match child.wait() {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow!("failed to run: {}", e)),
-            },
-            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
-        }
+impl Make {
+    pub fn new(current_dir: PathBuf) -> Result<Make> {
+        let Some(makefile_name) = Make::specify_makefile_name(current_dir.clone()) else {
+            return Err(anyhow!("makefile not found.\n"));
+        };
+        Make::new_internal(Path::new(&makefile_name).to_path_buf(), &current_dir)
     }
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).
     // It is not difficult to ensure that it works with manual tests, so I will not do it for now.
-    fn new_internal(path: PathBuf) -> Result<Make> {
+    /// `include_root` is the directory the include directives are resolved against. `make` resolves
+    /// them against the directory it is invoked in, which is the directory the makefile was found
+    /// in, so the same directory is passed down to every included file.
+    fn new_internal(path: PathBuf, include_root: &Path) -> Result<Make> {
         // If the file path does not exist, the make command cannot be executed in the first place,
         // so it is not handled here.
         let file_content = file_util::path_to_content(path.clone())?;
         let include_files = content_to_include_file_paths(file_content.clone())
             .iter()
-            .map(|included_file_path| Make::new_internal(included_file_path.clone()))
+            .map(|included_file_path| Make::new_internal(include_root.join(included_file_path), include_root))
             .filter_map(Result::ok)
             .collect();
 
@@ -75,14 +73,14 @@ impl Make {
         })
     }
 
-    fn specify_makefile_name(current_dir: PathBuf, target_path: String) -> Option<PathBuf> {
+    fn specify_makefile_name(current_dir: PathBuf) -> Option<PathBuf> {
         //  By default, when make looks for the makefile, it tries the following names, in order: GNUmakefile, makefile and Makefile.
         //  https://www.gnu.org/software/make/manual/make.html#Makefile-Names
         // It needs to enumerate `Makefile` too not only `makefile` to make it work on case insensitive file system
         let makefile_name_options = ["GNUmakefile", "makefile", "Makefile"];
 
         let mut temp_result = Vec::<PathBuf>::new();
-        let elements = fs::read_dir(target_path.clone()).unwrap();
+        let elements = fs::read_dir(&current_dir).ok()?;
         for e in elements {
             let file_name = e.unwrap().file_name();
             let file_name_string = file_name.to_str().unwrap();
@@ -135,8 +133,9 @@ impl Make {
     }
 }
 
-/// The path should be relative path from current directory where make command is executed.
-/// So the path can be treated as it is.
+/// The returned paths are the ones written in the include directives, so a relative one is
+/// relative to the directory `make` would be invoked in. `new_internal` resolves them against that
+/// directory.
 /// NOTE: path include `..` is not supported for now like `include ../c.mk`.
 fn content_to_include_file_paths(file_content: String) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
@@ -180,10 +179,7 @@ mod test {
     use super::*;
     use crate::model::runner_type;
     use pretty_assertions::assert_eq;
-    use std::{
-        env,
-        fs::{self, File},
-    };
+    use std::fs::{self, File};
     use uuid::Uuid;
 
     #[test]
@@ -229,17 +225,9 @@ mod test {
                 }
             }
 
-            let expect = match (env::current_dir(), case.expect) {
-                (Ok(c), Some(e)) => Some(c.join(e)),
-                _ => None,
-            };
+            let expect = case.expect.map(|e| tmp_dir.join(e));
 
-            assert_eq!(
-                expect,
-                Make::specify_makefile_name(env::current_dir().unwrap(), tmp_dir.to_string_lossy().to_string()),
-                "\nFailed: 🚨{:?}🚨\n",
-                case.title,
-            );
+            assert_eq!(expect, Make::specify_makefile_name(tmp_dir.clone()), "\nFailed: 🚨{:?}🚨\n", case.title,);
         }
     }
 
