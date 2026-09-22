@@ -1337,4 +1337,48 @@ mod test {
             other => panic!("expected Some(Err(_)), got {:?}", other),
         }
     }
+
+    // `SkimMatcherV2` gives the same score to commands which match the query in the same way,
+    // so the order of such commands depends on the stability of the sort.
+    #[test]
+    fn narrow_down_commands_test() {
+        struct Case {
+            title: &'static str,
+            search_text: &'static str,
+            expect: Vec<&'static str>,
+        }
+        let cases: Vec<Case> = vec![
+            Case {
+                title: "all the commands are listed in the original order when the search text is empty",
+                search_text: "",
+                expect: vec!["target0", "target1", "target2"],
+            },
+            Case {
+                title: "commands with the same score keep the original order",
+                search_text: "target",
+                expect: vec!["target0", "target1", "target2"],
+            },
+            Case {
+                title: "commands which do not match the search text are filtered out",
+                search_text: "target2",
+                expect: vec!["target2"],
+            },
+        ];
+
+        unsafe { env::set_var("FZF_MAKE_IS_TESTING", "true") };
+
+        for case in cases {
+            let state = SelectingCommandState {
+                search_text_area: {
+                    let mut text_area = TextArea::default();
+                    text_area.insert_str(case.search_text);
+                    TextArea_(text_area)
+                },
+                ..SelectingCommandState::new_for_test()
+            };
+
+            let actual: Vec<String> = state.narrow_down_commands().iter().map(|c| c.args.clone()).collect();
+            assert_eq!(case.expect, actual, "\nFailed: 🚨{:?}🚨\n", case.title,);
+        }
+    }
 }
