@@ -566,8 +566,9 @@ impl SelectingCommandState<'_> {
                 })
                 .collect();
 
-            list.sort_by(|(score1, _), (score2, _)| score1.cmp(score2));
-            list.reverse();
+            // Sort by score in descending order. `sort_by` is stable, so commands with the same
+            // score keep their original order(e.g. the order they appear in the Makefile).
+            list.sort_by(|(score1, _), (score2, _)| score2.cmp(score1));
 
             list.into_iter().map(|(_, command)| command).collect()
         };
