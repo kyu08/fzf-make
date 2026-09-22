@@ -9,6 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.20
+    # Install the prebuilt binary instead of compiling from source (`cargo install`).
+    - name: Install cargo-deny
+      uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
       with:
-        command: check licenses
+        tool: cargo-deny@0.18.2
+    - name: Check licenses
+      run: |
+        make check-licenses

@@ -9,5 +9,18 @@
   ],
   "ignorePaths": [
     "./test_data/**"
+  ],
+  "customManagers": [
+    {
+      "description": "Update tool versions passed to taiki-e/install-action, which the github-actions manager does not handle",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/[^/]+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "tool:\\s+(?<depName>[a-z0-9-]+)@(?<currentValue>[0-9][^\\s]+)"
+      ],
+      "datasourceTemplate": "crate"
+    }
   ]
 }

@@ -24,13 +24,13 @@ tool-bump-version:
 .PHONY: tool-spell-check
 tool-spell-check:
 	@if ! which typos > /dev/null; then \
-		cargo install --locked typos-cli --version 1.23.6; \
+		cargo install --locked typos-cli --version 1.45.1; \
 	fi
 
 .PHONY: tool-detect-unused-dependencies
 tool-detect-unused-dependencies:
 	@if ! which cargo-machete > /dev/null; then \
-		cargo install --locked --git https://github.com/bnjbvr/cargo-machete --rev 744a6d5e0db5d189ad36edb08c5f77107cc42310 cargo-machete; \
+		cargo install --locked cargo-machete --version 0.9.2; \
 	fi
 
 .PHONY: tool-check-licenses
