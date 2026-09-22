@@ -1,6 +1,5 @@
 use super::{npm, pnpm, yarn};
-use crate::model::command;
-use anyhow::Result;
+use crate::model::runner::Runner;
 use codespan::Files;
 use json_spanned_value::{self as jsv, spanned};
 use std::{fs, path::PathBuf};
@@ -9,105 +8,61 @@ pub(super) const METADATA_FILE_NAME: &str = "package.json";
 const METADATA_PACKAGE_NAME_KEY: &str = "name";
 const METADATA_COMMAND_KEY: &str = "scripts";
 
-#[allow(clippy::enum_variant_names)]
-#[derive(Clone, Debug, PartialEq)]
-pub enum JsPackageManager {
-    JsNpm(npm::Npm),
-    JsPnpm(pnpm::Pnpm),
-    JsYarn(yarn::Yarn),
-}
+// returns (package_name, [(script_name, script_content, line_number)]
+#[allow(clippy::type_complexity)]
+pub fn parse_package_json(content: &str) -> Option<(String, Vec<(String, String, u32)>)> {
+    let mut files = Files::new();
+    let file = files.add(METADATA_FILE_NAME, content);
+    let json_object: spanned::Object = match jsv::from_str(content) {
+        Ok(e) => e,
+        Err(_) => return None,
+    };
 
-impl JsPackageManager {
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
-        match self {
-            JsPackageManager::JsNpm(npm) => npm.command_to_run(command),
-            JsPackageManager::JsPnpm(pnpm) => pnpm.command_to_run(command),
-            JsPackageManager::JsYarn(yarn) => yarn.command_to_run(command),
+    let mut name = "".to_string();
+    let mut result = vec![];
+    for (k, v) in json_object {
+        if k.as_str() == METADATA_PACKAGE_NAME_KEY && v.as_string().is_some() {
+            name = v.as_string().unwrap().to_string();
         }
-    }
-
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
-        match self {
-            JsPackageManager::JsNpm(npm) => npm.to_commands(),
-            JsPackageManager::JsPnpm(pnpm) => pnpm.to_commands(),
-            JsPackageManager::JsYarn(yarn) => yarn.to_commands(),
-        }
-    }
-
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
-        match self {
-            JsPackageManager::JsNpm(npm) => npm.execute(command),
-            JsPackageManager::JsPnpm(pnpm) => pnpm.execute(command),
-            JsPackageManager::JsYarn(yarn) => yarn.execute(command),
-        }
-    }
-
-    pub fn path(&self) -> PathBuf {
-        match self {
-            JsPackageManager::JsNpm(npm) => npm.path.clone(),
-            JsPackageManager::JsPnpm(pnpm) => pnpm.path.clone(),
-            JsPackageManager::JsYarn(yarn) => yarn.path.clone(),
-        }
-    }
-
-    fn new(current_dir: PathBuf, file_names: Vec<String>) -> Option<Self> {
-        if let Some(r) = pnpm::Pnpm::new(current_dir.clone(), file_names.clone()) {
-            return Some(JsPackageManager::JsPnpm(r));
+        if k.as_str() != METADATA_COMMAND_KEY {
+            continue;
         }
 
-        if let Some(r) = npm::Npm::new(current_dir.clone(), file_names.clone()) {
-            return Some(JsPackageManager::JsNpm(r));
-        }
-
-        if let Some(r) = yarn::Yarn::new(current_dir, file_names) {
-            return Some(JsPackageManager::JsYarn(r));
-        }
-
-        None
-    }
-
-    // returns (package_name, [(script_name, script_content, line_number)]
-    #[allow(clippy::type_complexity)]
-    pub fn parse_package_json(content: &str) -> Option<(String, Vec<(String, String, u32)>)> {
-        let mut files = Files::new();
-        let file = files.add(METADATA_FILE_NAME, content);
-        let json_object: spanned::Object = match jsv::from_str(content) {
-            Ok(e) => e,
-            Err(_) => return None,
-        };
-
-        let mut name = "".to_string();
-        let mut result = vec![];
-        for (k, v) in json_object {
-            if k.as_str() == METADATA_PACKAGE_NAME_KEY && v.as_string().is_some() {
-                name = v.as_string().unwrap().to_string();
-            }
-            if k.as_str() != METADATA_COMMAND_KEY {
-                continue;
-            }
-
-            // object is the content of "scripts" key
-            if let Some(object) = v.as_object() {
-                for (k, v) in object {
-                    let args = k.to_string();
-                    let line_number = files.line_index(file, k.start() as u32).number().to_usize() as u32;
-                    if let Some(v) = v.as_string() {
-                        result.push((args, v.to_string(), line_number));
-                    }
+        // object is the content of "scripts" key
+        if let Some(object) = v.as_object() {
+            for (k, v) in object {
+                let args = k.to_string();
+                let line_number = files.line_index(file, k.start() as u32).number().to_usize() as u32;
+                if let Some(v) = v.as_string() {
+                    result.push((args, v.to_string(), line_number));
                 }
-            };
-            break;
-        }
-
-        Some((name, result))
+            }
+        };
+        break;
     }
+
+    Some((name, result))
 }
 
-pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<JsPackageManager> {
+/// get_js_package_manager_runner determines which JavaScript package manager is used in
+/// `current_dir`. The detection order is pnpm, npm and then yarn.
+pub fn get_js_package_manager_runner(current_dir: PathBuf) -> Option<Box<dyn Runner>> {
     let entries = fs::read_dir(current_dir.clone()).unwrap();
-    let file_names = entries.map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
+    let file_names: Vec<String> = entries.map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
 
-    JsPackageManager::new(current_dir, file_names)
+    if let Some(r) = pnpm::Pnpm::new(current_dir.clone(), file_names.clone()) {
+        return Some(Box::new(r));
+    }
+
+    if let Some(r) = npm::Npm::new(current_dir.clone(), file_names.clone()) {
+        return Some(Box::new(r));
+    }
+
+    if let Some(r) = yarn::Yarn::new(current_dir, file_names) {
+        return Some(Box::new(r));
+    }
+
+    None
 }
 
 #[cfg(test)]
@@ -166,12 +121,7 @@ mod test {
         ];
 
         for case in cases {
-            assert_eq!(
-                case.expected,
-                JsPackageManager::parse_package_json(case.file_content),
-                "\nfailed: 🚨{:?}🚨\n",
-                case.title,
-            );
+            assert_eq!(case.expected, parse_package_json(case.file_content), "\nfailed: 🚨{:?}🚨\n", case.title,);
         }
     }
 }

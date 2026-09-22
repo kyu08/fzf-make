@@ -1,60 +1,68 @@
-use super::{
-    command, js_package_manager::js_package_manager_main::JsPackageManager, just::just_main::Just,
-    make::make_main::Make, task::task_main::Task,
-};
-use anyhow::Result;
+use super::{command, runner_type::RunnerType};
+use anyhow::{Result, anyhow};
 use colored::Colorize;
-use std::path::PathBuf;
+use std::{fmt, path::PathBuf, process};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Runner {
-    MakeCommand(Make),
-    JsPackageManager(JsPackageManager),
-    Just(Just),
-    Task(Task),
-}
+/// Runner represents a task runner such as make, just, task or a JavaScript package manager.
+///
+/// Every runner is invoked as `{program} {args}`, so printing and executing a command are
+/// provided as default methods. Implementors only have to expose their own metadata.
+pub trait Runner: fmt::Debug + Send {
+    fn runner_type(&self) -> RunnerType;
 
-impl Runner {
-    pub fn list_commands(&self) -> Vec<command::CommandWithPreview> {
-        match self {
-            Runner::MakeCommand(make) => make.to_commands(),
-            Runner::JsPackageManager(js) => js.to_commands(),
-            Runner::Just(just) => just.to_commands(),
-            Runner::Task(task) => task.to_commands(),
-        }
+    /// program is the name of the executable to spawn.
+    fn program(&self) -> &'static str;
+
+    /// path is the path to the file which defines the commands.
+    fn path(&self) -> PathBuf;
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview>;
+
+    /// clone_box exists to make `Box<dyn Runner>` cloneable.
+    fn clone_box(&self) -> Box<dyn Runner>;
+
+    /// It is possible to implement this method as an associated function because it takes a
+    /// command as an argument. However, if it is an associated function, it can be called
+    /// from anywhere, so it is better to make it a method to limit the context.
+    fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
+        Ok(format!("{} {}", self.program(), command.args))
     }
 
-    pub fn path(&self) -> PathBuf {
-        match self {
-            Runner::MakeCommand(make) => make.path.clone(),
-            Runner::JsPackageManager(js) => js.path(),
-            Runner::Just(just) => just.path(),
-            Runner::Task(task) => task.path(),
-        }
-    }
-
-    pub fn show_command(&self, command: &command::CommandForExec) {
-        let command_or_error_message = match self {
-            Runner::MakeCommand(make) => make.command_to_run(command),
-            Runner::JsPackageManager(js) => js.command_to_run(command),
-            Runner::Just(just) => just.command_to_run(command),
-            Runner::Task(task) => task.command_to_run(command),
-        };
-
+    fn show_command(&self, command: &command::CommandForExec) {
         println!(
             "{}",
-            command_or_error_message
+            self.command_to_run(command)
                 .unwrap_or_else(|e| e.to_string())
                 .truecolor(161, 220, 156)
         );
     }
 
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
-        match self {
-            Runner::MakeCommand(make) => make.execute(command),
-            Runner::JsPackageManager(js) => js.execute(command),
-            Runner::Just(just) => just.execute(command),
-            Runner::Task(task) => task.execute(command),
+    fn execute(&self, command: &command::CommandForExec) -> Result<()> {
+        let child = process::Command::new(self.program())
+            .stdin(process::Stdio::inherit())
+            .args(command.args.split_whitespace())
+            .spawn();
+
+        match child {
+            Ok(mut child) => match child.wait() {
+                Ok(_) => Ok(()),
+                Err(e) => Err(anyhow!("failed to run: {}", e)),
+            },
+            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
         }
+    }
+}
+
+impl Clone for Box<dyn Runner> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+impl PartialEq for dyn Runner {
+    fn eq(&self, other: &Self) -> bool {
+        self.runner_type() == other.runner_type()
+            && self.path() == other.path()
+            && self.to_commands() == other.to_commands()
     }
 }

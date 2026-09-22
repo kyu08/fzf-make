@@ -1,39 +1,42 @@
 use super::js_package_manager_main as js;
 use crate::{
     file::path_to_content,
-    model::{command, file_util, runner_type},
+    model::{command, file_util, runner::Runner, runner_type},
 };
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use std::{path::PathBuf, process, process::Command, sync::OnceLock};
 
 const PNPM_LOCKFILE_NAME: &str = "pnpm-lock.yaml";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pnpm {
-    pub path: PathBuf,
+    path: PathBuf,
     commands: Vec<command::CommandWithPreview>,
 }
 
+impl Runner for Pnpm {
+    fn runner_type(&self) -> runner_type::RunnerType {
+        runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Pnpm)
+    }
+
+    fn program(&self) -> &'static str {
+        "pnpm"
+    }
+
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview> {
+        self.commands.clone()
+    }
+
+    fn clone_box(&self) -> Box<dyn Runner> {
+        Box::new(self.clone())
+    }
+}
+
 impl Pnpm {
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
-        Ok(format!("pnpm {}", command.args))
-    }
-
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
-        let child = process::Command::new("pnpm")
-            .stdin(process::Stdio::inherit())
-            .args(command.args.split_whitespace().collect::<Vec<&str>>())
-            .spawn();
-
-        match child {
-            Ok(mut child) => match child.wait() {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow!("failed to run: {}", e)),
-            },
-            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
-        }
-    }
-
     pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Pnpm> {
         let package_json_exist = Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME);
         let lockfile_exist_in_current_dir = Iterator::find(&mut cwd_file_names.iter(), |&f| f == PNPM_LOCKFILE_NAME);
@@ -80,7 +83,7 @@ impl Pnpm {
             }
 
             if let Ok(c) = path_to_content::path_to_content(&path)
-                && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c)
+                && let Some((name, parsing_result)) = js::parse_package_json(&c)
             {
                 for (key, value, line_number) in parsing_result {
                     if Self::use_filtering(value) {
@@ -107,7 +110,7 @@ impl Pnpm {
     fn collect_scripts_in_package_json(current_dir: PathBuf) -> Option<Vec<command::CommandWithPreview>> {
         let parsed_scripts_part_of_package_json =
             match path_to_content::path_to_content(&current_dir.join(js::METADATA_FILE_NAME)) {
-                Ok(c) => match js::JsPackageManager::parse_package_json(&c) {
+                Ok(c) => match js::parse_package_json(&c) {
                     Some(result) => result.1,
                     None => return None,
                 },
@@ -153,10 +156,6 @@ impl Pnpm {
             .iter()
             .map(|line| PathBuf::from(line).join(js::METADATA_FILE_NAME))
             .collect())
-    }
-
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
-        self.commands.clone()
     }
 
     // ref: https://pnpm.io/filtering
