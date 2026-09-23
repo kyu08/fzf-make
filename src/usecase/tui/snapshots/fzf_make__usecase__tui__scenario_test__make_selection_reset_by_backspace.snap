@@ -1,0 +1,34 @@
+---
+source: src/usecase/tui/scenario_test.rs
+expression: screen
+---
+"┏ ✨ Preview ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓" Hidden by multi-width symbols: [(3, " ")]
+"┃    1 .PHONY: run                                                                                                     ┃"
+"┃    2 run:                                                                                                            ┃"
+"┃    3     echo "run"                                                                                                  ┃"
+"┃    4                                                                                                                 ┃"
+"┃    5 .PHONY: run-with-args                                                                                           ┃"
+"┃    6 run-with-args:                                                                                                  ┃"
+"┃    7     echo $(ARG1); echo $(ARG2)                                                                                  ┃"
+"┃    8                                                                                                                 ┃"
+"┃    9 .PHONY: run-with-arg                                                                                            ┃"
+"┃   10 run-with-arg:                                                                                                   ┃"
+"┃   11     echo $(ARG1)                                                                                                ┃"
+"┃   12                                                                                                                 ┃"
+"┃   13 include ./makefiles/test.mk                                                                                     ┃"
+"┃   14                                                                                                                 ┃"
+"┃   15 .PHONY: cmd                                                                                                     ┃"
+"┃   16 cmd:                                                                                                            ┃"
+"┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
+"┏ 📢 Commands ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓┌ 📚 History ──────────────────────────────────────────────┐" Hidden by multi-width symbols: [(3, " "), (63, " ")]
+"┃  > make run                                              ┃│                                                          │"
+"┃    make run-with-args                                    ┃│                                                          │"
+"┃    make run-with-arg                                     ┃│                                                          │"
+"┃    make target-included                                  ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┃                                                          ┃│                                                          │"
+"┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛└──────────────────────────────────────────────────────────┘"
+"┏ 🔍 Search ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓                                                            " Hidden by multi-width symbols: [(3, " ")]
+"┃  ru                                                      ┃                                                            "
+"┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ vX.Y.Z "
+"  Execute the selected command: <enter> | Select command: ↑(<c-p>)/↓(<c-n>) | Narrow down command: (type any            "
