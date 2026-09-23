@@ -270,7 +270,9 @@ fn make_passing_one_additional_argument() {
     s.type_text("ARG1=1");
     s.key(KeyCode::Enter);
 
-    assert_eq!(Some("make run-with-arg ARG1=1".to_string()), s.selected_command());
+    // `run-with-arg` is a prefix of `run-with-args`, so no search text matches only the former.
+    // Both get the same score, so the one defined first in the Makefile is selected.
+    assert_eq!(Some("make run-with-args ARG1=1".to_string()), s.selected_command());
 }
 
 #[test]
