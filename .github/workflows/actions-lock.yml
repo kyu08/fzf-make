@@ -1,0 +1,30 @@
+# This workflow is managed by gh actions-lock.
+
+name: Actions lock
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7.0.1
+    - name: Install gh-actions-lock
+      run: gh extension install github/gh-actions-lock --pin v0.1.6
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Verify lockfile
+      run: gh actions-lock --no-fix
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Show fix instruction
+      if: failure()
+      run: |
+        echo "actions.lock is out of date. Run 'gh actions-lock' locally and commit the result."
