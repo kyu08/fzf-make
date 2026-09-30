@@ -1,3 +1,5 @@
+# This workflow is managed by gh actions-lock.
+
 name: Check license file
 on:
   pull_request:
@@ -7,14 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       # Install the prebuilt binary instead of compiling from source (`cargo install`)
       # because compiling cargo-about takes about 2.5 minutes in CI.
       - name: Install cargo-about
-        uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
+        uses: taiki-e/install-action@v2.85.7
         with:
           tool: cargo-about@0.8.2
 
