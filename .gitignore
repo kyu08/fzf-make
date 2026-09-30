@@ -8,3 +8,6 @@ test_data/history/
 node_modules
 
 debug_info.txt
+
+# Rejected snapshots written by insta. Accept them with `make review-snapshots`.
+*.snap.new

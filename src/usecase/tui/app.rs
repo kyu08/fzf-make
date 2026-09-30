@@ -82,7 +82,17 @@ pub struct Model<'a> {
 
 impl Model<'_> {
     pub fn new(config: config::Config) -> Result<Self> {
-        match SelectingCommandState::new(config) {
+        let current_dir = match env::current_dir() {
+            Ok(d) => d,
+            Err(e) => bail!("Failed to get current directory: {}", e),
+        };
+        Self::new_in(current_dir, config)
+    }
+
+    /// new_in builds the model for the given directory instead of the current one.
+    /// Only the scenario tests pass a directory of their own; `new` passes the current one.
+    pub(super) fn new_in(current_dir: PathBuf, config: config::Config) -> Result<Self> {
+        match SelectingCommandState::new_in(current_dir, config) {
             Ok(s) => Ok(Model {
                 app_state: AppState::SelectingCommand(Box::new(s)),
             }),
@@ -90,7 +100,7 @@ impl Model<'_> {
         }
     }
 
-    fn handle_key_input(&self, key: KeyEvent) -> Option<Message> {
+    pub(super) fn handle_key_input(&self, key: KeyEvent) -> Option<Message> {
         if let AppState::SelectingCommand(s) = &self.app_state {
             let is_ctrl_pressed = key.modifiers.contains(KeyModifiers::CONTROL);
 
@@ -180,7 +190,7 @@ impl Model<'_> {
         matches!(self.app_state, AppState::SelectedCommand(_))
     }
 
-    fn command_to_execute(&self) -> Option<(runner::Runner, command::CommandForExec)> {
+    pub(super) fn command_to_execute(&self) -> Option<(runner::Runner, command::CommandForExec)> {
         match &self.app_state {
             AppState::SelectedCommand(command) => {
                 let command = command.clone();
@@ -327,7 +337,7 @@ async fn get_latest_version(share_clone: Arc<Mutex<HashMap<String, String>>>) {
     };
 }
 
-enum Message {
+pub(super) enum Message {
     SearchTextAreaKeyInput(KeyEvent),
     ExecuteCommand(command::CommandForExec),
     NextCommand,
@@ -368,7 +378,7 @@ fn handle_event(model: &Model, timeout: Duration) -> io::Result<Option<Message>>
 
 // TODO: make this method Model's method
 // TODO: Make this function returns `Result` or have a field like Model.error to hold errors
-fn update(model: &mut Model, message: Option<Message>) {
+pub(super) fn update(model: &mut Model, message: Option<Message>) {
     if let AppState::SelectingCommand(ref mut s) = model.app_state {
         match message {
             Some(Message::SearchTextAreaKeyInput(key_event)) => s.handle_key_input(key_event),
@@ -438,12 +448,7 @@ impl PartialEq for SelectingCommandState<'_> {
 }
 
 impl SelectingCommandState<'_> {
-    pub fn new(config: config::Config) -> Result<Self> {
-        let current_dir = match env::current_dir() {
-            Ok(d) => d,
-            Err(e) => bail!("Failed to get current directory: {}", e),
-        };
-
+    pub(super) fn new_in(current_dir: PathBuf, config: config::Config) -> Result<Self> {
         let current_pane = if config.get_focus_history() {
             CurrentPane::History
         } else {
