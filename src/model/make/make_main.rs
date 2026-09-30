@@ -1,37 +1,34 @@
 use super::target::*;
-use crate::model::{command, file_util};
+use crate::model::{command, file_util, runner::Runner, runner_type::RunnerType};
 use anyhow::{Result, anyhow};
 use regex::Regex;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process,
 };
 
 /// Make represents a Makefile.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Make {
-    pub path: PathBuf,
+    path: PathBuf,
     include_files: Vec<Make>,
     targets: Targets,
 }
 
-impl Make {
-    /// It is possible to implement this method as an associated function because it takes a
-    /// command as an argument. However, if it is an associated function, it can be called
-    /// from anywhere, so it is better to make it a method to limit the context.
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
-        Ok(format!("make {}", command.args))
+impl Runner for Make {
+    fn runner_type(&self) -> RunnerType {
+        RunnerType::Make
     }
 
-    pub fn new(current_dir: PathBuf) -> Result<Make> {
-        let Some(makefile_name) = Make::specify_makefile_name(current_dir.clone()) else {
-            return Err(anyhow!("makefile not found.\n"));
-        };
-        Make::new_internal(Path::new(&makefile_name).to_path_buf(), &current_dir)
+    fn program(&self) -> &'static str {
+        "make"
     }
 
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview> {
         let mut result: Vec<command::CommandWithPreview> = vec![];
         result.append(&mut self.targets.0.to_vec());
         for include_file in &self.include_files {
@@ -41,19 +38,17 @@ impl Make {
         result
     }
 
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
-        let child = process::Command::new("make")
-            .stdin(process::Stdio::inherit())
-            .args(command.args.split_whitespace())
-            .spawn();
+    fn clone_box(&self) -> Box<dyn Runner> {
+        Box::new(self.clone())
+    }
+}
 
-        match child {
-            Ok(mut child) => match child.wait() {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow!("failed to run: {}", e)),
-            },
-            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
-        }
+impl Make {
+    pub fn new(current_dir: PathBuf) -> Result<Make> {
+        let Some(makefile_name) = Make::specify_makefile_name(current_dir.clone()) else {
+            return Err(anyhow!("makefile not found.\n"));
+        };
+        Make::new_internal(Path::new(&makefile_name).to_path_buf(), &current_dir)
     }
 
     // I gave up writing tests using temp_dir because it was too difficult (it was necessary to change the implementation to some extent).

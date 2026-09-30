@@ -1,4 +1,3 @@
-use super::{js_package_manager::js_package_manager_main as js, runner};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{self},
@@ -22,15 +21,6 @@ pub enum JsPackageManager {
 }
 
 impl RunnerType {
-    pub fn to_runner(&self, runners: &Vec<runner::Runner>) -> Option<runner::Runner> {
-        for r in runners {
-            if self.clone() == RunnerType::from(r.clone()) {
-                return Some(r.clone());
-            }
-        }
-        None
-    }
-
     pub fn get_extension_for_highlighting(&self) -> &'static str {
         match self {
             RunnerType::Make => "mk",
@@ -39,21 +29,6 @@ impl RunnerType {
             RunnerType::Just => "yaml",
             RunnerType::JsPackageManager(_) => "json",
             RunnerType::Task => "yaml",
-        }
-    }
-}
-
-impl From<runner::Runner> for RunnerType {
-    fn from(runner: runner::Runner) -> RunnerType {
-        match runner {
-            runner::Runner::MakeCommand(_) => RunnerType::Make,
-            runner::Runner::JsPackageManager(js) => match js {
-                js::JsPackageManager::JsNpm(_) => RunnerType::JsPackageManager(JsPackageManager::Npm),
-                js::JsPackageManager::JsPnpm(_) => RunnerType::JsPackageManager(JsPackageManager::Pnpm),
-                js::JsPackageManager::JsYarn(_) => RunnerType::JsPackageManager(JsPackageManager::Yarn),
-            },
-            runner::Runner::Just(_) => RunnerType::Just,
-            runner::Runner::Task(_) => RunnerType::Task,
         }
     }
 }
