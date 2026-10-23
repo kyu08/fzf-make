@@ -1,7 +1,7 @@
 use super::js_package_manager_main as js;
 use crate::{
     file::path_to_content,
-    model::{command, runner_type},
+    model::{command, runner::Runner, runner_type},
 };
 use anyhow::{Result, anyhow};
 use std::{path::PathBuf, process};
@@ -10,7 +10,7 @@ const YARN_LOCKFILE_NAME: &str = "yarn.lock";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Yarn {
-    pub path: PathBuf,
+    path: PathBuf,
     commands: Vec<command::CommandWithPreview>,
 }
 
@@ -19,26 +19,29 @@ enum YarnVersion {
     V2OrLater,
 }
 
+impl Runner for Yarn {
+    fn runner_type(&self) -> runner_type::RunnerType {
+        runner_type::RunnerType::JsPackageManager(runner_type::JsPackageManager::Yarn)
+    }
+
+    fn program(&self) -> &'static str {
+        "yarn"
+    }
+
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview> {
+        self.commands.clone()
+    }
+
+    fn clone_box(&self) -> Box<dyn Runner> {
+        Box::new(self.clone())
+    }
+}
+
 impl Yarn {
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String> {
-        Ok(format!("yarn {}", command.args))
-    }
-
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<()> {
-        let child = process::Command::new("yarn")
-            .stdin(process::Stdio::inherit())
-            .args(command.args.split_whitespace().collect::<Vec<&str>>())
-            .spawn();
-
-        match child {
-            Ok(mut child) => match child.wait() {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow!("failed to run: {}", e)),
-            },
-            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
-        }
-    }
-
     pub fn new(current_dir: PathBuf, cwd_file_names: Vec<String>) -> Option<Yarn> {
         Iterator::find(&mut cwd_file_names.iter(), |&f| f == js::METADATA_FILE_NAME)?;
         if Iterator::find(&mut cwd_file_names.iter(), |&f| f == YARN_LOCKFILE_NAME).is_some() {
@@ -90,10 +93,6 @@ impl Yarn {
         }
     }
 
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
-        self.commands.clone()
-    }
-
     // scripts_to_commands collects all scripts by following steps:
     // 1. Collect scripts defined in package.json in the current directory(which fzf-make is launched)
     // 2. Collect the paths of all `package.json` in the workspace.
@@ -113,7 +112,7 @@ impl Yarn {
         if let Ok(workspace_package_json_paths) = package_json_in_workspace {
             for path in workspace_package_json_paths {
                 if let Ok(c) = path_to_content::path_to_content(&path)
-                    && let Some((name, parsing_result)) = js::JsPackageManager::parse_package_json(&c)
+                    && let Some((name, parsing_result)) = js::parse_package_json(&c)
                 {
                     for (key, _, line_number) in parsing_result {
                         result.push(command::CommandWithPreview::new(
@@ -135,7 +134,7 @@ impl Yarn {
     fn collect_scripts_in_package_json(current_dir: PathBuf) -> Option<Vec<command::CommandWithPreview>> {
         let parsed_scripts_part_of_package_json =
             match path_to_content::path_to_content(&current_dir.join(js::METADATA_FILE_NAME)) {
-                Ok(c) => match js::JsPackageManager::parse_package_json(&c) {
+                Ok(c) => match js::parse_package_json(&c) {
                     Some(result) => result.1,
                     None => return None,
                 },

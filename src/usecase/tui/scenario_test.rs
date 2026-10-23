@@ -17,7 +17,7 @@ use super::{
     config,
     ui::ui,
 };
-use crate::model::{histories, runner, runner_type};
+use crate::model::{histories, runner_type};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{Terminal, backend::TestBackend};
 use std::{
@@ -54,7 +54,7 @@ impl Scenario<'_> {
         // every ancestor directory, and `Task` asks the `task` binary for its task list. These
         // scenarios are about the make runner, so the rest is dropped to keep the screen the same
         // everywhere.
-        s.runners.retain(|r| matches!(r, runner::Runner::MakeCommand(_)));
+        s.runners.retain(|r| r.runner_type() == runner_type::RunnerType::Make);
         // The history is read from the user's history file, which is not part of the fixture.
         // Scenarios that need one set it through `with_history`.
         s.history = vec![];

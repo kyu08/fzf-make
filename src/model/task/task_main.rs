@@ -1,5 +1,6 @@
 use crate::model::{
     command::{self},
+    runner::Runner,
     runner_type::{self},
 };
 use anyhow::{Result, anyhow};
@@ -14,37 +15,32 @@ pub struct Task {
     commands: Vec<command::CommandWithPreview>,
 }
 
+impl Runner for Task {
+    fn runner_type(&self) -> runner_type::RunnerType {
+        runner_type::RunnerType::Task
+    }
+
+    fn program(&self) -> &'static str {
+        "task"
+    }
+
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    fn to_commands(&self) -> Vec<command::CommandWithPreview> {
+        self.commands.clone()
+    }
+
+    fn clone_box(&self) -> Box<dyn Runner> {
+        Box::new(self.clone())
+    }
+}
+
 impl Task {
     pub fn new(cwd: PathBuf) -> Result<Task> {
         let commands = Self::get_available_commands()?;
         Ok(Task { path: cwd, commands })
-    }
-
-    pub fn to_commands(&self) -> Vec<command::CommandWithPreview> {
-        self.commands.clone()
-    }
-
-    pub fn path(&self) -> PathBuf {
-        self.path.clone()
-    }
-
-    pub fn command_to_run(&self, command: &command::CommandForExec) -> Result<String, anyhow::Error> {
-        Ok(format!("task {}", command.args))
-    }
-
-    pub fn execute(&self, command: &command::CommandForExec) -> Result<(), anyhow::Error> {
-        let child = process::Command::new("task")
-            .stdin(process::Stdio::inherit())
-            .args(command.args.split_whitespace())
-            .spawn();
-
-        match child {
-            Ok(mut child) => match child.wait() {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow!("failed to run: {}", e)),
-            },
-            Err(e) => Err(anyhow!("failed to spawn: {}", e)),
-        }
     }
 
     // get_available_commands executes `task --list-all --json` and parse the result from it.
