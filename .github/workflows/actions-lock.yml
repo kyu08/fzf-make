@@ -1,5 +1,3 @@
-# This workflow is managed by gh actions-lock.
-
 name: Actions lock
 
 on:
@@ -17,7 +15,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7.0.1
     - name: Install gh-actions-lock
-      run: gh extension install github/gh-actions-lock --pin v0.1.6
+      run: gh extension install github/gh-actions-lock --pin v0.3.0
       env:
         GH_TOKEN: ${{ github.token }}
     - name: Verify lockfile
