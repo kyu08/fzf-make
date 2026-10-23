@@ -31,7 +31,7 @@ jobs:
       uses: actions/checkout@v7.0.1
     # Install the prebuilt binary instead of compiling from source (`cargo install`).
     - name: Install taplo
-      uses: taiki-e/install-action@v2.85.7
+      uses: taiki-e/install-action@v2.87.18
       with:
         tool: taplo-cli@0.10.0
     - name: Check formatting
