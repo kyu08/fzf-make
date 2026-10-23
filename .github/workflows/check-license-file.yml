@@ -14,7 +14,7 @@ jobs:
       # Install the prebuilt binary instead of compiling from source (`cargo install`)
       # because compiling cargo-about takes about 2.5 minutes in CI.
       - name: Install cargo-about
-        uses: taiki-e/install-action@v2.85.7
+        uses: taiki-e/install-action@v2.87.18
         with:
           tool: cargo-about@0.8.2
 

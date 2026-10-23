@@ -12,16 +12,16 @@ workflows:
         - 'rust-lang/crates-io-auth-action@v1.0.5'
     '.github/workflows/check-license-file.yml':
         - 'actions/checkout@v7.0.1'
-        - 'taiki-e/install-action@v2.85.7'
+        - 'taiki-e/install-action@v2.87.18'
     '.github/workflows/check-licenses.yml':
         - 'actions/checkout@v7.0.1'
-        - 'taiki-e/install-action@v2.85.7'
+        - 'taiki-e/install-action@v2.87.18'
     '.github/workflows/detect-unused-dependencies.yml':
         - 'actions/checkout@v7.0.1'
-        - 'taiki-e/install-action@v2.85.7'
+        - 'taiki-e/install-action@v2.87.18'
     '.github/workflows/fmt.yml':
         - 'actions/checkout@v7.0.1'
-        - 'taiki-e/install-action@v2.85.7'
+        - 'taiki-e/install-action@v2.87.18'
     '.github/workflows/github-release.yml':
         - 'actions/checkout@v7.0.1'
         - 'taiki-e/upload-rust-binary-action@v1.30.2'
@@ -29,7 +29,7 @@ workflows:
         - 'actions/checkout@v7.0.1'
     '.github/workflows/spell-check.yml':
         - 'actions/checkout@v7.0.1'
-        - 'taiki-e/install-action@v2.85.7'
+        - 'taiki-e/install-action@v2.87.18'
     '.github/workflows/test.yml':
         - 'actions/checkout@v7.0.1'
 dependencies:
@@ -48,9 +48,9 @@ dependencies:
         commit: 'sha1-c6f97d42243bad5fab37ca0427f495c86d5b1a18'
         owner_id: 5430905
         repo_id: 1008931044
-    'taiki-e/install-action@v2.85.7':
-        ref: 'v2.85.7'
-        commit: 'sha1-67729d5c413db75907f0ad1e39bb04b9c868ff60'
+    'taiki-e/install-action@v2.87.18':
+        ref: 'v2.87.18'
+        commit: 'sha1-dfae9bf3d6f6c6f20ef4ebb3486c01a51341ff12'
         owner_id: 43724913
         repo_id: 442947557
     'taiki-e/upload-rust-binary-action@v1.30.2':
