@@ -2,9 +2,9 @@
 This page lists the licenses of the projects used in fzf-make.
 
 ## Overview of licenses
-- MIT License (231)
+- MIT License (235)
 - Unicode License v3 (19)
-- Apache License 2.0 (7)
+- Apache License 2.0 (9)
 - ISC License (3)
 - Boost Software License 1.0 (2)
 - Community Data License Agreement Permissive 2.0 (2)
@@ -440,7 +440,11 @@ This page lists the licenses of the projects used in fzf-make.
 #### Used by:
 - [gethostname 1.1.0](https://codeberg.org/swsnr/gethostname.rs.git)
 
+- [insta 1.48.0](https://github.com/mitsuhiko/insta)
+
 - [ring 0.17.14](https://github.com/briansmith/ring)
+
+- [similar 2.7.0](https://github.com/mitsuhiko/similar)
 
 ```
                               Apache License
@@ -1503,6 +1507,39 @@ SOFTWARE.
 
 ### MIT License
 #### Used by:
+- [tempfile 3.23.0](https://github.com/Stebalien/tempfile)
+
+```
+Copyright (c) 2015 Steven Allen
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+```
+
+### MIT License
+#### Used by:
 - [object 0.36.7](https://github.com/gimli-rs/object)
 
 ```
@@ -1720,6 +1757,39 @@ DEALINGS IN THE SOFTWARE.
 
 ```
 Copyright (c) 2016 Amanieu d'Antras
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+```
+
+### MIT License
+#### Used by:
+- [vte 0.14.1](https://github.com/alacritty/vte)
+
+```
+Copyright (c) 2016 Joe Wilm
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
@@ -2149,6 +2219,39 @@ DEALINGS IN THE SOFTWARE.
 
 ```
 Copyright (c) 2018 Josh Stone
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+```
+
+### MIT License
+#### Used by:
+- [strip-ansi-escapes 0.2.1](https://github.com/luser/strip-ansi-escapes)
+
+```
+Copyright (c) 2018 Mozilla
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
@@ -3678,6 +3781,8 @@ SOFTWARE.
 - [displaydoc 0.2.5](https://github.com/yaahc/displaydoc)
 
 - [etcetera 0.8.0](https://github.com/lunacookies/etcetera)
+
+- [fastrand 2.5.0](https://github.com/smol-rs/fastrand)
 
 - [home 0.5.11](https://github.com/rust-lang/cargo)
 
