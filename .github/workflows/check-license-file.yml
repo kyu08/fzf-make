@@ -1,5 +1,3 @@
-# This workflow is managed by gh actions-lock.
-
 name: Check license file
 on:
   pull_request:

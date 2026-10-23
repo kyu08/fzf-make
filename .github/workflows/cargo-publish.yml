@@ -1,5 +1,3 @@
-# This workflow is managed by gh actions-lock.
-
 name: Run cargo publish
 
 on:
