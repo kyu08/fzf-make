@@ -2655,7 +2655,7 @@ SOFTWARE.
 #### Used by:
 - [time-core 0.1.9](https://github.com/time-rs/time)
 
-- [time 0.3.51](https://github.com/time-rs/time)
+- [time 0.3.55](https://github.com/time-rs/time)
 
 ```
 Copyright (c) Jacob Pratt et al.
